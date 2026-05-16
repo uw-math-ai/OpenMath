@@ -4538,4 +4538,476 @@ theorem butcherShiftedLegendre_nine_roots :
   · obtain ⟨hgt, hlt⟩ := hr₉_mem
     exact ⟨by linarith, hlt⟩
 
+/-- (342g) at `n = 11` — empirical anchor: `P_11^*` has eleven distinct real
+zeros in the open interval `(0, 1)`. Strictly weaker than the general (342g)
+statement (`∀ n`, currently held by Aristotle project
+`5939f28b-c890-4b7f-be4f-ed0f31f0d0b5`), but axiom-clean and unconditional.
+
+Mechanical extension of cycle 298's `butcherShiftedLegendre_nine_roots` recipe
+to eleven roots, using cycle 287's closed form `butcherShiftedLegendre_eleven`
+and cycle 295's parity helper `butcherShiftedLegendre_eval_half_eq_zero_of_odd`
+witnessed by `11 = 2*5 + 1` (i.e. `⟨5, rfl⟩`).
+
+Bracket plan (each endpoint sign hand-verified via Python `Fraction` before
+writing):
+* `r₁  ∈ (0, 1/50)`       ascending  — `P(0) = -1`, `P(1/50) ≈ +0.339`.
+* `r₂  ∈ (1/50, 1/10)`    descending — `P(1/10) = -(900666979/3125000000)`.
+* `r₃  ∈ (1/10, 1/5)`     ascending  — `P(1/5) = 11581677/48828125`.
+* `r₄  ∈ (1/5, 3/10)`     descending — `P(3/10) = -(1534706671/6250000000)`.
+* `r₅  ∈ (3/10, 9/20)`    ascending  — `P(9/20) = 5516425106321/25600000000000`.
+* `r₆  = 1/2`             parity     — odd-degree forces `P(1/2) = 0`.
+* `r₇  ∈ (11/20, 7/10)`   ascending  — parity-mirror of (3/10, 9/20).
+* `r₈  ∈ (7/10, 4/5)`     descending — parity-mirror of (1/5, 3/10).
+* `r₉  ∈ (4/5, 9/10)`     ascending  — parity-mirror of (1/10, 1/5).
+* `r₁₀ ∈ (9/10, 49/50)`   descending — parity-mirror of (1/50, 1/10).
+* `r₁₁ ∈ (49/50, 1)`      ascending  — parity-mirror of (0, 1/50).
+
+Distinctness (55 pairs) follows from the strict ordering of the brackets:
+`(0, 1/50) < (1/50, 1/10) < (1/10, 1/5) < (1/5, 3/10) < (3/10, 9/20) <
+ {1/2} < (11/20, 7/10) < (7/10, 4/5) < (4/5, 9/10) < (9/10, 49/50) <
+ (49/50, 1)`. -/
+theorem butcherShiftedLegendre_eleven_roots :
+    ∃ r₁ r₂ r₃ r₄ r₅ r₆ r₇ r₈ r₉ r₁₀ r₁₁ : ℝ,
+      r₁ ≠ r₂ ∧ r₁ ≠ r₃ ∧ r₁ ≠ r₄ ∧ r₁ ≠ r₅ ∧ r₁ ≠ r₆ ∧ r₁ ≠ r₇ ∧
+        r₁ ≠ r₈ ∧ r₁ ≠ r₉ ∧ r₁ ≠ r₁₀ ∧ r₁ ≠ r₁₁ ∧
+      r₂ ≠ r₃ ∧ r₂ ≠ r₄ ∧ r₂ ≠ r₅ ∧ r₂ ≠ r₆ ∧ r₂ ≠ r₇ ∧
+        r₂ ≠ r₈ ∧ r₂ ≠ r₉ ∧ r₂ ≠ r₁₀ ∧ r₂ ≠ r₁₁ ∧
+      r₃ ≠ r₄ ∧ r₃ ≠ r₅ ∧ r₃ ≠ r₆ ∧ r₃ ≠ r₇ ∧
+        r₃ ≠ r₈ ∧ r₃ ≠ r₉ ∧ r₃ ≠ r₁₀ ∧ r₃ ≠ r₁₁ ∧
+      r₄ ≠ r₅ ∧ r₄ ≠ r₆ ∧ r₄ ≠ r₇ ∧
+        r₄ ≠ r₈ ∧ r₄ ≠ r₉ ∧ r₄ ≠ r₁₀ ∧ r₄ ≠ r₁₁ ∧
+      r₅ ≠ r₆ ∧ r₅ ≠ r₇ ∧
+        r₅ ≠ r₈ ∧ r₅ ≠ r₉ ∧ r₅ ≠ r₁₀ ∧ r₅ ≠ r₁₁ ∧
+      r₆ ≠ r₇ ∧ r₆ ≠ r₈ ∧ r₆ ≠ r₉ ∧ r₆ ≠ r₁₀ ∧ r₆ ≠ r₁₁ ∧
+      r₇ ≠ r₈ ∧ r₇ ≠ r₉ ∧ r₇ ≠ r₁₀ ∧ r₇ ≠ r₁₁ ∧
+      r₈ ≠ r₉ ∧ r₈ ≠ r₁₀ ∧ r₈ ≠ r₁₁ ∧
+      r₉ ≠ r₁₀ ∧ r₉ ≠ r₁₁ ∧
+      r₁₀ ≠ r₁₁ ∧
+      r₁ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₂ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₃ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₄ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₅ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₆ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₇ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₈ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₉ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₁₀ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₁₁ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      (butcherShiftedLegendre 11).eval r₁ = 0 ∧
+      (butcherShiftedLegendre 11).eval r₂ = 0 ∧
+      (butcherShiftedLegendre 11).eval r₃ = 0 ∧
+      (butcherShiftedLegendre 11).eval r₄ = 0 ∧
+      (butcherShiftedLegendre 11).eval r₅ = 0 ∧
+      (butcherShiftedLegendre 11).eval r₆ = 0 ∧
+      (butcherShiftedLegendre 11).eval r₇ = 0 ∧
+      (butcherShiftedLegendre 11).eval r₈ = 0 ∧
+      (butcherShiftedLegendre 11).eval r₉ = 0 ∧
+      (butcherShiftedLegendre 11).eval r₁₀ = 0 ∧
+      (butcherShiftedLegendre 11).eval r₁₁ = 0 := by
+  have hP11 := butcherShiftedLegendre_eleven
+  have hcont : Continuous (fun x : ℝ => (butcherShiftedLegendre 11).eval x) :=
+    (butcherShiftedLegendre 11).continuous
+  -- Twelve key evaluations of `P_11^*` (plus the parity-forced `P(1/2) = 0`).
+  have hf_0 : (butcherShiftedLegendre 11).eval (0 : ℝ) = -1 := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+  have hf_1 : (butcherShiftedLegendre 11).eval (1 : ℝ) = 1 := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_one_fiftieth :
+      (butcherShiftedLegendre 11).eval (1 / 50 : ℝ) =
+        25826480523788463 / 76293945312500000 := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_one_tenth :
+      (butcherShiftedLegendre 11).eval (1 / 10 : ℝ) =
+        -(900666979 / 3125000000) := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_one_fifth :
+      (butcherShiftedLegendre 11).eval (1 / 5 : ℝ) = 11581677 / 48828125 := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_three_tenths :
+      (butcherShiftedLegendre 11).eval (3 / 10 : ℝ) =
+        -(1534706671 / 6250000000) := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_nine_twentieths :
+      (butcherShiftedLegendre 11).eval (9 / 20 : ℝ) =
+        5516425106321 / 25600000000000 := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_eleven_twentieths :
+      (butcherShiftedLegendre 11).eval (11 / 20 : ℝ) =
+        -(5516425106321 / 25600000000000) := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_seven_tenths :
+      (butcherShiftedLegendre 11).eval (7 / 10 : ℝ) = 1534706671 / 6250000000 := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_four_fifths :
+      (butcherShiftedLegendre 11).eval (4 / 5 : ℝ) = -(11581677 / 48828125) := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_nine_tenths :
+      (butcherShiftedLegendre 11).eval (9 / 10 : ℝ) = 900666979 / 3125000000 := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_forty_nine_fiftieths :
+      (butcherShiftedLegendre 11).eval (49 / 50 : ℝ) =
+        -(25826480523788463 / 76293945312500000) := by
+    rw [hP11]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_half : (butcherShiftedLegendre 11).eval (1 / 2 : ℝ) = 0 :=
+    butcherShiftedLegendre_eval_half_eq_zero_of_odd 11 ⟨5, rfl⟩
+  -- IVT₁: ascending on `[0, 1/50]`.
+  have hivt_1 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 11).eval x) ''
+        Set.Ioo (0 : ℝ) (1 / 50) := by
+    apply intermediate_value_Ioo (by norm_num : (0 : ℝ) ≤ 1 / 50) hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 11).eval (0 : ℝ))
+        ((butcherShiftedLegendre 11).eval (1 / 50 : ℝ))
+    rw [hf_0, hf_one_fiftieth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₁, hr₁_mem, hr₁_eval⟩ := hivt_1
+  -- IVT₂: descending on `[1/50, 1/10]`.
+  have hivt_2 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 11).eval x) ''
+        Set.Ioo (1 / 50 : ℝ) (1 / 10) := by
+    apply intermediate_value_Ioo' (by norm_num : (1 / 50 : ℝ) ≤ 1 / 10)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 11).eval (1 / 10 : ℝ))
+        ((butcherShiftedLegendre 11).eval (1 / 50 : ℝ))
+    rw [hf_one_tenth, hf_one_fiftieth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₂, hr₂_mem, hr₂_eval⟩ := hivt_2
+  -- IVT₃: ascending on `[1/10, 1/5]`.
+  have hivt_3 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 11).eval x) ''
+        Set.Ioo (1 / 10 : ℝ) (1 / 5) := by
+    apply intermediate_value_Ioo (by norm_num : (1 / 10 : ℝ) ≤ 1 / 5)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 11).eval (1 / 10 : ℝ))
+        ((butcherShiftedLegendre 11).eval (1 / 5 : ℝ))
+    rw [hf_one_tenth, hf_one_fifth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₃, hr₃_mem, hr₃_eval⟩ := hivt_3
+  -- IVT₄: descending on `[1/5, 3/10]`.
+  have hivt_4 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 11).eval x) ''
+        Set.Ioo (1 / 5 : ℝ) (3 / 10) := by
+    apply intermediate_value_Ioo' (by norm_num : (1 / 5 : ℝ) ≤ 3 / 10)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 11).eval (3 / 10 : ℝ))
+        ((butcherShiftedLegendre 11).eval (1 / 5 : ℝ))
+    rw [hf_three_tenths, hf_one_fifth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₄, hr₄_mem, hr₄_eval⟩ := hivt_4
+  -- IVT₅: ascending on `[3/10, 9/20]`.
+  have hivt_5 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 11).eval x) ''
+        Set.Ioo (3 / 10 : ℝ) (9 / 20) := by
+    apply intermediate_value_Ioo (by norm_num : (3 / 10 : ℝ) ≤ 9 / 20)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 11).eval (3 / 10 : ℝ))
+        ((butcherShiftedLegendre 11).eval (9 / 20 : ℝ))
+    rw [hf_three_tenths, hf_nine_twentieths]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₅, hr₅_mem, hr₅_eval⟩ := hivt_5
+  -- IVT₇: ascending on `[11/20, 7/10]`.
+  have hivt_7 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 11).eval x) ''
+        Set.Ioo (11 / 20 : ℝ) (7 / 10) := by
+    apply intermediate_value_Ioo (by norm_num : (11 / 20 : ℝ) ≤ 7 / 10)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 11).eval (11 / 20 : ℝ))
+        ((butcherShiftedLegendre 11).eval (7 / 10 : ℝ))
+    rw [hf_eleven_twentieths, hf_seven_tenths]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₇, hr₇_mem, hr₇_eval⟩ := hivt_7
+  -- IVT₈: descending on `[7/10, 4/5]`.
+  have hivt_8 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 11).eval x) ''
+        Set.Ioo (7 / 10 : ℝ) (4 / 5) := by
+    apply intermediate_value_Ioo' (by norm_num : (7 / 10 : ℝ) ≤ 4 / 5)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 11).eval (4 / 5 : ℝ))
+        ((butcherShiftedLegendre 11).eval (7 / 10 : ℝ))
+    rw [hf_four_fifths, hf_seven_tenths]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₈, hr₈_mem, hr₈_eval⟩ := hivt_8
+  -- IVT₉: ascending on `[4/5, 9/10]`.
+  have hivt_9 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 11).eval x) ''
+        Set.Ioo (4 / 5 : ℝ) (9 / 10) := by
+    apply intermediate_value_Ioo (by norm_num : (4 / 5 : ℝ) ≤ 9 / 10)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 11).eval (4 / 5 : ℝ))
+        ((butcherShiftedLegendre 11).eval (9 / 10 : ℝ))
+    rw [hf_four_fifths, hf_nine_tenths]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₉, hr₉_mem, hr₉_eval⟩ := hivt_9
+  -- IVT₁₀: descending on `[9/10, 49/50]`.
+  have hivt_10 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 11).eval x) ''
+        Set.Ioo (9 / 10 : ℝ) (49 / 50) := by
+    apply intermediate_value_Ioo' (by norm_num : (9 / 10 : ℝ) ≤ 49 / 50)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 11).eval (49 / 50 : ℝ))
+        ((butcherShiftedLegendre 11).eval (9 / 10 : ℝ))
+    rw [hf_forty_nine_fiftieths, hf_nine_tenths]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₁₀, hr₁₀_mem, hr₁₀_eval⟩ := hivt_10
+  -- IVT₁₁: ascending on `[49/50, 1]`.
+  have hivt_11 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 11).eval x) ''
+        Set.Ioo (49 / 50 : ℝ) 1 := by
+    apply intermediate_value_Ioo (by norm_num : (49 / 50 : ℝ) ≤ 1)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 11).eval (49 / 50 : ℝ))
+        ((butcherShiftedLegendre 11).eval (1 : ℝ))
+    rw [hf_forty_nine_fiftieths, hf_1]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₁₁, hr₁₁_mem, hr₁₁_eval⟩ := hivt_11
+  -- Clear the polynomial-evaluation hypotheses now that the IVT closures are
+  -- bound: `linarith` calls below would otherwise scan all 12 large-rational
+  -- evaluations and time out on `isDefEq`. Keep `hf_half` (consumed by
+  -- `refine`) and all `hrᵢ_eval` / `hrᵢ_mem` (needed downstream).
+  clear hP11 hcont hf_0 hf_1 hf_one_fiftieth hf_one_tenth hf_one_fifth
+        hf_three_tenths hf_nine_twentieths hf_eleven_twentieths hf_seven_tenths
+        hf_four_fifths hf_nine_tenths hf_forty_nine_fiftieths
+  refine ⟨r₁, r₂, r₃, r₄, r₅, 1 / 2, r₇, r₈, r₉, r₁₀, r₁₁,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_,
+          ?_, ?_,
+          ?_,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+          hr₁_eval, hr₂_eval, hr₃_eval, hr₄_eval, hr₅_eval, hf_half,
+          hr₇_eval, hr₈_eval, hr₉_eval, hr₁₀_eval, hr₁₁_eval⟩
+  -- 55 distinctness goals (10 + 9 + 8 + 7 + 6 + 5 + 4 + 3 + 2 + 1).
+  -- r₁ vs r₂..r₁₁ (10 goals).
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₂_gt, _⟩ := hr₂_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₃_gt, _⟩ := hr₃_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₄_gt, _⟩ := hr₄_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₅_gt, _⟩ := hr₅_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₁₀_gt, _⟩ := hr₁₀_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₁₁_gt, _⟩ := hr₁₁_mem
+    intro h; linarith
+  -- r₂ vs r₃..r₁₁ (9 goals).
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₃_gt, _⟩ := hr₃_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₄_gt, _⟩ := hr₄_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₅_gt, _⟩ := hr₅_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₁₀_gt, _⟩ := hr₁₀_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₁₁_gt, _⟩ := hr₁₁_mem
+    intro h; linarith
+  -- r₃ vs r₄..r₁₁ (8 goals).
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₄_gt, _⟩ := hr₄_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₅_gt, _⟩ := hr₅_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₁₀_gt, _⟩ := hr₁₀_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₁₁_gt, _⟩ := hr₁₁_mem
+    intro h; linarith
+  -- r₄ vs r₅..r₁₁ (7 goals).
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₅_gt, _⟩ := hr₅_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₁₀_gt, _⟩ := hr₁₀_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₁₁_gt, _⟩ := hr₁₁_mem
+    intro h; linarith
+  -- r₅ vs r₆..r₁₁ (6 goals).
+  · obtain ⟨_, hr₅_lt⟩ := hr₅_mem
+    intro h; linarith
+  · obtain ⟨_, hr₅_lt⟩ := hr₅_mem
+    obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨_, hr₅_lt⟩ := hr₅_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₅_lt⟩ := hr₅_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₅_lt⟩ := hr₅_mem
+    obtain ⟨hr₁₀_gt, _⟩ := hr₁₀_mem
+    intro h; linarith
+  · obtain ⟨_, hr₅_lt⟩ := hr₅_mem
+    obtain ⟨hr₁₁_gt, _⟩ := hr₁₁_mem
+    intro h; linarith
+  -- r₆ = 1/2 vs r₇..r₁₁ (5 goals).
+  · obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨hr₁₀_gt, _⟩ := hr₁₀_mem
+    intro h; linarith
+  · obtain ⟨hr₁₁_gt, _⟩ := hr₁₁_mem
+    intro h; linarith
+  -- r₇ vs r₈..r₁₁ (4 goals).
+  · obtain ⟨_, hr₇_lt⟩ := hr₇_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₇_lt⟩ := hr₇_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₇_lt⟩ := hr₇_mem
+    obtain ⟨hr₁₀_gt, _⟩ := hr₁₀_mem
+    intro h; linarith
+  · obtain ⟨_, hr₇_lt⟩ := hr₇_mem
+    obtain ⟨hr₁₁_gt, _⟩ := hr₁₁_mem
+    intro h; linarith
+  -- r₈ vs r₉..r₁₁ (3 goals).
+  · obtain ⟨_, hr₈_lt⟩ := hr₈_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₈_lt⟩ := hr₈_mem
+    obtain ⟨hr₁₀_gt, _⟩ := hr₁₀_mem
+    intro h; linarith
+  · obtain ⟨_, hr₈_lt⟩ := hr₈_mem
+    obtain ⟨hr₁₁_gt, _⟩ := hr₁₁_mem
+    intro h; linarith
+  -- r₉ vs r₁₀, r₁₁ (2 goals).
+  · obtain ⟨_, hr₉_lt⟩ := hr₉_mem
+    obtain ⟨hr₁₀_gt, _⟩ := hr₁₀_mem
+    intro h; linarith
+  · obtain ⟨_, hr₉_lt⟩ := hr₉_mem
+    obtain ⟨hr₁₁_gt, _⟩ := hr₁₁_mem
+    intro h; linarith
+  -- r₁₀ vs r₁₁ (1 goal).
+  · obtain ⟨_, hr₁₀_lt⟩ := hr₁₀_mem
+    obtain ⟨hr₁₁_gt, _⟩ := hr₁₁_mem
+    intro h; linarith
+  -- 11 Ioo (0, 1) membership goals.
+  · obtain ⟨hgt, hlt⟩ := hr₁_mem
+    exact ⟨hgt, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₂_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₃_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₄_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₅_mem
+    exact ⟨by linarith, by linarith⟩
+  · refine ⟨?_, ?_⟩ <;> norm_num
+  · obtain ⟨hgt, hlt⟩ := hr₇_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₈_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₉_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₁₀_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₁₁_mem
+    exact ⟨by linarith, hlt⟩
+
 end OpenMath.Chapter3.Section342

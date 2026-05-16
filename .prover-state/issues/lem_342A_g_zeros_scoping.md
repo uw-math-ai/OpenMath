@@ -221,3 +221,60 @@ return.
   polls again. If 28% holds flat, that becomes observation #1 of a
   fresh three-stall window. Cancellation precondition (three
   consecutive flat readings) not currently met.
+
+## Cycle 299 update
+
+* **Aristotle single-poll**: `IN_PROGRESS`, `percent_complete = 29`
+  at `2026-05-15T23:56:34Z` (≈18 min after cycle 298's 28% reading;
+  **+1 percentage point**). Per the strategy branch table, `> 28%`
+  is healthy growth ⇒ **stall counter remains 0**; Branch B fires
+  (n = 11 anchor). Aristotle stays queued.
+* **`n = 11` anchor shipped**: `butcherShiftedLegendre_eleven_roots`
+  in `OpenMath/Chapter3/Section342.lean` — eleven distinct roots
+  of `P_11^*` in `(0, 1)`. Mechanical extension of cycle 298's
+  `n = 9` recipe using cycle 287's closed form
+  `butcherShiftedLegendre_eleven` and cycle 295's parity helper
+  applied to `⟨5, rfl⟩` (since `11 = 2·5 + 1`):
+  - **Middle root** `r₆ = 1/2` via
+    `butcherShiftedLegendre_eval_half_eq_zero_of_odd 11 ⟨5, rfl⟩`.
+  - **Five left roots** via IVT (signs pre-verified with Python
+    `Fraction` against the closed form
+    `P_11^* = 705432X^11 − 3879876X^10 + 9237800X^9
+              − 12471030X^8 + 10501920X^7 − 5717712X^6
+              + 2018016X^5 − 450450X^4 + 60060X^3
+              − 4290X^2 + 132X − 1`):
+    * `(0, 1/50)` ascending — `P(0) = -1`,
+      `P(1/50) = 25826480523788463/76293945312500000`.
+    * `(1/50, 1/10)` descending — `P(1/10) = -(900666979/3125000000)`.
+    * `(1/10, 1/5)` ascending — `P(1/5) = 11581677/48828125`.
+    * `(1/5, 3/10)` descending — `P(3/10) = -(1534706671/6250000000)`.
+    * `(3/10, 9/20)` ascending —
+      `P(9/20) = 5516425106321/25600000000000`.
+  - **Five right roots** (parity-symmetric to the left pentad):
+    * `(11/20, 7/10)` ascending; `(7/10, 4/5)` descending;
+      `(4/5, 9/10)` ascending; `(9/10, 49/50)` descending;
+      `(49/50, 1)` ascending.
+  - **Distinctness** (55 pairs) via disjoint-interval `linarith`.
+* **Pre-verification table** (actual signs observed; matches the
+  expected odd-parity pattern `−, +, −, +, −, +, 0, −, +, −, +, −, +`):
+  `P(0) -; P(1/50) +; P(1/10) -; P(1/5) +; P(3/10) -; P(9/20) +;
+  P(1/2) 0; P(11/20) -; P(7/10) +; P(4/5) -; P(9/10) +;
+  P(49/50) -; P(1) +`. Outer-bracket denominator 50 sufficed —
+  escalation to denominator 100 not needed.
+* **Linarith hypothesis-pollution mitigation** (new for cycle 299):
+  The 12 large-rational `hf_*` polynomial evaluations
+  (e.g. `25826480523788463 / 76293945312500000`) caused `linarith`
+  to time out on `isDefEq` during the post-`refine` distinctness/
+  membership block (66 goals). Mitigated by an explicit
+  `clear hP11 hcont hf_0 hf_1 hf_one_fiftieth … hf_forty_nine_fiftieths`
+  immediately before `refine`, retaining only `hf_half` (consumed
+  by `refine` for the parity-forced `r₆` root) and the IVT-derived
+  `hrᵢ_eval` / `hrᵢ_mem` hypotheses. **Worth importing into the
+  cycle 300+ template** if the empirical ladder continues.
+* Axiom-clean (`[propext, Classical.choice, Quot.sound]`); zero
+  sorries. Build refreshes `OpenMath.Chapter3.Section342` oleans in
+  ~28s on this cluster — cycle budget comfortably met.
+* Aristotle still in flight; cycle 300 polls again. If `29%` holds
+  flat that becomes observation #1 of a fresh three-stall window.
+  Cancellation precondition (three consecutive flat readings) not
+  currently met.
