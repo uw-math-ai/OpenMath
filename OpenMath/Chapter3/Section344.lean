@@ -2584,4 +2584,86 @@ theorem butcherLobattoIIIA_three_satisfiesC :
     simp [butcherLobattoIIIADirect_three, Fin.sum_univ_three] <;>
     norm_num
 
+/-! ## Deliverable D.14 — Lobatto III `s = 3` (unsuffixed family,
+direct form, `C(s − 1)` + last-column-zero variant)
+
+Cycle 335: saturates the §344 small-`s` direct-form ladder for the
+Lobatto III sub-family by extending cycle 331's
+`butcherLobattoIIIDirect_two` template to `s = 3`. The Lobatto III
+unsuffixed family is the `C(s − 1)` + last-column-zero variant per
+Butcher Table 344(I) row at `ch03.txt:5221` ("Lobatto III: Lobatto
+quadrature; `C(s − 1)`, `a₁s = a₂s = ⋯ = aₛₛ = 0`"). The printed
+tableau at `ch03.txt:5399-5405` gives
+
+  `c = (0, 1/2, 1)`,  `b = (1/6, 2/3, 1/6)`,
+  `A = !![0, 0, 0;  1/4, 1/4, 0;  0, 1, 0]`.
+
+The printed values agree with the C(2) + last-column-zero derivation:
+row 0 from `c_0 = 0`, rows 1–2 from `∑ⱼ Aᵢⱼ = cᵢ` and
+`∑ⱼ Aᵢⱼ · cⱼ = cᵢ² / 2` combined with `A_{*, 2} = 0`.
+
+Lobatto III at `s = 3` has classical order `p = 2s − 2 = 4`. -/
+
+/-- **Butcher §344 — Lobatto III `s = 3` tableau (unsuffixed family,
+`C(s − 1)` + last-column-zero variant)** declared inline from Butcher's
+printed Table 344(I), p. 226 (`extraction/raw_text/ch03.txt:5399-5405`):
+`c = (0, 1/2, 1)`, `b = (1/6, 2/3, 1/6)`,
+`A = !![0, 0, 0; 1/4, 1/4, 0; 0, 1, 0]`. This is the three-stage
+Lobatto III method (Butcher's `Choice of A = C(s − 1), a₁s = a₂s = aₛₛ
+= 0` row of Table 344(I)) with printed order `p = 4`.
+
+The `b` and `c` agree with `butcherLobattoIIIA_three` (cycle 333,
+collocation form) and `butcherLobattoIIIADirect_three` (cycle 333,
+direct form), and with `butcherLobattoIIIBDirect_three` (cycle 327) —
+all four share the Lobatto `(0, 1/2, 1)` abscissae and the Simpson
+weights `(1/6, 2/3, 1/6)`.
+
+The A-matrix has zero third column (the family-defining
+last-column-zero property: `A_{ij} = 0` for `j = s − 1 = 2`). At
+`s = 3`, the row-sums-equal-c condition (C(s − 1) = C(2)) plus the
+last-column-zero condition uniquely determines the matrix.
+
+Saturating closure of the §344 small-`s` direct-form ladder for the
+Lobatto III sub-family (cycle 331 at `s = 2`, cycle 335 at `s = 3`). -/
+noncomputable def butcherLobattoIIIDirect_three :
+    OpenMath.Chapter3.Section312.RKTableau 3 where
+  A := !![0, 0, 0; 1/4, 1/4, 0; 0, 1, 0]
+  b := ![1/6, 2/3, 1/6]
+  c := ![0, 1/2, 1]
+
+/-- **Non-vacuity (B(4))**: the direct Lobatto III `s = 3` tableau
+satisfies the order-4 quadrature condition `B(4)` (Lobatto III at
+`s = 3` has classical order `p = 2s − 2 = 4`). Arithmetic:
+- `k = 1`: `1/6 + 2/3 + 1/6 = 1 = 1/1`.
+- `k = 2`: `(1/6)·0 + (2/3)·(1/2) + (1/6)·1 = 1/3 + 1/6 = 1/2`.
+- `k = 3`: `(1/6)·0 + (2/3)·(1/4) + (1/6)·1 = 1/6 + 1/6 = 1/3`.
+- `k = 4`: `(1/6)·0 + (2/3)·(1/8) + (1/6)·1 = 1/12 + 1/6 = 1/4`. -/
+example : butcherLobattoIIIDirect_three.SatisfiesB 4 := by
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherLobattoIIIDirect_three, Fin.sum_univ_three]; norm_num
+  · simp [butcherLobattoIIIDirect_three, Fin.sum_univ_three]; norm_num
+  · simp [butcherLobattoIIIDirect_three, Fin.sum_univ_three]; norm_num
+  · simp [butcherLobattoIIIDirect_three, Fin.sum_univ_three]; norm_num
+
+/-- **`SatisfiesC 2` certificate** — the certificate that characterises
+this tableau as the `C(s − 1)` variant of Lobatto III: the direct
+Lobatto III `s = 3` tableau satisfies the order-2 collocation
+simplifying assumption `C(2)`, namely `∑ⱼ Aᵢⱼ · cⱼ^(k−1) = cᵢ^k / k`
+for `i ∈ {0, 1, 2}` and `k ∈ {1, 2}`.
+
+Arithmetic checks (9 arms):
+- `(i=0, k=1)`: `0·1 + 0·1 + 0·1 = 0 = 0^1/1`. ✓
+- `(i=0, k=2)`: `0·0 + 0·(1/2) + 0·1 = 0 = 0^2/2`. ✓
+- `(i=1, k=1)`: `(1/4) + (1/4) + 0 = 1/2 = (1/2)^1/1`. ✓
+- `(i=1, k=2)`: `(1/4)·0 + (1/4)·(1/2) + 0·1 = 1/8 = (1/2)^2/2`. ✓
+- `(i=2, k=1)`: `0 + 1 + 0 = 1 = 1^1/1`. ✓
+- `(i=2, k=2)`: `0·0 + 1·(1/2) + 0·1 = 1/2 = 1^2/2`. ✓ -/
+theorem butcherLobattoIIIDirect_three_satisfiesC :
+    butcherLobattoIIIDirect_three.SatisfiesC 2 := by
+  intro i k h1 hk
+  fin_cases i <;> interval_cases k <;>
+    simp [butcherLobattoIIIDirect_three, Fin.sum_univ_three] <;>
+    norm_num
+
 end OpenMath.Chapter3.Section344
