@@ -6105,4 +6105,96 @@ theorem butcherShiftedLegendre_n_distinct_real_zeros (n : ℕ) :
     butcherShiftedLegendre_rootsInIoo_subset n,
     butcherShiftedLegendre_rootsInIoo_are_roots n⟩
 
+/-! ### Phase A.1 of `lem:342B` — canonical zero enumeration
+
+Given that `P_n^*` has exactly `n` distinct real zeros in `(0, 1)`
+(`butcherShiftedLegendre_n_distinct_real_zeros`, cycle 301), we now
+package those zeros as an indexed family `Fin n → ℝ` in strictly
+increasing order. This is the canonical realisation of Butcher's
+informal naming `c₁, c₂, …, cₛ` in §342 and is the API consumed by
+the Gaussian quadrature constructions (`lem:342B` and downstream).
+
+The enumeration is built via `Finset.orderEmbOfFin` on the concrete
+finset `butcherShiftedLegendre_rootsInIoo n`, which gives strict
+monotonicity (and therefore injectivity) for free.
+
+This block ships four new symbols plus an `n = 1` non-vacuity anchor.
+-/
+
+/-- The cardinality of the root-set finset equals `n`. Combines the
+upper bound (`butcherShiftedLegendre_rootsInIoo_card_le`) and the
+lower bound (`butcherShiftedLegendre_rootsInIoo_card_ge`). -/
+lemma butcherShiftedLegendre_rootsInIoo_card_eq (n : ℕ) :
+    (butcherShiftedLegendre_rootsInIoo n).card = n :=
+  le_antisymm
+    (butcherShiftedLegendre_rootsInIoo_card_le n)
+    (butcherShiftedLegendre_rootsInIoo_card_ge n)
+
+/-- **Phase A.1 of `lem:342B` — canonical zeros of `P_n^*`.**
+
+`butcherShiftedLegendre_zeros n` is the strictly increasing
+enumeration `Fin n → ℝ` of the `n` distinct real zeros of `P_n^*` in
+the open interval `(0, 1)`. This realises Butcher's informal
+labelling `c₁, c₂, …, cₛ` (§342, p. 237) as an indexed family.
+
+Definition: apply `Finset.orderEmbOfFin` to the concrete finset
+`butcherShiftedLegendre_rootsInIoo n`, whose cardinality is `n` by
+`butcherShiftedLegendre_rootsInIoo_card_eq` (combining the (342g)
+upper and lower bounds from cycles 294 / 301).
+
+Note: this is a Lean-engineering name, not a textbook entity —
+Butcher names the `cᵢ` informally rather than as an indexed family,
+so the canonical enumeration here is a convenience for downstream
+constructions. -/
+noncomputable def butcherShiftedLegendre_zeros (n : ℕ) : Fin n → ℝ :=
+  (butcherShiftedLegendre_rootsInIoo n).orderEmbOfFin
+    (butcherShiftedLegendre_rootsInIoo_card_eq n)
+
+/-- Each canonical zero `butcherShiftedLegendre_zeros n i` lies in
+the open interval `(0, 1)`. Immediate from
+`Finset.orderEmbOfFin_mem` combined with
+`butcherShiftedLegendre_rootsInIoo_subset`. -/
+lemma butcherShiftedLegendre_zeros_mem_Ioo (n : ℕ) (i : Fin n) :
+    butcherShiftedLegendre_zeros n i ∈ Set.Ioo (0 : ℝ) 1 :=
+  butcherShiftedLegendre_rootsInIoo_subset n _
+    (Finset.orderEmbOfFin_mem _ _ i)
+
+/-- Each canonical zero `butcherShiftedLegendre_zeros n i` is in fact
+a root of `P_n^*`. Immediate from `Finset.orderEmbOfFin_mem`
+combined with `butcherShiftedLegendre_rootsInIoo_are_roots`. -/
+lemma butcherShiftedLegendre_zeros_isRoot (n : ℕ) (i : Fin n) :
+    (butcherShiftedLegendre n).eval
+        (butcherShiftedLegendre_zeros n i) = 0 :=
+  butcherShiftedLegendre_rootsInIoo_are_roots n _
+    (Finset.orderEmbOfFin_mem _ _ i)
+
+/-- The canonical zero enumeration is injective: distinct indices in
+`Fin n` map to distinct zeros. Follows from the strict monotonicity
+of `Finset.orderEmbOfFin`. -/
+lemma butcherShiftedLegendre_zeros_injective (n : ℕ) :
+    Function.Injective (butcherShiftedLegendre_zeros n) :=
+  ((butcherShiftedLegendre_rootsInIoo n).orderEmbOfFin
+    (butcherShiftedLegendre_rootsInIoo_card_eq n)).injective
+
+/-- **Non-vacuity anchor at `n = 1`.** The unique canonical zero of
+`P_1^* = 2X - 1` is `1/2`. Cross-checks the Phase A.1 enumeration
+against the concrete witness from `butcherShiftedLegendre_one_root`
+(cycle 294). -/
+example : butcherShiftedLegendre_zeros 1 ⟨0, by omega⟩ = (1 / 2 : ℝ) := by
+  have h_mem :
+      butcherShiftedLegendre_zeros 1 ⟨0, by omega⟩
+        ∈ butcherShiftedLegendre_rootsInIoo 1 :=
+    Finset.orderEmbOfFin_mem _ _ _
+  have h12_mem : (1 / 2 : ℝ) ∈ butcherShiftedLegendre_rootsInIoo 1 := by
+    simp only [butcherShiftedLegendre_rootsInIoo, Finset.mem_filter,
+               Multiset.mem_toFinset,
+               mem_roots (butcherShiftedLegendre_ne_zero 1)]
+    exact ⟨(butcherShiftedLegendre_one_root).1,
+           (butcherShiftedLegendre_one_root).2⟩
+  have hcard : (butcherShiftedLegendre_rootsInIoo 1).card = 1 :=
+    butcherShiftedLegendre_rootsInIoo_card_eq 1
+  obtain ⟨a, ha⟩ := Finset.card_eq_one.mp hcard
+  rw [ha, Finset.mem_singleton] at h_mem h12_mem
+  rw [h_mem, ← h12_mem]
+
 end OpenMath.Chapter3.Section342

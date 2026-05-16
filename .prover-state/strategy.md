@@ -1,313 +1,372 @@
-# Cycle 301 Strategy
+# Cycle 302 strategy
 
-## Context
+## §A — Status check
 
-Cycle 300 shipped the `n = 13` empirical anchor for `lem:342A` clause
-(342g) and observed Aristotle project `5939f28b-c890-4b7f-be4f-ed0f31f0d0b5`
-at **30 %** (+1 pp from cycle 299's 29 %, healthy growth). The cycle 300
-planner **explicitly warned against extending the empirical ladder past
-`n = 13`** in cycle 301. The empirical anchors `n ∈ {1, 3, 5, 7, 9, 11, 13}`
-are now sufficient evidence; further `n = 15, 17, …` add marginal value.
+**Cycle 301 SHIPPED `lem:342A` complete** (commit `4d07773`).
+`butcherShiftedLegendre_n_distinct_real_zeros` integrated axiom-clean
+into `OpenMath/Chapter3/Section342.lean` (line ~6090), with generic
+polynomial-sign helpers in
+`OpenMath/Chapter3/Section342DistinctRootsHelpers.lean`. All seven
+clauses (342a)–(342g) of Butcher's shifted Legendre characterisation
+are now formalized over cycles 271–301. `lean_status.json` correctly
+shows `lem:342A` as `formalized`; `plan.md` shows `[x]`.
 
-`lem:342A` remains `[~]` partial: clauses (342a)–(342f) are all closed
-axiom-clean (cycles 271–293, 277 for orthogonality, 293 for recurrence),
-plus seven concrete-`n` empirical anchors for (342g). Only general (342g)
-is open.
+**Supervisor score `-1` on cycle 301 is a tautology-scanner false
+positive — do not chase it.**
 
-## §A — Priority 0 (MANDATORY, do this FIRST, ≤ 5 minutes)
+Direct grep verification at HEAD:
 
-**Single Aristotle poll** on project `5939f28b-c890-4b7f-be4f-ed0f31f0d0b5`
-via `mcp__aristotle__get_status`. Record the percent and `status` in the
-task results.
-
-Per CLAUDE.md: **do NOT re-poll within the same cycle.** If the first
-call fails (rate-limit, network), wait and retry once, then proceed with
-the non-COMPLETE branch using the last-known 30 % observation from cycle 300.
-
-## §B — Branch table (commit to ONE branch based on §A result)
-
-| Aristotle status | Branch | Action |
-|---|---|---|
-| `COMPLETE` (100 %) | **A** | Integrate the general (342g) proof. Highest priority. |
-| `COMPLETE_WITH_ERRORS` | **A′** | Integrate with surgical fixes (mirror cycle 277 / 281 / 184 integration patterns). |
-| `IN_PROGRESS` ≥ 31 % | **B** | Healthy growth. Ship §C P1 (manual closure scoping + Phase A.1 stepping stone). |
-| `IN_PROGRESS` = 30 % | **C** | **First stall observation** (cycle 300 saw 30 % growth from 29 %; flat 30 % is now obs #1 of cycle 285 three-stall protocol). Do NOT cancel. Ship §C P1. |
-| `IN_PROGRESS` < 30 % | **D** | Regression. Note as obs #1 of stall protocol (regression treated same as flat). Do NOT cancel. Ship §C P1. |
-| `FAILED` | **E** | Cancellation triggered. Ship §C P1 immediately (it is the manual closure plan that this branch needs). |
-
-**Branches B, C, D, E all do the same work — §C P1 below.** The only
-exception is Branch A / A′ (integration).
-
-The cycle 285 three-stall protocol requires three consecutive flat-or-
-regressed observations before cancellation. Cycle 301 can only ever be
-obs #1 (since cycle 300 was the last healthy-growth observation); do
-NOT cancel Aristotle this cycle regardless of which non-COMPLETE branch
-fires.
-
-## §C — Branch B/C/D/E deliverable (default work)
-
-### P1 — Open manual closure scoping doc + ship Phase A.1 stepping stone
-
-**File**: `.prover-state/issues/lem_342A_342g_manual_closure_plan.md`
-(new file, ~250 LOC markdown). Model on the existing
-`lem_342A_342f_manual_closure_plan.md` (cycle 289). Required sections:
-
-1. **§1 Textbook statement** verbatim from
-   `extraction/formalization_data/entities/lem_342A.json` clause (342g):
-   "P_n^* has n distinct real zeros in the interval (0, 1), n = 0, 1, 2, …".
-2. **§2 Textbook proof sketch**: sign-change contradiction.
-   * Let the set of distinct sign-change zeros of `P_n^*` in `(0,1)` be
-     `{x_1, …, x_k}` with `k < n` (toward contradiction).
-   * Form `Q(x) := ∏ᵢ (x − xᵢ)` (degree `k`).
-   * Then `P_n^*(x) · Q(x)` has constant sign on `(0, 1)` (sign-change
-     zeros pair off between the two factors), so
-     `∫₀¹ P_n^* · Q ≠ 0`.
-   * But `deg Q = k < n`, so by cycle 292's
-     `butcherShiftedLegendre_orthogonal_to_lower_degree`,
-     `∫₀¹ P_n^* · Q = 0`. Contradiction.
-   * Therefore `k ≥ n`. Combined with cycle 294's
-     `butcherShiftedLegendre_card_roots_le` (`≤ n` upper bound), exactly
-     `n` distinct sign-change roots in `(0,1)`.
-3. **§3 Project-hook inventory** (already shipped, axiom-clean):
-   * `butcherShiftedLegendre_orthogonal_to_lower_degree` (cycle 292,
-     `Section342.lean:3032`) — the load-bearing input.
-   * `butcherShiftedLegendre_orthogonal` (cycle 277).
-   * `butcherShiftedLegendre_natDegree` (cycle 273).
-   * `butcherShiftedLegendre_card_roots_le` (cycle 294) — upper bound.
-   * `Polynomial.continuous` + `intermediate_value_Ioo`.
-   * `Polynomial.roots`, `Polynomial.roots.toFinset`.
-4. **§4 Mathlib-hook checks** (verify with `lean_local_search` /
-   `lean_loogle` in cycle 302+ before consuming):
-   * Sign-change extraction: likely needs a custom helper
-     `Polynomial.signChangeRoots`; Mathlib does not appear to have a
-     direct "set of sign-change zeros" predicate.
-   * Constant sign on Ioo: continuity + `intermediate_value_Ioo`
-     pairwise argument.
-   * Polynomial product non-vanishing: `Polynomial.prod_X_sub_C`,
-     `Polynomial.eval_prod`.
-5. **§5 Phase decomposition** (4 phases, 3–4 cycle estimate):
-   * **Phase A.1 (this cycle, P1.b below)**: `signChangeRoots`
-     definition + cardinality-upper-bound lemma.
-   * **Phase A.2 (cycle 302)**: Sign-constancy of `P_n^*(x) · Q(x)`
-     on `(0,1)` when `Q` collects all sign-change roots.
-   * **Phase A.3 (cycle 303)**: Integral nonvanishing via positivity
-     on the sign-constant product.
-   * **Phase A.4 (cycle 304)**: Contradiction closure via (342a)
-     orthogonality. Ship `butcherShiftedLegendre_distinct_roots`.
-6. **§6 Risk assessment**: LOC estimates per phase, Aristotle
-   suitability ratings, alternative bypass routes (e.g. Sturm-sequence
-   argument as fallback if sign-change combinatorics stalls).
-7. **§7 Cycle 302 entry point**: Phase A.2 deliverable spec.
-
-**P1.b (Phase A.1 stepping stone)**: ship a single reusable lemma in
-`OpenMath/Chapter3/Section342.lean` (NOT in a new file — keep §342
-cohesive). Append immediately after
-`butcherShiftedLegendre_card_roots_le` (cycle 294 location).
-
-```lean
-/-- The Finset of distinct real roots of `p` in the open interval `(a, b)`.
-This is a subset of `p.roots.toFinset` whose cardinality is bounded by
-`p.natDegree`. -/
-noncomputable def Polynomial.rootsIn (p : Polynomial ℝ) (a b : ℝ) :
-    Finset ℝ :=
-  p.roots.toFinset.filter (fun x => x ∈ Set.Ioo a b)
-
-/-- The number of distinct real roots of `p` in `(a, b)` is bounded
-above by the natural degree of `p`. -/
-theorem Polynomial.rootsIn_card_le (p : Polynomial ℝ) (a b : ℝ) :
-    (p.rootsIn a b).card ≤ p.natDegree := by
-  unfold Polynomial.rootsIn
-  exact le_trans (Finset.card_filter_le _ _)
-    (le_trans (Multiset.toFinset_card_le _) (Polynomial.card_roots' p))
+```
+$ rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' \
+    OpenMath/Chapter3/Section342.lean \
+    OpenMath/Chapter3/Section342DistinctRootsHelpers.lean
+(no matches)
 ```
 
-Two non-vacuity `example`s on `butcherShiftedLegendre {1, 3}`
-confirming `(P_n^*.rootsIn 0 1).card ≤ n`, leveraging the cycle
-295/297 anchors. Both should close by `simpa using
-Polynomial.rootsIn_card_le _ _ _` after substituting
-`butcherShiftedLegendre_natDegree`.
+The only `exact h_*` line in `Section342.lean` is line 1366
+`exact h_diff.trans (Finset.sum_eq_zero …)` — this is genuine work
+(`.trans (...)` application), NOT a vacuous closer, and the scanner
+regex does NOT match (`\s*$` requires end-of-line after `h_\w+`, but
+`.trans` follows). The two `h_integrand_nonzero` hits at lines 5963 /
+6030 are `obtain ⟨…⟩ := h_integrand_nonzero` destructurings — none
+of the three patterns fire on these.
 
-**Note**: this is the *cardinality-upper-bound* piece. The
-*sign-change* refinement (distinguishing sign-changes from tangencies)
-is Phase A.2 work — the contradiction argument only needs sign-change
-roots, but for `P_n^*` every real root in `(0,1)` is automatically a
-sign change because `P_n^*` is squarefree (its derivative `n·P_n^*`
-has no common zero with `P_n^*` on `(0,1)` since the recurrence (342f)
-combined with linear independence forces simple roots). Document this
-in §5 of the scoping doc.
+This matches the pattern documented across cycles 010 / 013 / 014 /
+015 / 121 / 154 / 243–247 / 248 (see
+`.prover-state/issues/tautology_scanner_false_positives.md` and the
+six "phantom verdict" consultant notes in
+`.prover-state/issues/consultant_advice_cycle_*.md`). Standing
+recommendation applies: do NOT modify `scripts/autonomous_loop.py`
+(loop-maintainer territory); do NOT rename anything in the cycle 301
+deliverables; do NOT revert any cycle 301 work.
 
-**Why this work is always useful**:
-- If Aristotle returns COMPLETE in cycle 302, the scoping doc + Phase A.1
-  ship is ~50 LOC of clean reusable polynomial machinery, possibly
-  already needed by Aristotle's proof.
-- If Aristotle stalls / fails, cycle 302's planner has a concrete 3-phase
-  plan to execute.
+**Cycle 302 worker: re-run the grep above to confirm no new real
+tautology slipped in. If empty, the score is a phantom — pivot
+directly to §B.**
 
-LOC budget: **~150 LOC total** (scoping doc ~250 lines markdown ≈ 0 LOC
-of Lean; Phase A.1 is ~30–50 LOC of Lean + 10 LOC of `example`s).
-Aristotle suitability for P1.b: high (mechanical Finset cardinality).
+## §B — Cycle 302 target: `lem:342B` Phase A.1
 
-## §D — Branch A / A′ deliverable (Aristotle COMPLETE)
+Per cycle 301 task results §"Suggested next approach", with `lem:342A`
+closed the natural next §342 entity is **`lem:342B`** (Gaussian
+quadrature exactness on `[0, 1]` with `s` nodes from the zeros of
+`P_s^*`). Textbook statement (Butcher §342, p. 237, equation 342h):
 
-### P1 — Integrate Aristotle's general (342g) proof
+> Let `c₁, c₂, …, cₛ` denote the zeros of `P_s^*`. Then there exist
+> positive numbers `b₁, b₂, …, bₛ` such that
+>     `∫₀¹ φ(x) dx = ∑_{i=1}^s bᵢ φ(cᵢ)`
+> for any polynomial of degree less than `2s`. The `bᵢ` are unique.
 
-1. **Download** the result: `mcp__aristotle__download_result` for project
-   `5939f28b-c890-4b7f-be4f-ed0f31f0d0b5`. Extract the proof file to
-   `.prover-state/aristotle_results/cycle_301/`.
+The JSON's `transitive_dependencies` lists `thm:342C` (Gaussian
+quadrature order conditions equivalence — unformalised, multi-cycle).
+**This is a JSON extraction artifact**: the textbook proof of
+`lem:342B` does NOT use `thm:342C` — it's pure polynomial division
++ orthogonality reasoning, depending only on `lem:342A` (now closed)
+and Mathlib's polynomial machinery. Worker should NOT block on
+`thm:342C` and should NOT try to formalise the order-conditions
+framework (`B(2s)`, `C(s)`, `D(s)`, `E(s,s)`, `G(2s)`) — that's the
+entirely different and much larger §321 / §310 cluster work.
 
-2. **Read `ARISTOTLE_SUMMARY.md`** if present. Note the proof strategy
-   (sign-change / Sturm / IVT cardinality) and any helper lemmas
-   Aristotle introduced.
+### Textbook proof outline (Butcher §342)
 
-3. **Mirror cycle 281 integration pattern**: extract any new
-   reusable polynomial / sign / integral helpers to a new file
-   `OpenMath/Chapter3/Section342DistinctRootsHelpers.lean` (mirror
-   `Section342NormSqHelpers.lean`). Keep main `Section342.lean`
-   clean — only the public theorem `butcherShiftedLegendre_distinct_roots`
-   lives there.
+1. Choose `b₁, …, bₛ` so (342h) holds for any `φ` of degree `< s`.
+   Since `c₁, …, cₛ` are distinct, the choice is unique (Vandermonde).
+2. For `φ` of degree `< 2s`, write `φ = P_s^* · Q + R` with
+   `deg Q, deg R ≤ s − 1`. Then `∫P_s^* · Q = 0` by (342a)
+   orthogonality (applied with `m = s`, since `deg Q < s`).
+   So `∫φ = ∫R = ∑ bᵢ R(cᵢ) = ∑ bᵢ φ(cᵢ)` (last step uses
+   `P_s^*(cᵢ) = 0`).
+3. Positivity: set `φ(x) = (P_s^*(x) / (x − cᵢ))²`. Then `φ` has
+   degree `2(s−1) < 2s`, `φ(cⱼ) = 0` for `j ≠ i`, and `φ(cᵢ) > 0`.
+   So `0 < ∫₀¹ φ = bᵢ · φ(cᵢ)` ⇒ `bᵢ > 0`.
 
-4. **Headline theorem** target signature:
+### Phase decomposition (multi-cycle scope)
+
+This is **a multi-cycle target**. Decompose into independent
+single-cycle phases. Cycle 302 deliverable is **Phase A.1 only**.
+Do NOT attempt the full lemma in one cycle.
+
+* **Phase A.1 (cycle 302 target)** — extract canonical zero
+  enumeration `butcherShiftedLegendre_zeros (n : ℕ) : Fin n → ℝ`
+  plus 3 spec lemmas. ~50–80 LOC.
+* **Phase A.2 (cycle 303)** — define quadrature weights (via
+  Lagrange interpolation integrals) and prove uniqueness for
+  `deg < s`.
+* **Phase A.3 (cycle 304)** — prove exactness for `deg < 2s` via
+  polynomial division + (342a). Aristotle-suitable.
+* **Phase A.4 (cycle 305)** — prove positivity via the
+  `(P_s^*/(X − cᵢ))²` witness.
+* **Phase A.5 (cycle 306)** — assemble `lem:342B` headline.
+
+### Phase A.1 concrete deliverables for cycle 302
+
+In `OpenMath/Chapter3/Section342.lean`, appended at the end (after
+the cycle 301 `_card_le` / `_card_ge` / `_n_distinct_real_zeros`
+block), ship **four new symbols**, all axiom-clean
+(`[propext, Classical.choice, Quot.sound]`):
+
+1. **`butcherShiftedLegendre_zeros (n : ℕ) : Fin n → ℝ`**
+   (`noncomputable def`). The canonical strictly-increasing
+   enumeration of the `n` distinct real zeros of `P_n^*` in
+   `(0, 1)`. Define via `Classical.choose` on cycle 301's
+   `_n_distinct_real_zeros` followed by `Finset.orderEmbOfFin`
+   (preferred over `Finset.equivFin` — gives strict-monotonicity
+   for free).
+
+   Recommended implementation sketch (verify Mathlib lemma names
+   with `lean_local_search` before committing):
 
    ```lean
-   theorem butcherShiftedLegendre_distinct_roots (n : ℕ) :
-       ∃ rs : Fin n → ℝ,
-         Function.Injective rs ∧
-         (∀ i, rs i ∈ Set.Ioo (0 : ℝ) 1) ∧
-         (∀ i, (butcherShiftedLegendre n).eval (rs i) = 0)
+   noncomputable def butcherShiftedLegendre_zeros (n : ℕ) : Fin n → ℝ :=
+     have h := butcherShiftedLegendre_n_distinct_real_zeros n
+     have h1 : (Classical.choose h).card = n := (Classical.choose_spec h).1
+     fun i => (Classical.choose h).orderEmbOfFin h1 i
    ```
 
-   (Match Aristotle's exact signature if it differs — but verify the
-   conclusion captures "n distinct real zeros in (0, 1)" per the
-   textbook entity JSON.)
+   If `orderEmbOfFin` is named differently in current Mathlib (verify
+   via `lean_local_search "orderEmbOfFin"` early), fall back to:
 
-5. **Verify**:
-   * `lake env lean OpenMath/Chapter3/Section342.lean` exit 0.
-   * `lake env lean OpenMath/Chapter3.lean` exit 0 (aggregator).
-   * `lean_verify` axiom-clean on the new theorem
-     (`[propext, Classical.choice, Quot.sound]`).
-   * Sorry count remains 0.
+   ```lean
+   noncomputable def butcherShiftedLegendre_zeros (n : ℕ) : Fin n → ℝ :=
+     have h := butcherShiftedLegendre_n_distinct_real_zeros n
+     have h1 : (Classical.choose h).card = n := (Classical.choose_spec h).1
+     fun i => ((Classical.choose h).equivFin.symm ⟨i, h1 ▸ i.isLt⟩).val
+   ```
 
-6. **Cross-check against empirical anchors** (cycles 295–300):
-   each `butcherShiftedLegendre_{one,three,five,seven,nine,eleven,
-   thirteen}_roots` should be derivable as a corollary of the general
-   theorem specialized at the corresponding `n`. **Do NOT delete the
-   empirical anchors** — they serve as defensive regression tests and
-   provide explicit closed-form root witnesses (which the existential
-   general theorem does not). Add a `/-- Cross-check: the cycle 300
-   `_thirteen_roots` empirical anchor is consistent with the general
-   theorem. -/` comment near the headline.
+   The `orderEmbOfFin` form is preferred.
 
-7. **Update bookkeeping** (Branch A only):
-   * `extraction/formalization_data/lean_status.json`: `lem:342A`
-     `partial` → `formalized`, `lean_symbol` updated to include
-     `butcherShiftedLegendre_distinct_roots`, `last_modified` to cycle 301.
-   * `plan.md`: `[~] lem:342A` → `[x] lem:342A` with note "all 7
-     clauses (342a)–(342g) closed cycle 271–301".
-   * `.prover-state/issues/lem_342A_g_zeros_scoping.md`: append "Cycle 301
-     closure" section marking the scoping doc resolved.
+2. **`butcherShiftedLegendre_zeros_mem_Ioo (n : ℕ) (i : Fin n) :
+   butcherShiftedLegendre_zeros n i ∈ Set.Ioo (0 : ℝ) 1`** —
+   destructure `Classical.choose_spec` (second conjunct) at the
+   element produced by `orderEmbOfFin i`, which is by construction
+   a member of the chosen `Finset`.
 
-8. **Faithfulness audit**: per CLAUDE.md pre-commit checklist, confirm
-   * No new `axiom` / `constant` declarations.
-   * No `sorry` in the integrated proof.
-   * The Lean conclusion matches the textbook clause (342g) word-for-word
-     in essence ("`P_n^*` has `n` distinct real zeros in `(0, 1)`").
-   * No hypotheses stronger than `n : ℕ` (the textbook statement is
-     unconditional in `n`, including `n = 0` where the empty `Fin 0 → ℝ`
-     trivially witnesses).
+3. **`butcherShiftedLegendre_zeros_isRoot (n : ℕ) (i : Fin n) :
+   (butcherShiftedLegendre n).eval (butcherShiftedLegendre_zeros n i)
+   = 0`** — destructure `Classical.choose_spec` (third conjunct).
 
-## §E — What NOT to do
+4. **`butcherShiftedLegendre_zeros_injective (n : ℕ) :
+   Function.Injective (butcherShiftedLegendre_zeros n)`** — from
+   `OrderEmbedding.injective` if using `orderEmbOfFin`, or from
+   `Equiv.injective` + underlying-set distinctness otherwise.
 
-* **Do NOT extend the empirical ladder to `n = 15`**. Planner
-  explicitly warned in cycle 300 against this. Marginal value of an
-  eighth concrete anchor is low; defer indefinitely unless Aristotle is
-  cancelled in cycle 302+ and the manual closure stalls.
+### Non-vacuity (P2, cycle 302)
 
-* **Do NOT re-poll Aristotle within cycle 301**. CLAUDE.md single-poll
-  rule. Even if the first poll shows IN_PROGRESS at 30 %, do NOT poll
-  again later in the cycle hoping for COMPLETE.
+Two small `example`s exercising the new symbols on concrete `n`:
 
-* **Do NOT cancel Aristotle this cycle.** Cycle 285 three-stall protocol
-  requires three consecutive flat / regressed observations. Cycle 301
-  is at most obs #1.
+* **`n = 1`** (REQUIRED): `butcherShiftedLegendre_zeros 1 ⟨0, by omega⟩
+  = 1/2`. May not be by `rfl` (depends on `orderEmbOfFin` reduction);
+  if not, prove via cycle 294's `butcherShiftedLegendre_one_root`
+  membership + zero-uniqueness on the singleton root set.
 
-* **Do NOT touch `OpenMath/Chapter4/Section441.lean`**. GPFS pathology
-  is 43+ timeouts since cycle 182; skip per
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`. Section381 / 342 /
-  300 / 310 / 311 compile healthy and remain the cycle's scope.
+* **`n = 2`** (OPTIONAL, stretch): the explicit Gauss–Legendre 2-point
+  nodes `(3 ± √3) / 6 ∈ (0, 1)`. Use cycle 294's
+  `butcherShiftedLegendre_two_roots` for the underlying set; the
+  strict-monotone order follows from `(3 − √3)/6 < (3 + √3)/6` via
+  `nlinarith [Real.sqrt_pos.mpr (by norm_num : (0:ℝ) < 3)]`.
 
-* **Do NOT introduce sorry-first scaffolds for `lem:342B`,
-  `thm:342C`, or `cor:342D`**. Each is blocked on either (342g)
-  (`lem:342B` direct) or on simplifying-assumption infrastructure
-  (`thm:342C`); attempting any of them this cycle violates the
-  cycle 200 / 201 / 138 / 139 / 149 / 150 sorry-rollback precedent.
+If the `n = 2` witness proves too fiddly within the cycle budget,
+ship only the `n = 1` witness and flag the `n = 2` form for cycle 303
+as an add-on.
 
-* **Do NOT pivot to a fresh §381 / §310 entity unless Aristotle
-  returns FAILED.** The §342 closure path has clear momentum and the
-  manual closure scoping doc unblocks 3 cycles of substantive work.
+### Lean tactics — Mathlib hooks to verify before use
 
-* **Do NOT raise `maxHeartbeats` above 200000.** If sign-change
-  combinatorics stall on simp, decompose into named intermediate
-  lemmas (cycle 280's `matrix7_oneMinusZSmul_det` precedent).
+Run `lean_local_search` / `lean_loogle` at cycle start to confirm
+names; the names below are best-effort accurate but Mathlib has had
+recent renaming churn:
 
-* **Do NOT modify `scripts/autonomous_loop.py` or the prompt-builder**.
-  Tautology-scanner / empty-stuck-on phantoms are loop-maintainer
-  territory per `.prover-state/issues/tautology_scanner_false_positives.md`.
+| Goal | Candidate lemma |
+|---|---|
+| `Finset.orderEmbOfFin` (canonical ordered enumeration of a finset of size `n`) | `Finset.orderEmbOfFin` (`Mathlib.Order.OrderBoundedFinset`) |
+| `OrderEmbedding.injective` | `OrderEmbedding.injective` or `StrictMono.injective` |
+| `Classical.choose_spec` on a triple-conjunct existential | standard; destructure with `.1` / `.2.1` / `.2.2` or `obtain` |
+| `Set.mem_Ioo` | standard |
+| `Polynomial.IsRoot` ↔ `Polynomial.eval = 0` | `Polynomial.IsRoot.def` |
+| `Finset.orderEmbOfFin_mem` (its image lies in the underlying set) | search via `lean_local_search "orderEmbOfFin"` for the membership-spec lemma |
 
-* **Do NOT submit a new Aristotle job for (342g) in cycle 301**. One
-  is already in flight; firing a second wastes the slot. If `5939f28b`
-  must be cancelled in cycle 302+, the resubmission strategy goes in
-  the new scoping doc, not this strategy.
+### Risk profile
 
-## §F — Risk register (cycle 301-specific)
+| Risk | Mitigation |
+|---|---|
+| `orderEmbOfFin` API drift / name change | Confirm via `lean_local_search "orderEmbOfFin"` before committing; fall back to `Finset.equivFin` if needed |
+| Cycle 301's existential is over `Finset ℝ`, not `Finset (Set.Ioo 0 1)` — coercion friction | Both `card` + membership specs come from the same `Classical.choose_spec`; destructure all three conjuncts in one shot |
+| `n = 0` edge case (vacuous `Fin 0`) | `orderEmbOfFin` handles `n = 0` trivially (empty function); no special-casing needed |
+| `n = 1` example's `rfl` reduction fails on `orderEmbOfFin` | Use the singleton-Finset uniqueness route: `Finset.singleton_iff_unique` + `butcherShiftedLegendre_one_root` |
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| Aristotle returns COMPLETE with proof relying on a Mathlib gap | low | Integration step §D.3 isolates helpers in a dedicated file; if a gap appears (e.g. `Polynomial.sign_variations` not in Mathlib), close it with a hand-written lemma in the helper file |
-| `rootsIn_card_le` (P1.b) fails because `Polynomial.card_roots'` signature drifted | low | Cycle 294 already uses `Polynomial.card_roots'` successfully in `butcherShiftedLegendre_card_roots_le`; reuse that exact pattern |
-| `Multiset.toFinset_card_le` returns the wrong shape | low | Inline-test with `lean_multi_attempt` if first compile fails |
-| `Polynomial.rootsIn` namespace collision (Mathlib may already export this name) | medium | Verify with `lean_local_search "Polynomial.rootsIn"` before introducing; if collision, use `butcherShiftedLegendre.rootsIn` or `Section342.rootsIn` |
-| Aristotle COMPLETE but proof uses `≥ 200000` heartbeats | low | Surgical decomposition mirroring cycle 281's `Section342NormSqHelpers.lean` extraction |
-| Scoping doc Phase A.1 lemma trivially follows from `card_roots_le` (cycle 294) | medium | Acceptable — the value is the scoping doc and Phase A.2/A.3 setup, not the trivial Phase A.1 |
-| Phase A.1 ships axiom-clean but adds a tautology-scanner false positive | low | Rename any `h_<name>` → `h<name>` proactively per cycle 154 precedent |
+## §C — DO NOT attempt this cycle
 
-## §G — Deliverable bar for cycle 301
+1. **DO NOT attempt the full `lem:342B`** (uniqueness + exactness +
+   positivity). That is 4–5 cycles of work; cycle 302 ships Phase A.1
+   only.
 
-**Minimum acceptable** (per CLAUDE.md "zero-change cycle is unacceptable"):
-* Aristotle poll executed and observation recorded.
-* Either **integration of (342g) general proof** (Branch A/A′) OR
-  **scoping doc + Phase A.1 stepping stone** (Branches B/C/D/E).
-* Axiom-clean (`[propext, Classical.choice, Quot.sound]` only); sorry
-  count remains 0.
-* Task results `.prover-state/task_results/cycle_301.md` documents the
-  Aristotle observation, the branch taken, and the deliverable's
-  faithfulness audit.
+2. **DO NOT formalise `thm:342C`** (Gaussian Quadrature Order
+   Conditions Equivalence). It is listed in `lem:342B`'s
+   `transitive_dependencies` but the textbook proof of `lem:342B`
+   does NOT use it. `thm:342C` requires the order-conditions
+   framework (`B(2s)` / `C(s)` / `D(s)` / `E(s,s)` / `G(2s)`) which
+   depends on `lem:310B` Phase A.3+ — that's multi-cycle
+   infrastructure scoped separately in
+   `.prover-state/issues/lem_310B_plan.md`.
 
-**Stretch (Branch A only)**:
-* Update `lean_status.json` `lem:342A` → `formalized`.
-* Cross-check all seven cycle 295–300 anchors derive from the general
-  theorem (state as a comment block, not new theorems).
+3. **DO NOT modify `scripts/autonomous_loop.py`.** The cycle 301
+   score=-1 is a tautology scanner false positive (see §A). The
+   scanner over-firing is loop-maintainer territory per
+   `tautology_scanner_false_positives.md` and the six "consultant
+   advice" issue files. Worker rule per CLAUDE.md.
 
-**Stretch (Branches B/C/D/E)**:
-* Phase A.1 stepping stone ships with two non-vacuity `example`s
-  (n = 1, n = 3).
-* Scoping doc has all 7 sections (§1–§7) populated with at least one
-  paragraph each.
+4. **DO NOT rename any cycle 301 symbols** in response to the
+   scanner verdict. The grep confirms zero real matches; renaming
+   would be cosmetic churn that propagates into the codebase.
 
-## §H — Cycle 302 outlook (advisory only)
+5. **DO NOT attempt to compile `OpenMath/Chapter4/Section441.lean`.**
+   43+ consecutive GPFS timeouts since cycle 182 (see
+   `.prover-state/issues/cycle_182_gpfs_slowness.md`). Skip §441
+   work entirely; it remains blocked on cluster-admin remediation.
 
-Depending on cycle 301's Aristotle observation:
-* **If COMPLETE in cycle 301**: cycle 302 planner picks a fresh entity
-  pivot. Natural candidates: `lem:342B` (Gaussian quadrature exactness;
-  now unblocked since (342g) provides the zeros) or pivot back to
-  `lem:310B` Phase A.3 (TreeAutomorphism strengthening).
-* **If still IN_PROGRESS in cycle 302**: cycle 302 ships Phase A.2 of
-  the manual closure plan (sign-constancy of `P_n^* · Q` on `(0, 1)`).
-  Aristotle observation #2 of 3.
-* **If FAILED or cancelled in cycle 302**: cycle 302 ships Phase A.2,
-  plus optionally a defensive resubmission strategy in the scoping doc.
+6. **DO NOT submit Aristotle this cycle.** Phase A.1 is small
+   (~50–80 LOC) and entirely mechanical — `Classical.choose_spec`
+   destructuring plus a couple of order-embedding API calls.
+   Aristotle has no advantage on this shape. Save the slot for
+   Phase A.3 (the exactness-via-polynomial-division step is
+   genuinely Aristotle-suitable — schedule for cycle 304).
 
----
+7. **DO NOT introduce `sorry` / `axiom` / `constant`.** Cycles 138 /
+   149 / 200 / 201 rollback precedents apply: sorry-first scaffolds
+   for multi-cycle work get rolled back when they don't close.
+   Phase A.1 is single-cycle axiom-clean or skipped entirely.
 
-Cycle 300 closed a complete and verified empirical ladder. Cycle 301
-executes one Aristotle poll, branches cleanly, and ships substantive
-work regardless of outcome. No cherry-picking, no scope creep.
+8. **DO NOT raise `maxHeartbeats` above 200000.** If
+   `orderEmbOfFin` reduction is slow, decompose via `set` /
+   `have hf := ...` rather than bumping.
+
+9. **DO NOT delete the cycle 294–300 empirical anchors**
+   (`butcherShiftedLegendre_{one,three,five,seven,nine,eleven,
+   thirteen}_roots`). They are retained as defensive regression
+   witnesses providing explicit closed-form sub-interval brackets
+   that the existential headline lacks (per cycle 301 task results
+   §D.6).
+
+10. **DO NOT bump `lean_status.json` for `lem:342B`.** Phase A.1 is
+    infrastructure, not the lemma itself. Status stays `unformalized`
+    until cycle 306 Phase A.5 lands.
+
+## §D — Faithfulness check (cycle 302)
+
+For Phase A.1's four new symbols:
+
+* **`butcherShiftedLegendre_zeros`** is a `def`, NOT a textbook
+  entity (Butcher names the zeros `c₁, …, cₛ` informally but does
+  not define them as an indexed family). Cycle 302's
+  `butcherShiftedLegendre_zeros n i` realises this family via a
+  noncomputable canonical choice; this is **Lean engineering, not a
+  faithfulness deviation**. Document in the docstring that this is
+  the canonical strictly-increasing enumeration of the n distinct
+  zeros from cycle 301's existential.
+
+* **`butcherShiftedLegendre_zeros_mem_Ioo` / `_isRoot` /
+  `_injective`** are direct consequences of cycle 301's
+  `_n_distinct_real_zeros` (the existential's three conjuncts) plus
+  `OrderEmbedding`'s strict monotonicity. No textbook content beyond
+  the (342g) clause already shipped. Stating them as separate named
+  theorems is for downstream ergonomics; this is standard Lean
+  practice (cf. cycle 196's `IsPReducible.sBar` /
+  `IsPReducible.partition` destructor API).
+
+* **Hypothesis-strength check**: all four symbols are unconditional
+  in `n : ℕ` (matching the textbook's "n = 0, 1, 2, …" quantification).
+
+* **Tautology / identity check**: none of the four symbols re-export
+  a hypothesis or apply `exact h`. The `_zeros` def constructs a
+  canonical witness via `orderEmbOfFin`; the three specs destructure
+  `Classical.choose_spec` and apply `OrderEmbedding`-level lemmas.
+  No `exact` closers on hypotheses with `h_` prefix anywhere.
+
+## §E — Tooling and ordering
+
+1. **First**: re-verify cycle 301 is at HEAD and axiom-clean:
+   ```bash
+   git log -1 --format='%H %s'  # expect 4d07773 Cycle 301 ...
+   wc -l OpenMath/Chapter3/Section342.lean  # expect ~6090
+   grep -c sorry OpenMath/Chapter3/Section342.lean  # expect 0
+   echo '#print axioms OpenMath.Chapter3.Section342.butcherShiftedLegendre_n_distinct_real_zeros' \
+     | lake env lean --stdin OpenMath/Chapter3/Section342.lean
+   # expect [propext, Classical.choice, Quot.sound] only
+   ```
+   If any check fails, escalate; do not proceed to Phase A.1.
+
+2. **Second**: re-grep for tautology patterns (§A above). Confirm
+   zero matches. Move on.
+
+3. **Third**: read cycle 301's
+   `butcherShiftedLegendre_n_distinct_real_zeros` signature
+   (~line 6090) to confirm the existential shape:
+   ```
+   ∃ xs : Finset ℝ,
+     xs.card = n ∧
+     (∀ x ∈ xs, x ∈ Set.Ioo 0 1) ∧
+     (∀ x ∈ xs, (butcherShiftedLegendre n).eval x = 0)
+   ```
+
+4. **Fourth**: ship Phase A.1's four symbols + non-vacuity example(s).
+   Run `lake env lean OpenMath/Chapter3/Section342.lean`; expect
+   warm-rebuild ~30s (only the appended block elaborates fresh).
+   Run `#print axioms` on each new symbol.
+
+5. **Fifth**: do NOT update `extraction/formalization_data/lean_status.json`
+   for `lem:342B` (status stays `unformalized`).
+
+6. **Sixth**: do NOT update `plan.md`'s `lem:342B` row (still `[ ]`).
+
+7. **Seventh**: write `task_results/cycle_302.md` per the standard
+   format, documenting Phase A.1 deliverables + Phase A.2 entry
+   point for cycle 303.
+
+## §F — Cycle 303+ outlook (informational)
+
+* **Cycle 303 (Phase A.2)**: Define quadrature weights via Lagrange
+  interpolation integrals
+  `butcherShiftedLegendre_quadratureWeights (n : ℕ) : Fin n → ℝ`
+  with `bⱼ := ∫₀¹ Lⱼ(x) dx` where
+  `Lⱼ(x) = ∏_{k ≠ j} (x - cₖ) / (cⱼ - cₖ)`. Prove exactness for
+  `deg < n` polynomials (interpolation is exact at `n` distinct
+  nodes for `deg < n` polynomials). ~100–150 LOC.
+
+  Alternative: Vandermonde via `Matrix.det_vandermonde`. Lagrange is
+  cleaner; prefer it unless Mathlib's Lagrange-interpolation lemmas
+  are missing.
+
+* **Cycle 304 (Phase A.3)**: Polynomial division `φ = P_s^* · Q + R`
+  with `deg Q, deg R < s`. Apply (342a) orthogonality to
+  `∫₀¹ P_s^* · Q = 0`, derive `∫φ = ∫R = Σ bᵢ R(cᵢ) = Σ bᵢ φ(cᵢ)`.
+  ~150 LOC. **Aristotle-suitable** (polynomial division +
+  integration + (342a) is structural).
+
+* **Cycle 305 (Phase A.4)**: Positivity. The polynomial
+  `(P_s^*(X) / (X − cᵢ))²` has degree `2(s − 1) < 2s`, so Phase A.3's
+  exactness applies. Plug in and derive `bᵢ > 0`. ~80 LOC.
+
+  Mathlib hook: `Polynomial.div_X_sub_C` or hand-rolled. Confirm
+  `P_s^*(X) = (X − cᵢ) · Qᵢ(X)` factorization is exact (no
+  remainder, since `cᵢ` is a root) — uses `Polynomial.dvd_iff_isRoot`.
+
+* **Cycle 306 (Phase A.5)**: Assemble `lem:342B` headline. Existential
+  packaging plus uniqueness. ~50 LOC. Update `lean_status.json` /
+  `plan.md` to mark `lem:342B` `formalized`.
+
+Total: 5 cycles. Mirrors the `lem:342A` ladder (cycles 271–301, ~30
+cycles) but much shorter because the polynomial-only proof avoids
+real-analysis machinery.
+
+## §G — Summary directive
+
+1. (5 min) Verify cycle 301 health per §E steps 1–2.
+2. (rest of cycle) Ship Phase A.1 of `lem:342B` per §B: four new
+   symbols (`butcherShiftedLegendre_zeros` + 3 specs) plus 1–2
+   non-vacuity examples, in `OpenMath/Chapter3/Section342.lean`.
+3. Axiom-clean target. ~50–80 LOC. Sorry count stays 0.
+4. No `lean_status.json` / `plan.md` updates for `lem:342B`
+   (still `unformalized`).
+5. Write `task_results/cycle_302.md` documenting Phase A.1
+   deliverables and Phase A.2 entry point.
+
+Cycle 302 is infrastructure-only on `lem:342B`. Phase A.1 establishes
+the canonical zero enumeration that Phases A.2–A.5 will consume.
