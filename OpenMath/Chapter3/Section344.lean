@@ -466,4 +466,120 @@ example :
   butcherLobatto_orthogonal_to_lower_degree 3 (by norm_num) (Polynomial.C 1)
     (by simp)
 
+/-! ## Deliverable C.1 — Small-`s` explicit roots
+
+Each small-`s` Radau/Lobatto polynomial from Deliverable C factors
+cleanly with rational roots in `[0, 1]`. These named root theorems
+are the abscissae-side anchor for downstream RKTableau construction
+(planned for cycle 320+) and the small-`s` `R.natDegree < s`
+Lagrange-interpolation collapse needed for the eventual
+polynomial-exactness theorem (Phase B.2).
+
+| Polynomial         | Roots          |
+|--------------------|----------------|
+| `butcherRadauI 1`  | `0`            |
+| `butcherRadauI 2`  | `0, 2/3`       |
+| `butcherRadauII 1` | `1`            |
+| `butcherRadauII 2` | `1/3, 1`       |
+| `butcherLobatto 2` | `0, 1`         |
+| `butcherLobatto 3` | `0, 1/2, 1`    |
+-/
+
+/-- **Butcher §344 small-`s` roots — Radau I at `s = 1`**:
+the single root of `butcherRadauI 1 = 2X` is the left endpoint
+`x = 0`. This is the named-theorem version of the cycle 318
+`example` immediately above, packaged for downstream abscissae-table
+use. -/
+theorem butcherRadauI_one_root :
+    (butcherRadauI 1).eval (0 : ℝ) = 0 := by
+  rw [butcherRadauI_one]
+  simp
+
+/-- **Butcher §344 small-`s` roots — Radau I at `s = 2`**:
+the two roots of `butcherRadauI 2 = 6X² − 4X = 2X(3X − 2)` are
+`x = 0` (left endpoint) and `x = 2/3` (interior). The endpoint
+matches Radau I's `c_1 = 0` constraint. -/
+theorem butcherRadauI_two_roots :
+    (butcherRadauI 2).eval (0 : ℝ) = 0 ∧
+    (butcherRadauI 2).eval (2/3 : ℝ) = 0 ∧
+    (0 : ℝ) ≠ 2/3 := by
+  refine ⟨?_, ?_, ?_⟩
+  · rw [butcherRadauI_two]
+    simp
+  · rw [butcherRadauI_two]
+    simp only [Polynomial.eval_sub, Polynomial.eval_mul,
+               Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  · norm_num
+
+/-- **Butcher §344 small-`s` roots — Radau II at `s = 1`**:
+the single root of `butcherRadauII 1 = 2X − 2` is the right endpoint
+`x = 1`. This matches Radau II's `c_s = 1` constraint with one
+stage. -/
+theorem butcherRadauII_one_root :
+    (butcherRadauII 1).eval (1 : ℝ) = 0 := by
+  rw [butcherRadauII_one]
+  simp
+
+/-- **Butcher §344 small-`s` roots — Radau II at `s = 2`**:
+the two roots of `butcherRadauII 2 = 6X² − 8X + 2 = 2(3X − 1)(X − 1)`
+are `x = 1/3` (interior) and `x = 1` (right endpoint). The endpoint
+matches Radau II's `c_s = 1` constraint. -/
+theorem butcherRadauII_two_roots :
+    (butcherRadauII 2).eval (1/3 : ℝ) = 0 ∧
+    (butcherRadauII 2).eval (1 : ℝ) = 0 ∧
+    (1/3 : ℝ) ≠ 1 := by
+  refine ⟨?_, ?_, ?_⟩
+  · rw [butcherRadauII_two]
+    simp only [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+               Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  · rw [butcherRadauII_two]
+    simp only [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+               Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  · norm_num
+
+/-- **Butcher §344 small-`s` roots — Lobatto at `s = 2`**:
+the two roots of `butcherLobatto 2 = 6X² − 6X = 6X(X − 1)` are both
+endpoints `x = 0` and `x = 1`. Matches Lobatto's
+`c_1 = 0`, `c_s = 1` constraints with two stages (no interior
+abscissae). -/
+theorem butcherLobatto_two_roots :
+    (butcherLobatto 2).eval (0 : ℝ) = 0 ∧
+    (butcherLobatto 2).eval (1 : ℝ) = 0 ∧
+    (0 : ℝ) ≠ 1 := by
+  refine ⟨?_, ?_, ?_⟩
+  · rw [butcherLobatto_two]
+    simp
+  · rw [butcherLobatto_two]
+    simp
+  · norm_num
+
+/-- **Butcher §344 small-`s` roots — Lobatto at `s = 3`**:
+the three roots of `butcherLobatto 3 = 20X³ − 30X² + 10X
+= 10X(2X − 1)(X − 1)` are `x = 0` (left endpoint), `x = 1/2`
+(interior), and `x = 1` (right endpoint). The endpoints match
+Lobatto's `c_1 = 0`, `c_s = 1` constraints; the midpoint `1/2`
+is the unique interior abscissa. -/
+theorem butcherLobatto_three_roots :
+    (butcherLobatto 3).eval (0 : ℝ) = 0 ∧
+    (butcherLobatto 3).eval (1/2 : ℝ) = 0 ∧
+    (butcherLobatto 3).eval (1 : ℝ) = 0 ∧
+    (0 : ℝ) ≠ 1/2 ∧ (0 : ℝ) ≠ 1 ∧ (1/2 : ℝ) ≠ 1 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [butcherLobatto_three]
+    simp
+  · rw [butcherLobatto_three]
+    simp only [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+               Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  · rw [butcherLobatto_three]
+    simp only [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+               Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  · norm_num
+  · norm_num
+  · norm_num
+
 end OpenMath.Chapter3.Section344
