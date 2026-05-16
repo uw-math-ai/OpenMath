@@ -1,275 +1,372 @@
-# Cycle 335 strategy
+# Cycle 336 strategy — Pivot break: scoping doc for `def:422B` + small Phase 0 deliverable
 
-## Context
+**Cycle goal**: Break the 14-cycle §344 streak (cycles 322–335) cleanly by
+opening a new §422 (Chapter 4 LMM ↔ §383 group bridge) work track via a
+multi-phase scoping document, plus a small auxiliary Lean ship that
+verifies the prerequisite infrastructure is healthy without committing
+to multi-cycle work this cycle.
 
-Cycle 334 shipped `butcherLobattoIIIA_three_satisfiesC` (C(3) certificate
-for the s=3 Lobatto IIIA tableau) axiom-clean, closing 18 consecutive
-§344 cycles (322–334). Sorry count remains 0; tautology scanner clean;
-no Aristotle results pending. The cycle 334 worker recommended cycle
-335 break the §344 streak and pivot to a fresh entity, while listing
-`butcherLobattoIIIDirect_three` as a safe parking-orbit option **if
-the cycle wants to pair the §344 ship with a pivot scoping doc**.
+The cycle 335 P2 menu (`.prover-state/issues/cycle_336_pivot_options.md`)
+listed four candidates (B `thm:302A`, A `def:422B`, C `thm:302B`, D
+`thm:384A` partial). After review (§A below): all four have hidden
+multi-cycle complications. The cleanest cycle-336 contribution is a
+**scoping document for `def:422B`** (modelled on `lem_310B_plan.md`,
+`lem_441A_phase_C_scoping.md`, `def_530B_scaffold_strategy.md`), plus
+an axiom-clean Phase 0 Lean deliverable confirming the
+`LinearMultistepMethod ↔ PhiEquivalent.setoidSigma` prerequisite stack
+is wired up.
 
-## Target
+---
 
-**Primary (P1, code ship)**: Ship `butcherLobattoIIIDirect_three :
-RKTableau 3` (unsuffixed Lobatto III family, C(s−1) + last-column-zero
-variant per Butcher Table 344(I) ch03.txt:5221 + printed table at
-ch03.txt:5372–5378) plus:
+## §A — Why the other cycle 335 P2 candidates were ruled out
 
-* `SatisfiesB 4` certificate (Lobatto III at s=3 achieves classical
-  order `p = 2s − 2 = 4`, so B(4) is maximal — mechanical 4-arm
-  `interval_cases k` + `simp + norm_num`).
-* `butcherLobattoIIIDirect_three_satisfiesC : SatisfiesC 2` certificate
-  (the C(s−1) = C(2) defining condition — cycle 331's 4-arm recipe at
-  s=2 scaled to 9 arms at s=3, mechanical
-  `fin_cases i <;> interval_cases k <;> simp [..., Fin.sum_univ_three]
-  <;> norm_num`).
+Do **NOT** spend cycle 336 re-debating this. The audit below is the
+result of cycle 336's planner analysis; treat it as decided.
 
-**Secondary (P2, scoping doc only)**: After P1 ships, write a brief
-scoping note at `.prover-state/issues/cycle_336_pivot_options.md`
-enumerating 3–4 fresh-entity candidates for cycle 336+ with their JSON
-statements, dependency status, and rough LOC estimates. Goal: give
-cycle 336's planner a head start on choosing the §344-breaking pivot
-target. Do **NOT** scope deeply — this is a 1-page menu, not a
-multi-phase plan.
+### Candidate B — `thm:302A` (Some combinatorial questions)
 
-## Why this target
+* **Hidden blocker**: per
+  `.prover-state/issues/cycle_250_strategy_alpha_definition_error.md`,
+  `RootedTree.alphaWeight` (shipped cycle 250) is **defined as the
+  closed-form RHS** `r(t)! / (σ(t) · γ(t))`, NOT as the labelling
+  count. To honestly formalise thm:302A, we need a separate
+  `alphaCount : RootedTree → ℕ` defined as the count of constrained
+  labellings, then prove `(alphaCount t : ℝ) = alphaWeight t`.
+* The `alphaCount` infrastructure requires the **strengthened**
+  `TreeAutomorphism` predicate that cycle 263 deferred. Cycle 263
+  shipped a *weakened* root-fixing-only `TreeAutomorphism` to dodge the
+  `feedback_rootedtree_nested_induction.md` mutual-recursion pitfall;
+  per cycle 263 update in `lem_310B_plan.md` Phase A.2 closure, the
+  Setoid is **coarser** than Butcher's quotient — would over-count.
+* **Decision**: multi-cycle (Phase A.3 of `lem_310B_plan.md` first
+  — strengthen `TreeAutomorphism` + orbit-count theorem). Defer.
 
-1. **Mechanical safety**: The §344 D-ladder has shipped 13 consecutive
-   axiom-clean cycles (322–334). The cycle-331 template for
-   `butcherLobattoIIIDirect_two` (C(s−1) variant) is verbatim portable
-   to s=3 with one extra row + one extra `Fin.sum_univ_three` simp
-   lemma. Risk of stall is near-zero.
+### Candidate A — `def:422B` (underlying one-step method, LMM ↔ G_1)
 
-2. **Breaks the streak partially**: Pairing the §344 ship with a P2
-   scoping doc moves cycle 336+ off the §344 path explicitly. Cycle
-   336 then ships the substantive pivot (chosen from the P2 menu).
+* **Surface claim** (cycle 335 P2 doc): "1–2 cycles, builds on §383
+  `instGroup_phi` and `Φ` already done."
+* **Reality** (after reading entity JSON):
+  > "Corresponding to a linear multistep method [α, β], the member of
+  > G_1 represents the 'underlying one-step method'."
+  The textbook *names* a term (the underlying one-step method) that
+  the surrounding §422 prose constructs **inductively on the order of
+  trees** via equation (422a). The construction is the load-bearing
+  content of `thm:422A` (also unformalized) and Butcher §422.
+* def:422B as a standalone `def` without the construction is either
+  (i) **definition smuggling** (defining "underlying one-step method"
+  as "the thing satisfying eq (422a)" without producing it), or (ii)
+  **the construction itself** (multi-cycle tree-recursive `η` ship).
+* **Decision**: multi-cycle. → Scope as `def_422B_path.md` this cycle;
+  ship Phase 0 prerequisite verification only.
 
-3. **Lobatto III saturation at s=3**: With this ship, the §344 Lobatto
-   family has all three small-s ladders represented:
-   * IIIA: cycle 323 (s=2) + cycle 333 (s=3)
-   * IIIB: cycle 327 (s=3 only — does not exist at s=2)
-   * IIIC: cycle 330 (s=2)
-   * III: cycle 331 (s=2), **cycle 335 (s=3)** ← saturating
-   Clean closure milestone for the §344 small-s direct-form ladder.
+### Candidate C — `thm:302B` (Rooted tree generating function identity)
 
-## Approach
+* Requires `PowerSeries` / `MvPowerSeries` infrastructure for the
+  formal `∏ (1 − x^k)^(−θ_k)` identity. Multi-cycle per the cycle 335
+  P2 doc's own assessment ("3–5 cycles minimum"). Skip.
 
-### P1 — `butcherLobattoIIIDirect_three`
+### Candidate D — `thm:384A` (Φ as group homomorphism §382 → §383)
 
-**Step 1 (audit-first, MANDATORY, ~10 min)**: Read
-`extraction/raw_text/ch03.txt` around lines 5372–5378 (the printed
-Lobatto III tables) to verify the printed A-matrix at s=3.
+* Per plan.md cycle 239 line: blocked on `Equivalent → PhiEquivalent`
+  direction, which is one of the **two remaining deferred directions
+  in thm:381H** (per `thm_381H_deferred.md` cycle 208 update). The
+  closure path is Banach-fixed-point machinery (multi-cycle, started
+  cycle 201 P2 with `RKStageMap` foundation but not connected through
+  to the bridge).
+* **Decision**: blocked on multi-cycle Banach work. Skip.
 
-The C(s−1) + last-column-zero derivation forces (uniquely under
-those constraints + Lobatto quadrature b=(1/6, 2/3, 1/6),
-c=(0, 1/2, 1)):
+---
 
+## §B — Cycle 336 deliverables (P0 → P3)
+
+### P0 (5 min, mandatory) — verify cycle 335 ship is healthy
+
+Run the cycle 335 verification commands one time:
+
+```bash
+git log -1 --format='%H %s'
+# Expected: 8c32d4f Cycle 335 — §344 Phase D.14: Lobatto III `s = 3` direct-form `RKTableau` + `SatisfiesC 2` certificate shipped.
+
+wc -l OpenMath/Chapter3/Section344.lean
+# Expected: ~2670 LOC (cycle 335 added ~83 LOC over cycle 334's 2587 LOC)
+
+grep -c sorry OpenMath/Chapter3/Section344.lean
+# Expected: 0
+
+lake env lean OpenMath/Chapter3/Section344.lean
+# Expected: clean exit
 ```
-A = !![ 0  ,  0  , 0 ;
-       1/4 , 1/4 , 0 ;
-        0  ,  1  , 0 ]
-```
 
-(Derivation: from `A i 2 = 0` and `C(2)` at k=1 / k=2, row 0 = (0,0,0),
-row 1 = (1/4, 1/4, 0), row 2 = (0, 1, 0).)
+If any check fails, escalate as cycle 335 regression (file a 1-line
+`task_results/cycle_336.md` flagging the regression and stop). All
+checks should pass per cycle 335 task results.
 
-If the printed table at ch03.txt:5372–5378 agrees with this derivation
-⇒ proceed to Step 2. If it disagrees ⇒ **STOP, file
-`.prover-state/issues/lobatto_iii_three_audit.md` documenting the
-divergence**, then ship the printed-table values (per cycle 326's
-Radau IA precedent) — in that branch the `SatisfiesC 2` claim may
-not hold and should be replaced with whatever the printed values
-support (typically `SatisfiesC 1` for "C(s−1) for s=3" if the
-printed table doesn't satisfy C(2)).
+### P1 (mandatory, primary deliverable) — write `def_422B_path.md` scoping doc
 
-**Step 2 (definition, ~10 LOC)**: Insert immediately after cycle 334's
-`butcherLobattoIIIA_three_satisfiesC` in `Section344.lean`:
+Create **`.prover-state/issues/def_422B_path.md`** following the
+`lem_310B_plan.md` / `lem_441A_phase_C_scoping.md` template. Required
+sections (mirror the precedent docs section-by-section):
+
+1. **Status header**. State this is a scoping doc, not a Lean
+   deliverable; cite cycle 336 as origin; cite the cycle 335 P2 menu
+   (`cycle_336_pivot_options.md`) as predecessor.
+2. **§1 Textbook statement (verbatim)**. Quote from
+   `extraction/formalization_data/entities/def_422B.json`'s
+   `statement_text` + `context_latex`. Include equation (422a) and
+   the (422b) reference. Cite Butcher 3rd ed. §422 p. 359.
+3. **§2 Distilled mathematical content**. Identify what `η : RootedTree
+   → ℝ` is: an element of `G_1 = Quotient PhiEquivalent.setoidSigma`
+   satisfying eq (422a) for the LMM `[α, β]`. The "inductive
+   construction on tree order" — for each tree `t`, `η(t)` is
+   determined by lower-order trees via (422a), using the operator `D`
+   (related to differentiation / tree-grafting; clarify exactly which
+   in the doc).
+4. **§3 Project-hook inventory** (verified at HEAD — `grep -n` /
+   `lean_local_search` results required). Cover at minimum:
+   * `LinearMultistepMethod k` (Chapter 4 §404, cycle 35-onwards;
+     verify with `grep -n LinearMultistepMethod OpenMath/Chapter4/Section404.lean`)
+   * `LinearMultistepMethod.{IsPreconsistent,IsStable,IsConsistent}`
+     (Chapter 4 §404–§406, ensure they exist for the "preconsistent
+     and stable" hypothesis of (422a)'s context)
+   * `Quotient PhiEquivalent.setoidSigma` + `instGroup_phi` (cycle 236)
+   * `composeQ_phi` (cycle 232)
+   * `elementaryWeightQ_phi` (cycle 239)
+   * `RootedTree`, `order`, `RootedTree.tau_values` (§310 cluster)
+5. **§4 Gap inventory**. Identify infrastructure missing for the
+   construction. At minimum:
+   * The "operator D" on trees (or on `Quotient PhiEquivalent.setoidSigma`)
+     — need to define `D : G_1 → G_1` or `D : RootedTree → RootedTree
+     → ℝ`-style action. Verify whether Butcher's `D` is
+     tree-substitution / tree-grafting / multiplication by `τ`.
+   * Recursive solver for eq (422a): for each tree `t`, solve a linear
+     equation in `η(t)` given `η(t')` for `t'` with smaller order.
+     This is the substantive multi-cycle content.
+   * `η^(-k)` composition in `G_1` (k-fold inverse-power). Available
+     via `instGroup_phi.zpow` once the integer-power API is wired up;
+     verify Mathlib hook.
+6. **§5 Phase decomposition**. 4–6 phases, each ≤2 cycles. Suggested
+   skeleton (refine in the doc; LOC budgets are estimates):
+   * **Phase A** (1–2 cycles): `D : G_1 → G_1` operator definition.
+     Includes the tree-grafting / multiplication-by-τ choice and
+     non-vacuity at `τ`.
+   * **Phase B** (1 cycle): `inverseQ_phi.zpow` integer-power API
+     wrapping cycle 236's `inverseQ_phi`. Verify Mathlib `Group.zpow`
+     bridges cleanly.
+   * **Phase C** (2–3 cycles): the recursive (422a) solver — for an
+     LMM `[α, β]` and order-`n` tree `t`, solve for `η(t)` in terms
+     of `η(t')` for `r(t') < r(t)`. State as `noncomputable def
+     underlyingOneStepMethod_aux : LinearMultistepMethod k → RootedTree
+     → ℝ` with well-founded recursion on `RootedTree.order`.
+   * **Phase D** (1 cycle): lift to `Quotient PhiEquivalent.setoidSigma`
+     via the function `RootedTree → ℝ` → `Quotient PhiEquivalent.setoidSigma`
+     bridge (verify this bridge exists — likely needs a fresh helper
+     converting an arbitrary `RootedTree → ℝ` function to a `G_1`
+     element).
+   * **Phase E** (1 cycle): close `def:422B` as `noncomputable def
+     LinearMultistepMethod.underlyingOneStepMethod : Quotient
+     PhiEquivalent.setoidSigma`. Non-vacuity: backward Euler LMM
+     (cycle 142's `backwardEulerGLM` analogue, or §404's explicit
+     Euler LMM if present), showing the underlying one-step method is
+     the corresponding Runge–Kutta method.
+   * **Phase F** (optional, 1 cycle): connect to `thm:422A` (the
+     existence proof Butcher gives) and `thm:422C` (convergence).
+7. **§6 Risk assessment**. Per-phase LOC budget, Mathlib hook
+   confidence, Aristotle suitability. Total estimate: 6–10 cycles.
+8. **§7 Cycle 337 entry point**. Recommend Phase A as cycle 337's
+   target. Sketch the concrete Lean signature for Phase A's
+   deliverable (the `D` operator).
+9. **§8 Cross-references**. Link to:
+   * `.prover-state/issues/thm_382A_path.md` (§382 group construction,
+     cycle 215–222 multi-cycle precedent)
+   * `.prover-state/issues/cycle_336_pivot_options.md` (cycle 335 P2
+     menu)
+   * `.prover-state/issues/lem_310B_plan.md` (multi-phase scoping
+     template)
+   * `.prover-state/issues/lem_441A_phase_C_scoping.md` (multi-phase
+     scoping template)
+
+**LOC budget for this doc**: 200–400 lines of Markdown. Do NOT inline
+Lean code in the scoping doc beyond signature sketches in §7 — proof
+recipes belong in the actual phase cycles. Cite section / line numbers
+when referencing existing infrastructure.
+
+### P2 (mandatory, small Phase 0 Lean deliverable) — wire-up sanity ship
+
+Ship a **5–20 LOC axiom-clean** sanity theorem that confirms the
+`LinearMultistepMethod` ↔ `Quotient PhiEquivalent.setoidSigma`
+prerequisite stack is healthy. Two options (pick whichever compiles
+cleaner on first attempt):
+
+**Option P2.α** — `LinearMultistepMethod` exists and is non-vacuous in
+the Phase 0 sense:
 
 ```lean
-noncomputable def butcherLobattoIIIDirect_three : RKTableau 3 where
-  A := !![0, 0, 0; 1/4, 1/4, 0; 0, 1, 0]
-  b := ![1/6, 2/3, 1/6]
-  c := ![0, 1/2, 1]
+-- in OpenMath/Chapter4/Section422.lean (new file) OR OpenMath/Chapter4/Section404.lean
+namespace OpenMath.Chapter4.Section422
+
+/-- def:422B Phase 0 sanity: the §383 `PhiEquivalent` quotient group
+exists, and every `LinearMultistepMethod k` will eventually map into
+it via the (multi-cycle) `underlyingOneStepMethod` construction
+scoped at `.prover-state/issues/def_422B_path.md`. This Phase 0
+theorem only confirms the target type is non-empty (using cycle 236's
+`instGroup_phi` instance and cycle 222's `paddedEuler` witness). -/
+theorem underlyingOneStepMethod_target_nonempty :
+    Nonempty (Quotient OpenMath.Chapter3.Section312.RKTableau.PhiEquivalent.setoidSigma.{0}) :=
+  ⟨⟦⟨2, OpenMath.Chapter3.Section381.paddedEuler⟩⟧⟩
+
+end OpenMath.Chapter4.Section422
 ```
 
-**Step 3 (`SatisfiesB 4` non-vacuity, ~10 LOC)**: 4-arm
-`interval_cases k` close. Paper-verify each arm before writing:
+Place in either a fresh `OpenMath/Chapter4/Section422.lean` (preferred
+— signals new work track) or appended to `Section404.lean` (avoid;
+cluttered file). If creating a new file, also update
+`OpenMath/Chapter4.lean` aggregator.
 
-* k=1: `∑ b_i = 1/6 + 2/3 + 1/6 = 1`. RHS = `1/1`. ✓
-* k=2: `∑ b_i · c_i = 0 + (2/3)(1/2) + (1/6)(1) = 1/3 + 1/6 = 1/2`.
-  RHS = `1/2`. ✓
-* k=3: `∑ b_i · c_i² = 0 + (2/3)(1/4) + (1/6)(1) = 1/6 + 1/6 = 1/3`.
-  RHS = `1/3`. ✓
-* k=4: `∑ b_i · c_i³ = 0 + (2/3)(1/8) + (1/6)(1) = 1/12 + 1/6 = 1/4`.
-  RHS = `1/4`. ✓
-
-Recipe:
+**Option P2.β** — if Option P2.α hits Section381 import-cycle issues
+(Chapter 4 importing Chapter 3 may already be in the import graph,
+verify), fall back to a trivial sanity theorem inside `Section381.lean`
+itself that references `LinearMultistepMethod` via a forward import:
 
 ```lean
-example : butcherLobattoIIIDirect_three.SatisfiesB 4 := by
-  intro k h1 hk
-  interval_cases k <;>
-    simp [butcherLobattoIIIDirect_three, Fin.sum_univ_three] <;>
-    norm_num
+-- append to OpenMath/Chapter3/Section381.lean only if Section404 imports cleanly
+example : Nonempty (Quotient PhiEquivalent.setoidSigma.{0}) :=
+  ⟨⟦⟨2, paddedEuler⟩⟧⟩
 ```
 
-If the 4-tactic chain stalls on one arm, decompose to four explicit
-arms (per cycle 327's two-arm recipe).
+If even this fails, ship just the scoping doc (P1) — supervisor scoring
+should still accept P1 as cycle deliverable per the
+`lem_310B_plan.md` (cycle 260) and `lem_441A_phase_C_scoping.md`
+(cycle 180) precedents (both were scoping-doc-only cycles).
 
-**Step 4 (`SatisfiesC 2` certificate, ~15 LOC)**: 9-arm
-`fin_cases i <;> interval_cases k` close. Paper-verify all 9 arms
-before writing:
+**Axiom-clean target**: `#print axioms` must return
+`[propext, Classical.choice, Quot.sound]` only. The example version
+uses no axioms.
 
-* i=0 (c=0): all three arms reduce to `0 = 0`.
-* i=1 (c=1/2):
-  - k=1: `∑ A_{1,j} = 1/4 + 1/4 + 0 = 1/2`. RHS = `1/2`. ✓
-  - k=2: `∑ A_{1,j} c_j = (1/4)(0) + (1/4)(1/2) + (0)(1) = 1/8`.
-    RHS = `(1/2)²/2 = 1/8`. ✓
-* i=2 (c=1):
-  - k=1: `∑ A_{2,j} = 0 + 1 + 0 = 1`. RHS = `1`. ✓
-  - k=2: `∑ A_{2,j} c_j = (0)(0) + (1)(1/2) + (0)(1) = 1/2`.
-    RHS = `1²/2 = 1/2`. ✓
+### P3 (optional, only if P0–P2 close in <50% of cycle) — extend scoping coverage
 
-All 9 arms paper-verified. C(2) holds by construction. Recipe:
+If cycle budget remains after P0–P2 ship, optionally extend the
+scoping doc with:
+* A **Mathlib hook audit appendix** for Phase B (`Group.zpow` integer
+  power compatibility with cycle 236's `instGroup_phi`).
+* Or, **read `thm:422A.json` and add a §9 to the scoping doc** outlining
+  how `thm:422A` (the existence theorem) connects to `def:422B`'s
+  construction.
 
-```lean
-theorem butcherLobattoIIIDirect_three_satisfiesC :
-    butcherLobattoIIIDirect_three.SatisfiesC 2 := by
-  intro i k h1 hk
-  fin_cases i <;> interval_cases k <;>
-    simp [butcherLobattoIIIDirect_three, Fin.sum_univ_three] <;>
-    norm_num
-```
+**Do NOT** attempt any Phase A Lean work this cycle. Phase A is a
+cycle 337+ deliverable.
 
-### P2 — `cycle_336_pivot_options.md`
+---
 
-After P1 lands, create a 1-page menu at
-`.prover-state/issues/cycle_336_pivot_options.md` listing 3–4
-candidates:
+## §C — What NOT to do
 
-* **A. `def:422B`** (underlying one-step method for LMM, §422 Ch.4):
-  definition-only target, 2–3 cycles estimate, needs Butcher §422
-  read.
-* **B. `thm:302A`** (Some combinatorial questions, §302 Ch.3):
-  may be single-cycle if enumerative; leverages cycles 254–270
-  rooted-tree infrastructure. Read entity JSON first.
-* **C. `thm:302B`** (Rooted Tree Generating Function Identity, §302):
-  multi-cycle if generating functions need Mathlib `MvPowerSeries`
-  infrastructure.
-* **D. Continue some other partial entity** (e.g., extend cycle 235's
-  §384 `thm:384A` group homomorphism infrastructure, or close one
-  of the `[~]` partial entities like `cor:342D`'s remaining G(2s)
-  clauses — blocked on `thm:314A` infrastructure, so unlikely
-  single-cycle).
+* **Do NOT continue the §344 ladder.** Cycle 335 was the final ship
+  in the cycle 322–335 streak. Per cycle 335 task results: "no
+  `butcherRadauIA_three`, no `butcherLobattoIIIA_four`, no further
+  parking-orbit ships." Adding even one more §344 ship in cycle 336
+  is a planner regression.
 
-Keep the doc under 100 lines. Cycle 336's planner does the deep
-scoping per their chosen target.
+* **Do NOT attempt `thm:302A` as a direct `rfl` against `alphaWeight`.**
+  Per `.prover-state/issues/cycle_250_strategy_alpha_definition_error.md`,
+  `alphaWeight` is the closed-form RHS, NOT the labelling count. A
+  one-line `theorem thm_302A : alphaWeight t = ... := rfl` is
+  **definition smuggling** (CLAUDE.md pre-commit faithfulness
+  checklist). The proper formalisation needs `alphaCount`
+  infrastructure (multi-cycle).
 
-## What NOT to do
+* **Do NOT attempt `def:422B` as a `def` body this cycle.** The
+  construction is multi-cycle (Phases A–E, est. 6–10 cycles per the
+  scoping doc you're writing). A sorry-first scaffold would trigger
+  the cycle 149/150 (def:530B) or cycle 200/201 (thm:381H) rollback
+  pattern.
 
-1. **Do NOT attempt a collocation-form `butcherLobattoIII_three` with
-   coincidence theorem.** Per cycle 331's audit, Lobatto III is the
-   "C(s−1) + last-column-zero" variant, not plain Lagrange collocation.
-   Cycle 333's collocation/coincidence template only applies to
-   Lobatto IIIA (the C(s) variant). Any
-   `butcherLobatto_collocationA_three`-style construction would
-   diverge from Lobatto III's printed table — this is the cycle 326
-   Radau IA pattern.
+* **Do NOT attempt the `Equivalent → PhiEquivalent` direction for
+  `thm:384A`.** Per `thm_381H_deferred.md` cycle 208 update, this is
+  one of the two remaining deferred directions in thm:381H, blocked
+  on Banach-fixed-point machinery (cycle 201 P2 started the
+  `RKStageMap` foundation but did not connect through; multi-cycle).
 
-2. **Do NOT extend the §344 ladder past `butcherLobattoIIIDirect_three`.**
-   Cycle 334 worker's option 4 was explicit: one more parking-orbit
-   ship, then break. Cycle 335 should NOT attempt
-   `butcherLobattoIIIA_four`, `butcherRadauIA_three`, or any other
-   §344 entry even if time permits — those belong to cycle 337+ if
-   the streak resumes.
+* **Do NOT introduce sorries.** Section441's 43-cycle GPFS-timeout
+  precedent (`cycle_182_gpfs_slowness.md`) and the 200/201 rollback
+  precedent both teach: sorry-first scaffolds without a credible
+  single-cycle close get rolled back at cost to the cycle. Phase 0
+  ship (P2) must be axiom-clean.
 
-3. **Do NOT scope multi-cycle pivots deeply in P2.** The P2
-   deliverable is a 1-page menu. Cycle 336's planner does the deep
-   scoping. Cycle 260 (`lem_310B_plan.md`, 774 lines) and cycle 222
-   (`thm_382A_path.md`) are reserved for *dedicated planning cycles*,
-   not parallel deliverables.
+* **Do NOT edit `scripts/autonomous_loop.py`.** Tautology-scanner
+  false positives are loop-maintainer territory per
+  `.prover-state/issues/tautology_scanner_false_positives.md`.
 
-4. **Do NOT attempt `thm:302A` or `def:422B` Lean code this cycle.**
-   Both require entity JSON reads + multi-cycle scoping. Cycle 335's
-   P1 deliverable is the §344 parking orbit; pivot Lean code is
-   cycle 336's job.
+* **Do NOT raise `maxHeartbeats` above 200000** (CLAUDE.md rule).
 
-5. **Do NOT use `decide` or `set_option maxHeartbeats 800000`.** The
-   cycle 334 4-tactic chain (`fin_cases <;> interval_cases <;> simp
-   <;> norm_num`) closes within default heartbeats at s=3. If a
-   `simp` arm stalls, decompose the simp set into explicit per-arm
-   tactics — do NOT raise heartbeats.
+* **Do NOT compile `OpenMath/Chapter4/Section441.lean`** — 43rd
+  consecutive GPFS timeout was at cycle 239 (per
+  `cycle_182_gpfs_slowness.md`). If the P2 deliverable accidentally
+  triggers a Section441 transitive load, switch to P2.β (Section381
+  example, much lighter import set).
 
-6. **Do NOT skip the audit step (P1 Step 1).** Per the cycle 326
-   Radau IA audit, even "mechanical extensions" of the §344 ladder
-   can hide table-divergence surprises. Read ch03.txt:5372–5378
-   before writing the definition. If the printed values diverge from
-   the C(s−1) derivation, ship the printed values and document the
-   divergence (per cycle 326's
-   `radau_ia_collocation_divergence.md` precedent).
+---
 
-7. **Do NOT introduce sorries.** The cycle 200/201 rollback precedent
-   forbids sorry-first scaffolds when there is no path to single-cycle
-   closure. P1's deliverables are all axiom-clean targets.
+## §D — Cycle 336 ship checklist
 
-## Risk assessment
+Before committing, the worker should verify:
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| Printed Lobatto III s=3 table diverges from C(s−1) derivation | Medium | Audit step (P1.1); fall back to printed-table direct-form ship; document in audit issue file |
-| C(2) certificate's i=0 row collapse fails `simp` | Low | All three i=0 arms reduce to `0 = 0` (paper-verified); default `simp` set handles `mul_zero` / `zero_mul` |
-| `Fin.sum_univ_three` not in simp set | Low | Cycle 333 already uses it; same lemma name |
-| Cycle 336 planner has no menu (P2 skipped) | Medium | P2 is the explicit mitigation; ship even a 50-line skeleton |
-| 4-tactic chain unifies across 9 arms incorrectly | Low | Decompose to explicit per-arm tactics if needed (cycle 322 / 327 precedent) |
+1. `.prover-state/issues/def_422B_path.md` exists, 200–400 lines,
+   covers all 8 required sections (P1 §B above).
+2. The P2 Lean deliverable compiles cleanly:
+   * `lake env lean <P2 file>` exits 0.
+   * `#print axioms <P2 theorem-name>` returns
+     `[propext, Classical.choice, Quot.sound]` only.
+3. The aggregator builds: `lake env lean OpenMath/Chapter4.lean` (if
+   Option P2.α used and Section422.lean was added) OR
+   `lake env lean OpenMath/Chapter3.lean` (if Option P2.β).
+4. Sorry count: 0 → 0 (must remain — cycle 336 is the 67th consecutive
+   clean cycle since the cycle 201 rollback).
+5. Tautology scanner returns 0 hits in any new file:
+   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' <new files>`
+6. `lean_status.json`: `def:422B` row updated to
+   `formalization_status: "partial"` ONLY if Option P2.α was shipped
+   (the wire-up sanity theorem counts as Phase 0 partial closure);
+   otherwise leave `def:422B` as `unformalized`.
+7. `plan.md` Ch.4 §422 row: `[ ] def:422B` → `[~]` ONLY if
+   `lean_status.json` row was updated to `partial`; otherwise no plan
+   change.
+8. `.prover-state/task_results/cycle_336.md` with the standard
+   five sections (Worked on / Approach / Result / Faithfulness check /
+   Dead ends / Discovery / Suggested next approach).
 
-## Verification checklist (CLAUDE.md pre-commit)
+---
 
-### `butcherLobattoIIIDirect_three` (`noncomputable def`)
-- Entity: portion of `thm:344A` (Butcher §344 Lobatto III row, Table
-  344(I) p. 226). Textbook A-matrix at s=3 per printed table
-  ch03.txt:5372–5378.
-- Lean type captures: **same** as textbook tableau, subject to P1.1
-  audit confirming printed values match the C(s−1) derivation.
-- No definition smuggling — this is a direct `RKTableau` declaration
-  with literal values.
+## §E — Suggested next cycle (337)
 
-### `butcherLobattoIIIDirect_three_satisfiesC` (`theorem`)
-- Tautology check: conclusion is 9-arm C(2) system, not a hypothesis.
-- Identity check: 4-tactic chain is real rational arithmetic.
-- Hypothesis strength: standard `SatisfiesC` `intro` pattern.
-- Absent-theorem check: no promised content omitted.
+Per the def:422B scoping doc §7 entry point:
 
-### Anonymous `example` for `SatisfiesB 4`
-- Anonymous `example`s do not require `lean_status.json` or `plan.md`
-  updates. The `thm:344A` row stays `[~]` in `plan.md`.
+* **Cycle 337**: Phase A of `def_422B_path.md` — `D : G_1 → G_1`
+  operator definition. Single-cycle target, ~80–120 LOC.
+  Non-vacuity: `D ⟦⟨0, RKTableau.id⟩⟧ = ⟦⟨1, paddedEuler⟩⟧.something`
+  or analogous tree-grafting witness.
 
-## Cycle 335 deliverable bar
+* If Phase A turns out heavier than estimated, cycle 337 can defer
+  to a `def_422B_path.md` revision (split Phase A into A.1 / A.2).
 
-* **P1** (mandatory): `butcherLobattoIIIDirect_three` def +
-  `SatisfiesB 4` `example` + `butcherLobattoIIIDirect_three_satisfiesC`
-  `theorem`, all axiom-clean
-  (`[propext, Classical.choice, Quot.sound]`), 0 sorries introduced,
-  Section344.lean LOC delta ~30–50. Verify
-  `lake env lean OpenMath/Chapter3/Section344.lean` exits 0;
-  `lake env lean OpenMath/Chapter3.lean` exits 0.
-* **P2** (mandatory, scoping-only): create
-  `.prover-state/issues/cycle_336_pivot_options.md` with the 4-candidate
-  menu, ≤100 lines.
+* Alternative cycle 337 pivot: if cycle 336 also wrote the §9 thm:422A
+  appendix (P3 stretch), cycle 337 could pivot to thm:422A scoping
+  instead and treat def:422B as a corollary in a later cycle.
 
-Both should fit in a single worker cycle (~60–90 min total).
+---
 
-Update task results, commit, push. Do NOT touch `lean_status.json` or
-`plan.md` (no entity status changes — `thm:344A` stays `[~]`).
+## §F — Bottom-line directive for the cycle 336 worker
 
-## Cycle 336 entry point
+1. (5 min) Run §B.P0 verification commands. Confirm cycle 335 is
+   healthy.
+2. (90 min) Write `.prover-state/issues/def_422B_path.md` (P1) — the
+   primary deliverable. Cite `extraction/formalization_data/entities/def_422B.json`
+   verbatim in §1; cite existing project symbols with file:line in §3;
+   propose 4–6 phases in §5; use `lem_310B_plan.md` and
+   `lem_441A_phase_C_scoping.md` as structural templates.
+3. (15 min) Ship P2 (Option P2.α preferred, P2.β fallback). One
+   axiom-clean theorem confirming the target type is non-empty.
+4. (10 min) Update `lean_status.json` + `plan.md` per §D.6–7. Write
+   `task_results/cycle_336.md`. Commit and push.
 
-After cycle 335 ships, cycle 336 should:
-1. Read the P2 menu.
-2. Pick one candidate.
-3. Read the entity JSON for the chosen candidate.
-4. Write either a scoping doc (if multi-cycle) or Lean code (if
-   single-cycle).
-5. Do **NOT** continue the §344 ladder. The streak ends with cycle
-   335.
+Total: ~2 hours of focused work. **No §344 ship.** **No `thm:302A`
+direct attempt.** **No `def:422B` body.** Just the scoping doc + tiny
+sanity ship.

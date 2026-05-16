@@ -162,9 +162,10 @@
     "status": "formalized"
   },
   "def:422B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section422.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section422.underlyingOneStepMethod_target_nonempty",
+    "status": "partial",
+    "note": "Cycle 336: Phase 0 wire-up sanity ship. The full `def:422B` (Butcher §422 p. 359 — the underlying one-step method of a preconsistent and stable linear multistep method) is multi-cycle work scoped in `.prover-state/issues/def_422B_path.md` (Phases A–E, 6–10 cycles, est. 600+ LOC). Cycle 336 ships only the Phase 0 wire-up: `Nonempty (Quotient PhiEquivalent.setoidSigma)` — a 5-LOC sanity theorem confirming the §383 quotient group target type is non-empty, witnessed by the equivalence class of cycle 184's `paddedEuler : RKTableau 2`. The witness threads through cycle 236's `instGroup_phi`, cycle 232's `composeQ_phi`, cycle 187's `PhiEquivalent`, and cycle 184's `paddedEuler` to confirm the prerequisite stack (LMM in Section404 + §383 group in Section381) is healthy and ready for cycle 337+ Phase A. Section422.lean: new file, ~50 LOC. Axiom-clean (`[propext, Classical.choice, Quot.sound]`). Aggregator updated: `OpenMath/Chapter4.lean` now imports `Section422`. Cycle 337+ entry point: Phase A — pin Butcher's `D` operator (tree-grafting / order-weighted / Connes–Kreimer differentiation — read `extraction/raw_text/ch04.txt` §422 in full before deciding) and ship `D_phi : Quotient PhiEquivalent.setoidSigma → Quotient PhiEquivalent.setoidSigma`. See scoping doc for full phase decomposition and risk inventory."
   },
   "def:442A": {
     "lean_file": null,
