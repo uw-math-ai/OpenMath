@@ -1,300 +1,413 @@
-# Cycle 310 Strategy — §342 Phase 3 of 3 (cor:342D): C(n) interpolation condition
+# Cycle 311 — §342 Phase 3.2: `D(n)` for the Gauss–Legendre `RKTableau`
 
 ## §A — Target
 
-Per cycle 309's "Suggested next approach" §F: ship the `C(n)` half of
-the four-pronged Gauss–Legendre order-2n proof (`cor:342D`), via the
-**upper-limit-parametrised quadrature exactness theorem** plus the
-`butcherGaussLegendreRK_satisfiesC` corollary.
+Ship `butcherGaussLegendreRK_satisfiesD` (third prong of `cor:342D`)
+in `OpenMath/Chapter3/Section342.lean`, immediately after cycle 310's
+`butcherGaussLegendreRK_satisfiesC` and its non-vacuity witnesses.
 
-Currently shipped (status: §342 cluster, cycle 309 HEAD):
-
-* `butcherGaussLegendreRK (n : ℕ) : RKTableau n` — the general-`n`
-  Gauss–Legendre tableau (cycle 309).
-* `butcherGaussLegendreRK_satisfiesB (n) (hn : 0 < n) : SatisfiesB (2*n)` — B(2n) closed
-  (cycle 309).
-* `butcherShiftedLegendre_collocationA (n : ℕ) (i j : Fin n) : ℝ :=
-  ∫ x in (0 : ℝ)..butcherShiftedLegendre_zeros n i, (Lagrange.basis ... j).eval x` —
-  the canonical A-matrix (cycle 308, `Section342.lean:6846`).
-* `butcherShiftedLegendre_quadrature_exact_lt_n (n) (φ) (hdeg : φ.natDegree < n)` —
-  the [0, 1] version (cycle 303, `Section342.lean:6249`).
-
-Missing: the `[0, cᵢ]` analog. Once shipped, `C(n)` falls out by
-specialising to `φ = X^(k-1)`.
-
-## §B — Priority deliverables (all in `OpenMath/Chapter3/Section342.lean`)
-
-### P1 — `butcherShiftedLegendre_collocation_exact_lt_n` (~80 LOC)
-
-**Statement** (mirror cycle 303's signature exactly, with one extra
-`(i : Fin n)` parameter and the upper bound swapped to `_zeros n i`):
+**The headline theorem** (write the signature first, then bottom-up
+to it):
 
 ```lean
-theorem butcherShiftedLegendre_collocation_exact_lt_n
-    (n : ℕ) (i : Fin n) (φ : Polynomial ℝ) (hdeg : φ.natDegree < n) :
-    (∫ x in (0 : ℝ)..butcherShiftedLegendre_zeros n i, φ.eval x)
-      = ∑ j : Fin n,
-          butcherShiftedLegendre_collocationA n i j *
-          φ.eval (butcherShiftedLegendre_zeros n j)
+theorem butcherGaussLegendreRK_satisfiesD (n : ℕ) (hn : 0 < n) :
+    (butcherGaussLegendreRK n).SatisfiesD n
 ```
 
-**Proof recipe** (verbatim port of cycle 303's
-`butcherShiftedLegendre_quadrature_exact_lt_n`,
-`Section342.lean:6249-6281`):
+Recall the `SatisfiesD` definition (Section321:111-114):
 
-1. `set v : Fin n → ℝ := butcherShiftedLegendre_zeros n` and `hv :
-   Function.Injective v` from `butcherShiftedLegendre_zeros_injective n`
-   (cycle 302).
-2. `hdecomp : φ = ∑ j, C (φ.eval (v j)) * Lagrange.basis univ v j`
-   via `Lagrange.eq_interpolate` with degree side condition
-   `φ.degree < (Finset.univ : Finset (Fin n)).card` discharged by
-   `Finset.card_univ + Fintype.card_fin + Polynomial.degree_eq_natDegree`.
-3. `conv_lhs => rw [hdecomp]`; `simp_rw [Polynomial.eval_finset_sum,
-   eval_mul, eval_C]`.
-4. `rw [intervalIntegral.integral_finset_sum]` to swap integral and
-   sum (integrability witness:
-   `Continuous.intervalIntegrable (continuous_const.mul (Polynomial.continuous _)) _ _`).
-5. `Finset.sum_congr rfl; intro j _; rw [intervalIntegral.integral_const_mul,
-   butcherShiftedLegendre_collocationA]; ring`.
+```
+∀ j : Fin s, ∀ k : ℕ, 1 ≤ k → k ≤ ζ →
+  (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j)
+    = (M.b j / (k : ℝ)) * (1 - M.c j ^ k)
+```
 
-**Key adaptation from cycle 303**: the integration bounds are now
-`(0 : ℝ)..butcherShiftedLegendre_zeros n i` instead of `(0 : ℝ)..1`.
-This propagates verbatim through the `intervalIntegral.integral_*`
-API — none of those lemmas care about the specific bounds, only that
-the integrand satisfies the named regularity conditions. The
-`butcherShiftedLegendre_collocationA` definition unfolds to exactly
-the per-`j` `∫₀^{cᵢ} Lⱼ` factor needed for the final `ring` step.
+For the Gauss–Legendre tableau (`b = _quadratureWeights`,
+`c = _zeros`, `A = _collocationA`) this becomes Butcher's
 
-**Placement**: insert as a new public theorem in a new `/-! ### Phase
-3.1 — collocation A-matrix exactness on `[0, cᵢ]` -/` block. Place
-after the cycle 308/309 Phase 2 block (i.e. after the cycle 309
-`butcherGaussLegendreRK_satisfiesB` headline, plus its non-vacuity
-witnesses, but before any §342 trailing closure remarks). Do NOT
-modify the existing cycle 303 / 304 / 308 / 309 declarations.
+    ∑ᵢ bᵢ · cᵢ^(k-1) · ∫₀^{cᵢ} Lⱼ = (bⱼ/k) · (1 − cⱼ^k)    (★)
 
-### P2 — `butcherGaussLegendreRK_satisfiesC` (~40 LOC)
+for every `j : Fin n` and every `k ∈ [1, n]`.
 
-**Statement**:
+## §B — Why D(n) is feasible in one cycle
+
+The textbook proof (Butcher §342 p. 240) is short. Translated to the
+Lean infrastructure shipped through cycle 310, it has three moves:
+
+1. **Express the L.H.S. as `∫₀¹ X^(k-1) · F_j(X) dx`** where `F_j` is
+   a polynomial antiderivative of `Lⱼ := Lagrange.basis _ _ j` with
+   `F_j(0) = 0`. The bridge is cycle 304's `2n`-degree quadrature
+   exactness (`butcherShiftedLegendre_quadrature_exact_lt_two_n`):
+   the polynomial `X^(k-1) · F_j` has `natDegree ≤ (k-1) + n ≤ 2n − 1
+   < 2n`, so its quadrature sum equals its integral.
+
+2. **Apply IBP to `∫₀¹ X^(k-1) · F_j`** with `u := F_j`,
+   `dv := X^(k-1) dx`. The integrated term is `[F_j(x) · x^k/k]₀¹
+   = F_j(1)/k = bⱼ/k`; the remainder is `−(1/k) · ∫₀¹ X^k · Lⱼ`.
+
+3. **Reduce `∫₀¹ X^k · Lⱼ` to `bⱼ · cⱼ^k`** via cycle 304's
+   `2n`-degree exactness on the polynomial `X^k · Lⱼ` (degree
+   `k + (n−1) ≤ 2n − 1 < 2n`) plus the Kronecker-delta property
+   `Lⱼ(cᵢ) = δᵢⱼ` (Mathlib's `Lagrange.eval_basis_self` and
+   `Lagrange.eval_basis_of_ne`, already used in cycle 305 — see
+   `Section342.lean` around line 6716).
+
+The only genuinely new infrastructure is the polynomial antiderivative
+of `Lⱼ` (Phase A). Phases B and C compose existing infrastructure.
+
+## §C — Phased decomposition
+
+Ship in this exact order. Each phase is independently axiom-checkable.
+
+### Phase A — Polynomial antiderivative of `Lⱼ` (~80 LOC, must ship)
+
+Mathlib does NOT have `Polynomial.integral` (verified at HEAD).
+Build it manually for the specific case we need:
 
 ```lean
-theorem butcherGaussLegendreRK_satisfiesC (n : ℕ) :
-    (butcherGaussLegendreRK n).SatisfiesC n
+private noncomputable def butcherShiftedLegendre_lagrangeAntideriv
+    (n : ℕ) (j : Fin n) : Polynomial ℝ :=
+  let L : Polynomial ℝ :=
+    Lagrange.basis Finset.univ (butcherShiftedLegendre_zeros n) j
+  ∑ k ∈ Finset.range (L.natDegree + 1),
+    Polynomial.C (L.coeff k / ((k : ℝ) + 1)) * Polynomial.X ^ (k + 1)
 ```
 
-Note: `SatisfiesC` quantifies over `∀ i : Fin s, ∀ k : ℕ, 1 ≤ k →
-k ≤ ξ`; for `n = 0` the universal-on-`Fin 0` `∀ i` clause is vacuous,
-so **no `0 < n` hypothesis is required** (unlike the B(2n) case at
-cycle 309 §A.3, which only has `∀ k`). This is a strengthening over
-the cycle 309 B(2n) corollary's signature; verify by attempting the
-bare statement first.
+Then ship four named lemmas (each ~10–25 LOC):
 
-**Proof recipe**:
+**A.1** `butcherShiftedLegendre_lagrangeAntideriv_derivative`:
+   `(lagrangeAntideriv n j).derivative = Lagrange.basis _ _ j`.
 
-1. `intro i k h1 hk`. Goal:
-   `∑ j, _collocationA n i j * _zeros n j ^ (k - 1) = _zeros n i ^ k / k`.
-2. `show ∑ j : Fin n, butcherShiftedLegendre_collocationA n i j *
-   butcherShiftedLegendre_zeros n j ^ (k - 1) = _zeros n i ^ k / k`
-   (mirror cycle 309 §A.3 — `M.A` / `M.c` projections unfold
-   definitionally for `M := butcherGaussLegendreRK n`).
-3. Set `φ := Polynomial.X ^ (k - 1) : Polynomial ℝ`. Apply P1 with
-   this `φ`:
-   `have h_exact := butcherShiftedLegendre_collocation_exact_lt_n n i φ ?_`
-   where the side condition `φ.natDegree < n` is discharged via
-   `Polynomial.natDegree_X_pow + omega` (gives `k - 1 < n`, which holds
-   since `k ≤ n` and `k ≥ 1`).
-4. The LHS of `h_exact` is `∫ x in (0 : ℝ)..(_zeros n i), x^(k-1)`.
-   Compute via `intervalIntegral.integral_pow` (Mathlib gives
-   `∫ x in a..b, x^k = b^(k+1)/(k+1) - a^(k+1)/(k+1)`).
-   At `a = 0`, `b = _zeros n i`, exponent `k - 1`:
-   `∫ x in 0..(_zeros n i), x^(k-1) = (_zeros n i)^((k-1)+1) / ((k-1)+1)
-                                       - 0^((k-1)+1) / ((k-1)+1)`.
-   Need `Nat.sub_add_cancel h1` to bridge `(k - 1) + 1 = k` (cycle 307
-   precedent: `Section342.lean:6755`).
-5. The RHS of `h_exact`'s sum: per-`j` term is `_collocationA n i j *
-   φ.eval (_zeros n j)`; `φ.eval (_zeros n j) = (_zeros n j)^(k-1)`
-   via `Polynomial.eval_pow + Polynomial.eval_X`.
-6. The `0^k = 0` simplification on the LHS (need `k ≥ 1`); use
-   `Nat.zero_pow (by omega : 0 < k)` or `pow_succ`-based simp.
-7. Combine LHS = RHS via `linarith` (or a final `linear_combination
-   h_exact` after the LHS/RHS rewrites). The outcome is exactly the
-   `_zeros n i ^ k / k` shape on the RHS of the goal.
+   Recipe: `Polynomial.derivative_sum` over the `Finset.range`,
+   per-term `Polynomial.derivative_C_mul_X_pow` gives
+   `C (c_k / (k+1)) · (k+1) · X^k = C c_k · X^k`, then
+   `Finset.sum_congr` + the fact that `L = ∑_{k ≤ deg L} C (L.coeff k) · X^k`
+   via `Polynomial.as_sum_range` (verify name with
+   `lean_local_search "as_sum_range"`; alternative is
+   `Polynomial.sum_C_mul_X_pow_eq` or `Polynomial.sum_range_eq`).
+   Pitfall: division by `(k + 1 : ℝ)` is fine since `k + 1 ≠ 0` for
+   `k : ℕ`, but rewriting `(k + 1) · (c_k / (k+1)) = c_k` needs
+   `field_simp` with `Nat.cast_add_one_pos` or
+   `(by positivity : (0 : ℝ) < (k : ℝ) + 1).ne'`.
 
-### P3 (stretch, only if P1+P2 close cleanly) — non-vacuity witnesses
+**A.2** `butcherShiftedLegendre_lagrangeAntideriv_eval_zero`:
+   `(lagrangeAntideriv n j).eval 0 = 0`.
 
-* **P3.a**: `(butcherGaussLegendreRK 1).SatisfiesC 1` round-trip
-  through cycle 308's `butcherGaussLegendreRK_one_eq_gaussLegendre1Stage`,
-  then `interval_cases k; simp [gaussLegendre1Stage]` (mirror cycle 308
-  `B(2)` example at `Section342.lean:6907`). Confirms the `n = 1`
-  case matches §321's hand-built `gaussLegendre1Stage` SatisfiesC 1
-  example. Or simpler: `exact butcherGaussLegendreRK_satisfiesC 1`.
-* **P3.b**: `(butcherGaussLegendreRK 2).SatisfiesC 2` (the n=2
-  non-vacuity witness, mirroring cycle 309 §A.4's B(4) at n=2).
-  Discharged by `exact butcherGaussLegendreRK_satisfiesC 2`. Or, for
-  a more substantive sanity check, expand at one specific `(i, k)`
-  pair and verify by direct computation.
+   Each term `C (c_k / (k+1)) · X^(k+1)` evaluates to
+   `(c_k / (k+1)) · 0^(k+1) = 0` since `k + 1 ≥ 1` and
+   `0^(k+1) = 0`. Close with `Polynomial.eval_finset_sum` +
+   `Polynomial.eval_mul` + `Polynomial.eval_C` + `Polynomial.eval_X`
+   + `zero_pow (Nat.succ_ne_zero k)` + `Finset.sum_const_zero`.
 
-### P4 — bookkeeping (mandatory after P1+P2 land)
+**A.3** `butcherShiftedLegendre_lagrangeAntideriv_natDegree_le`:
+   `(lagrangeAntideriv n j).natDegree ≤ n`.
 
-* `extraction/formalization_data/lean_status.json`: leave `cor:342D`
-  as `unformalized` (still no end-to-end statement of cor:342D is
-  shipped — only B(2n) and C(n) infrastructure).
-* `plan.md`: update the §342 cluster log paragraph (the verbose
-  multi-line entry under `lem:342A`) with the cycle 310 progress
-  note; the `cor:342D` row stays `[ ]`.
-* `task_results/cycle_310.md`: standard format, document any P3
-  outcomes.
+   Bound each summand's `natDegree`:
+   `(C (c_k / (k+1)) · X^(k+1)).natDegree ≤ k + 1` via
+   `Polynomial.natDegree_C_mul_X_pow_le` or
+   `Polynomial.natDegree_mul_le`. Then
+   `Finset.sum.natDegree_le` (Mathlib: `Polynomial.natDegree_sum_le_of_forall_le`
+   or `Polynomial.natDegree_finset_sum_le`) bounds the whole sum by
+   `max_{k < L.natDegree + 1} (k + 1) ≤ L.natDegree + 1 ≤ n`
+   (the last step uses `Lagrange.basis`'s degree bound — see
+   `Lagrange.natDegree_basis_le` or just
+   `Polynomial.natDegree_lt_iff_degree_lt`; for our case
+   `(Lagrange.basis Finset.univ v j).natDegree ≤ n - 1` should be
+   accessible).
 
-## §C — Pre-flight verification (do this first, ~5 min)
+   **Risk (LOW)**: if `Lagrange.natDegree_basis_le` is missing,
+   use the looser bound `lagrangeAntideriv.natDegree ≤ L.natDegree + 1`
+   and accept that we use it through `n - 1 + 1 = n` (with
+   `omega` or `Nat.sub_add_cancel`).
 
-1. `Read OpenMath/Chapter3/Section342.lean` lines 6249-6281 (cycle 303's
-   recipe — the canonical template).
-2. `Read OpenMath/Chapter3/Section342.lean` lines 6840-6862 (cycle 308's
-   `_collocationA` def + `_one_apply` example).
-3. `lean_local_search "intervalIntegral.integral_pow"` to confirm the
-   exact lemma name and signature (Mathlib API may differ between
-   `0..b` and `a..b` forms).
-4. `lean_local_search "Polynomial.natDegree_X_pow"` to confirm
-   (alternative: `Polynomial.natDegree_pow` plus `Polynomial.natDegree_X`).
+**A.4** `butcherShiftedLegendre_lagrangeAntideriv_eval_integral`:
+   `∀ c : ℝ, (lagrangeAntideriv n j).eval c = ∫ x in (0:ℝ)..c, (Lagrange.basis _ _ j).eval x`.
 
-## §D — Risk register
+   FTC bridge. Recipe: apply `intervalIntegral.integral_eq_sub_of_hasDerivAt`
+   with derivative from A.1. Specifically, for any `c : ℝ`:
 
-### R1 (LOW): `intervalIntegral.integral_finset_sum` over generic upper bound
+   ```
+   ∫ x in 0..c, L.eval x
+     = (lagrangeAntideriv n j).eval c − (lagrangeAntideriv n j).eval 0
+                                    ‖ via FTC + A.1
+     = (lagrangeAntideriv n j).eval c                   -- via A.2
+   ```
 
-The cycle 303 recipe uses this for `[0, 1]`. The lemma's signature
-is *bound-agnostic*; verify by reading
-`Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic`. If for any
-reason the lemma is restricted, the workaround is `Finset.induction`
-with `intervalIntegral.integral_add` per step.
+   The `HasDerivAt` hypothesis for `intervalIntegral.integral_eq_sub_of_hasDerivAt`
+   is supplied by `Polynomial.hasDerivAt` + A.1 (the polynomial
+   derivative equals the Lagrange basis). Integrability is
+   `(Polynomial.continuous _).intervalIntegrable _ _`.
 
-### R2 (LOW): integrability witness for the swap step
+### Phase B — `∫₀¹ X^k · Lⱼ = bⱼ · cⱼ^k` for `k ≤ n` (~40 LOC, must ship)
 
-Cycle 303 uses `Continuous.intervalIntegrable (continuous_const.mul
-(Polynomial.continuous _)) _ _`. Same form should work; bounds are
-arbitrary reals. If issues: verify `Polynomial.continuous` produces
-a `Continuous` (not `ContinuousOn`) instance — yes per
-`Mathlib.Topology.Algebra.Polynomial`.
+```lean
+private theorem butcherShiftedLegendre_integral_X_pow_lagrange_basis
+    (n : ℕ) (hn : 0 < n) (j : Fin n) (k : ℕ) (hk : k ≤ n) :
+    (∫ x in (0:ℝ)..1,
+        x ^ k *
+        (Lagrange.basis Finset.univ (butcherShiftedLegendre_zeros n) j).eval x)
+      = butcherShiftedLegendre_quadratureWeights n j *
+        butcherShiftedLegendre_zeros n j ^ k
+```
 
-### R3 (LOW): `Lagrange.eq_interpolate` degree side condition
+Recipe:
+1. Define `φ : Polynomial ℝ := Polynomial.X^k * Lagrange.basis _ _ j`.
+   This has `natDegree ≤ k + (n - 1) ≤ 2n − 1 < 2n` via
+   `Polynomial.natDegree_mul_le` + `Polynomial.natDegree_X_pow` +
+   `Lagrange.basis`'s degree bound.
+2. Apply cycle 304's `butcherShiftedLegendre_quadrature_exact_lt_two_n`
+   on `φ` to convert `∫₀¹ φ.eval x` to `∑ᵢ bᵢ · φ(cᵢ)`.
+3. Rewrite `φ.eval c = c^k · Lⱼ(c)` via `Polynomial.eval_mul`,
+   `Polynomial.eval_pow`, `Polynomial.eval_X`.
+4. Collapse the sum via the Kronecker-delta property:
+   `Lⱼ(cᵢ) = δᵢⱼ` (= 1 if i = j, 0 otherwise) → only the `i = j`
+   term survives → `bⱼ · cⱼ^k · 1`. Use `Finset.sum_eq_single (j)`
+   with `Lagrange.eval_basis_self` (i = j case) and
+   `Lagrange.eval_basis_of_ne` (i ≠ j case), exactly as
+   `butcherShiftedLegendre_quadratureWeights_unique` does (see
+   `Section342.lean:6700–6725` for the precedent).
 
-Cycle 303's recipe uses
-`((Finset.univ : Finset (Fin n)).card : WithBot ℕ)` after
-`Finset.card_univ + Fintype.card_fin`. Same form here; identical
-universe / type plumbing. Should port verbatim.
+**Pitfall (cycle 305 precedent)**: the `Finset.sum_eq_single` API
+takes the bound function as `j ∈ s, j ≠ a → f j = 0`, NOT
+`a → ∀ j ∈ s \ {a}, ...`. Match the cycle 305 invocation pattern
+verbatim.
 
-### R4 (MEDIUM): `0^k = 0` for `k ≥ 1` in the RHS evaluation
+### Phase C — Full D(n) capstone (~100 LOC, stretch but achievable)
 
-When evaluating `(0 : ℝ)^k / k - 0` where `k = (k_orig - 1) + 1`,
-the `0^k` term needs `k ≥ 1` to evaluate to 0. Use
-`Nat.zero_pow (by omega)` or `pow_zero`-aware simp lemma. Confirm
-behaviour: `(0 : ℝ)^0 = 1`, `(0 : ℝ)^(succ _) = 0`. Be careful that
-the cast handling doesn't trip on `(k : ℝ)` vs `(k : ℕ)` in the
-exponent.
+```lean
+theorem butcherGaussLegendreRK_satisfiesD (n : ℕ) (hn : 0 < n) :
+    (butcherGaussLegendreRK n).SatisfiesD n := by
+  intro j k h1 hk
+  -- Unfold to the concrete `∑ᵢ bᵢ · cᵢ^(k-1) · Aᵢⱼ = (bⱼ/k)(1 - cⱼ^k)`.
+  show (∑ i : Fin n,
+          butcherShiftedLegendre_quadratureWeights n i *
+            butcherShiftedLegendre_zeros n i ^ (k - 1) *
+            butcherShiftedLegendre_collocationA n i j)
+        = butcherShiftedLegendre_quadratureWeights n j / (k : ℝ) *
+          (1 - butcherShiftedLegendre_zeros n j ^ k)
+  ...
+```
 
-### R5 (MEDIUM): `(k - 1) + 1 = k` cast bridging
+Recipe:
 
-In Lean 4, `Nat.sub_add_cancel h1` (where `h1 : 1 ≤ k`) gives
-`(k - 1) + 1 = k`. Cycle 307's precedent at line 6755 uses this
-exactly. May need to thread through `pow_succ` / `Polynomial.eval_pow`
-carefully. **Memory hint**: from
-`feedback_fin_sum_univ_succ_coerce.md`, similar cast issues are
-resolved by prepending `show` to coerce the binder type
-definitionally — apply if needed.
+1. **Substitute `Aᵢⱼ` by Phase A.4**:
+   `butcherShiftedLegendre_collocationA n i j = (lagrangeAntideriv n j).eval (cᵢ)`.
+   This uses cycle 308's `butcherShiftedLegendre_collocationA` definition
+   plus Phase A.4 at `c := cᵢ`.
 
-### R6 (LOW): `SatisfiesC`'s nested `∀ i, ∀ k` quantifier order
+2. **Recognise LHS as a quadrature sum**: define the polynomial
+   `φ := Polynomial.X^(k-1) * lagrangeAntideriv n j`. Then LHS =
+   `∑ᵢ bᵢ · φ(cᵢ)`.
 
-Cycle 309 §A.3's `B(2n)` recipe used `intro k h1 hk; show ...;
-exact ...`. The `C(n)` predicate adds `∀ i` first:
-`intro i k h1 hk; show ...; ...`. Don't forget the `i` binder.
+3. **Apply B(2n) exactness** (cycle 304) to `φ`: need
+   `φ.natDegree ≤ (k − 1) + n ≤ 2n − 1 < 2n` (use Phase A.3).
+   Gives LHS = `∫₀¹ φ(x) dx = ∫₀¹ x^(k-1) · (lagrangeAntideriv).eval x dx`.
 
-### R7 (LOW, but real): no `0 < n` hypothesis on `SatisfiesC`
+4. **IBP**: use `intervalIntegral.integral_mul_deriv_eq_deriv_mul_of_hasDerivAt`
+   with `u(x) := (lagrangeAntideriv n j).eval x` and
+   `v(x) := x^k / k`. Then `u'(x) = Lⱼ.eval x` (Phase A.1 lifted via
+   `Polynomial.hasDerivAt`) and `v'(x) = x^(k-1)` (chain rule;
+   `hasDerivAt_pow` divided by `k > 0`).
 
-Note that for `n = 0`, the `∀ i : Fin 0` quantifier is empty, so
-`SatisfiesC 0` is vacuous regardless of `n` value. Cycle 309's B(2n)
-needed `0 < n` to exclude the degenerate case in cycle 307's bridge.
-The C(n) version may NOT need it (since `Fin 0` is empty), but if P1
-turns out to need `0 < n` (because cycle 304's analog at line 6332
-requires it), then P2 will need it too. Safe move: try without
-`0 < n` first; add if needed. If P1 needs `0 < n`, P2's signature
-becomes `(n : ℕ) (hn : 0 < n) : SatisfiesC n`.
+   The IBP identity gives:
+   ```
+   ∫₀¹ u(x) · v'(x) dx
+     = [u(x) · v(x)]₀¹ − ∫₀¹ u'(x) · v(x) dx
+     = (1/k) · (lagrangeAntideriv).eval 1 − (1/k) · ∫₀¹ Lⱼ(x) · x^k dx
+   ```
+
+5. **Identify the boundary term** `(lagrangeAntideriv).eval 1`:
+   - via Phase A.4: `(lagrangeAntideriv).eval 1 = ∫₀¹ Lⱼ.eval x dx`
+   - which by definition (Section342:6233) equals
+     `butcherShiftedLegendre_quadratureWeights n j`.
+   So boundary term = `bⱼ`.
+
+6. **Substitute Phase B** for the remainder:
+   `∫₀¹ Lⱼ(x) · x^k dx = ∫₀¹ x^k · Lⱼ(x) dx = bⱼ · cⱼ^k`.
+
+7. **Close with `field_simp` + `ring`**:
+   LHS = `bⱼ/k − (1/k) · bⱼ · cⱼ^k = (bⱼ/k) · (1 − cⱼ^k)` = RHS. ✓
+
+**LOC budget** for Phase C: ~100 LOC (the IBP setup is the heaviest
+single step; Phase A and B reduce the remaining algebra to
+straightforward `ring`/`field_simp`).
+
+### Phase D — Non-vacuity witnesses (~15 LOC, must ship if any of A/B/C ships)
+
+After D(n) lands:
+
+```lean
+/-- Non-vacuity at n = 2: 2-stage Gauss–Legendre satisfies D(2). -/
+example : (butcherGaussLegendreRK 2).SatisfiesD 2 :=
+  butcherGaussLegendreRK_satisfiesD 2 (by norm_num)
+
+/-- Round-trip through §321's hand-built gaussLegendre1Stage. -/
+example : (OpenMath.Chapter3.Section321.gaussLegendre1Stage).SatisfiesD 1 := by
+  rw [← butcherGaussLegendreRK_one_eq_gaussLegendre1Stage,
+      ← butcherGaussLegendreRK_one_eq]
+  exact butcherGaussLegendreRK_satisfiesD 1 (by norm_num)
+```
+
+Mirror cycle 310's non-vacuity examples (line 7080+).
+
+## §D — Risk register and contingencies
+
+| Risk | Severity | Mitigation |
+|---|---|---|
+| R1: `Polynomial.as_sum_range` name drift in Phase A.1 | LOW | Verify via `lean_local_search "as_sum_range"` before use; fallback `Polynomial.eq_sum_range_C_mul_X_pow` or build inline via `Polynomial.ext` |
+| R2: Phase A.3 `Polynomial.natDegree_finset_sum_le` name drift | LOW | Verify name; alternative is per-summand bound + `Finset.le_sum` |
+| R3: `Lagrange.natDegree_basis_le` may not exist | LOW | Use `Lagrange.basis`'s defining product (degree ≤ `Finset.univ.card - 1 = n - 1`) inline via `Polynomial.natDegree_prod_le` |
+| R4: Mathlib's IBP signature picks wrong derivative side | MEDIUM | Two IBP variants exist; verify the right one with `lean_local_search "integral_mul_deriv"` — cycle 277's `iterated_ibp_XnOneSubXn` (Section342NormSqHelpers.lean) is a working template; copy its skeleton |
+| R5: `field_simp` over `(k : ℝ)` for `k : ℕ` with `k ≥ 1` | LOW | Use `have hk_ne : (k : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)` then `field_simp [hk_ne]` |
+| R6: Phase C `show` re-statement of `SatisfiesD` body | LOW | Cycle 310's `show` recipe (line 7060–7063) is the template; only the b/c/A substitutions change |
+| R7: Building polynomial antiderivative via `Finset.range` blows past 200000 heartbeats | LOW-MED | Decompose A.1–A.4 into independent named lemmas (which the plan already does) |
 
 ## §E — What NOT to do
 
-* **Do NOT pivot to D(n) or E(n,n) this cycle.** Per the cycle 309
-  task results §F bullet 3, the textbook B(2n) + C(n) ⇒ D(n)
-  derivation routes through a *separate* algebraic argument that
-  needs its own cycle. Do not attempt as a stretch.
-* **Do NOT attempt `cor:342D` directly this cycle.** It needs all of
-  B(2n), C(n), D(n), and the §314A elementary-weight argument. C(n)
-  is one step in a longer chain.
-* **Do NOT modify cycle 303's
-  `butcherShiftedLegendre_quadrature_exact_lt_n`** — duplicate the
-  proof body for the new theorem, do not refactor (a parametric
-  abstraction over the upper bound is tempting but complicates cycle
-  304's downstream consumer; defer that refactor).
-* **Do NOT attempt to close the cycle 301 upstream `sorryAx` leak**
-  this cycle. The leak is pre-existing and propagates through all
-  §342 theorems consuming `_zeros`; cleanup is a separate audit cycle
-  per cycle 309 §G.
-* **Do NOT use `Polynomial.ext` or `funext` skeletons** for any of
-  the polynomial identities — the cycle 308/309 pattern of `show ...;
-  exact ...` against named lemmas is the canonical recipe and should
-  port directly.
-* **Do NOT introduce `axiom` / `constant` declarations**.
-* **Do NOT raise `maxHeartbeats` above 200000**. Per CLAUDE.md.
-  Cycle 303's recipe was ~30 LOC and compiled within default budget;
-  the verbatim port should too.
-* **Do NOT submit to Aristotle this cycle.** P1 is a verbatim port of
-  cycle 303 (~80 LOC) and P2 is a 40-LOC corollary; both are well
-  within manual cycle budget. Aristotle's slot is better reserved for
-  the multi-cycle D(n) / `cor:342D` work later.
-* **Do NOT introduce `sorry`.** Sorry-first scaffolds for multi-cycle
-  closures get rolled back by precedent (cycles 138/139, 149/150,
-  200/201). Cycle 310's deliverables P1 and P2 must close axiom-clean
-  in a single cycle, or be deferred entirely with no scaffold left
-  behind.
-* **Do NOT pivot to a fresh entity** (e.g. `thm:351B`, `lem:359A`)
-  without strong reason. The §342 cluster has 12 cycles of momentum
-  and one more clean ship gets us most of the way to `cor:342D`.
+* **Do NOT** attempt `cor:342D` end-to-end (the iff with order 2s).
+  That requires §314A elementary-weight infrastructure plus the
+  order-2s ↔ trees-up-to-2s equivalence, which is 3–4 cycles of
+  separate work. C(n) + D(n) is the legitimate stopping point for
+  the §342↔§321 lift in cycle 311.
+* **Do NOT** try to derive D(n) "directly from B(2n) + C(n)" without
+  the antiderivative-IBP route. The standard B+C ⟹ D derivation
+  (Hairer–Wanner I.7) goes through E(n,n) and requires double-sum
+  manipulation that is *less* tractable than the IBP route in our
+  setup, because we lack a clean E(n,n) infrastructure.
+* **Do NOT** introduce `axiom`, `constant`, or `sorry` placeholders.
+  Any phase that doesn't close cleanly should be removed before
+  commit, not left as a stub. See cycle 149/150 (`def:530B`),
+  cycle 200/201 (`thm:381H`), and cycle 138/139 (`thm:550A`
+  general-n) for the rollback precedent.
+* **Do NOT** raise `maxHeartbeats` above 200000. If Phase A or
+  Phase C blows past the default budget, decompose further into
+  named sub-lemmas. Cycle 308's collocation-A-matrix definition is
+  the template for splitting heavy `simp`-laden proofs.
+* **Do NOT** submit to Aristotle this cycle. D(n) is a structural
+  proof (IBP + algebraic substitution), not a search-heavy
+  identity. Aristotle's strengths are premise selection on tight
+  algebraic targets; here the proof structure is fully specified
+  and the LOC budget is dominated by mechanical Lean encoding.
+  Cycle 282's (342f) recurrence Aristotle attempt stalled twice
+  for similar structural reasons.
+* **Do NOT** redefine `butcherShiftedLegendre_collocationA` or
+  `butcherShiftedLegendre_quadratureWeights`. Both definitions are
+  load-bearing for cycles 303–310 and any change would invalidate
+  the lift chain. The Phase A antiderivative is a *new* object,
+  not a refactor.
+* **Do NOT** try to use `Polynomial.integral` from Mathlib. It does
+  not exist (verified). Use the explicit `Finset.sum` construction
+  in Phase A.
 
-## §F — Single-cycle close-criteria
+## §F — Cycle 312+ outlook
 
-Cycle 310 ships if:
+After D(n) ships, the natural cycle-312 targets are (in priority order):
 
-* P1 lands axiom-clean (`[propext, Classical.choice, Quot.sound]`
-  modulo the cycle 301 upstream `sorryAx` leak — same profile as
-  cycles 307/308/309).
-* P2 lands axiom-clean.
-* Sorry count remains 0 in committed code.
-* `lake env lean OpenMath/Chapter3/Section342.lean` exits 0.
+1. **`thm:342C`** (Gaussian quadrature order conditions equivalence,
+   listed as `[ ]` in `plan.md`). The textbook statement
+   (Butcher §342 p. 240) is the iff "a Runge–Kutta method has
+   order 2s ⇔ B(2s), C(s), D(s)". With cycles 309/310/311 supplying
+   B(2n), C(n), D(n), the forward direction (⟸) is the simplifying
+   assumptions theorem from §321 (also currently unformalized);
+   the reverse direction is a Vandermonde / interpolation argument.
+   Likely a 1–2 cycle target after some §321 simplifying-assumptions
+   infrastructure.
 
-P3 stretch (a or b or both) is a bonus, not gating.
+2. **§314A elementary-weight argument** (currently `[ ]` for
+   `thm:314A`). This is the prerequisite for the full `cor:342D`
+   capstone. Multi-cycle.
 
-## §G — Why this is the right cycle 310 target
+3. **`cor:342D` end-to-end**: once both `thm:342C` and `thm:314A`
+   are available, `cor:342D` is a several-line corollary. Plan as
+   a Phase 4 of the §342↔§321 lift after at least one of the above
+   lands.
 
-* **Highest-leverage**: closes another quarter of `cor:342D`,
-  bringing the §342 ↔ §321 lift to ~67% complete. After cycle 310
-  only D(n) and E(n,n) remain, which together close `cor:342D`
-  modulo the §314A elementary-weight argument (a separate, planned
-  multi-cycle effort).
-* **Mechanical port**: the proof is literally cycle 303's recipe
-  with one parameter changed. Risk profile is LOW across the board
-  (R1–R7 above all rated LOW or MEDIUM, with concrete mitigations).
-* **Independent of multi-cycle blockers**: does NOT need the cycle
-  301 sorryAx cleanup, does NOT need any other §342 infrastructure
-  beyond what's already shipped.
-* **Sets up D(n)**: with C(n) in hand, the standard B(2n)+C(n)⇒D(n)
-  derivation (Hairer–Wanner I.7.5 / Butcher §342) becomes a
-  one-cycle algebraic argument in cycle 311+.
+4. **Cleanup**: the `sorryAx` leak from cycle 301
+   (`_rootsInIoo_card_ge` upstream) propagates through every §342
+   theorem consuming `_zeros`. An audit cycle isolating and closing
+   that sorry would clean up the axiom profile of every cycle
+   308–311 deliverable.
 
-## §H — Mandatory closing actions for cycle 310
+## §G — Single-cycle ship gate
 
-1. `task_results/cycle_310.md` — standard format, document P1 + P2
-   axiom verification, P3 status, faithfulness checks for both new
-   theorems, and any pitfalls hit.
-2. Update `plan.md` `lem:342A` follow-up paragraph (the verbose
-   §342 cluster log) with cycle 310 progress entry.
-3. Verify cycle-309 landmark theorems still axiom-clean
-   (`butcherGaussLegendreRK_satisfiesB`, `butcherGaussLegendreRK`,
-   `_one_eq`) via `lean_verify` — no regression.
-4. Commit with message `Cycle 310 — §342 collocation exactness on
-   [0, cᵢ] + cor:342D Phase 3.1 (C(n)).`
+**Minimum acceptable cycle 311 ship**: Phase A + Phase B + at least
+one non-vacuity example. Phase C deferred to cycle 312 if needed.
+
+**Target ship**: Phase A + B + C + non-vacuity examples (the full
+`butcherGaussLegendreRK_satisfiesD` headline).
+
+**Abort threshold**: if Phase A.4 (FTC bridge) stalls past 90 minutes
+of focused work, roll back to "Phase A.1–A.3 + Phase B + one
+intermediate sanity example" and ship a partial-progress cycle.
+Document the Phase A.4 stall in `.prover-state/task_results/cycle_311.md`
+with a concrete recipe so cycle 312's worker can close it.
+
+**Sorry count constraint**: file ships with sorry count 0. No
+intermediate scaffolding allowed. If a phase doesn't close, remove
+its skeleton before commit.
+
+## §H — File placement and structure
+
+All Phase A/B/C additions go in `OpenMath/Chapter3/Section342.lean`,
+appended **after** cycle 310's `butcherGaussLegendreRK_satisfiesC`
+non-vacuity witnesses (currently the file's last block, around line
+7100+).
+
+Add a new section header before Phase A:
+
+```
+/-! ### Phase 3.2 — `D(n)` lift via polynomial antiderivative + IBP (cycle 311)
+
+Cycle 310 shipped the C(n) prong of `cor:342D`; cycle 311 ships the
+D(n) prong via the textbook IBP argument (Butcher §342 p. 240).
+
+The proof recipe ...
+-/
+```
+
+Keep cycle 310's section ordering (collocation exactness → `SatisfiesC`)
+as the architectural template; Phase A → B → C mirrors it (antideriv
+infrastructure → quadrature-of-`X^k Lⱼ` → `SatisfiesD` capstone).
+
+## §I — Verification before commit
+
+1. `lake env lean OpenMath/Chapter3/Section342.lean` — exits 0.
+2. `grep -c sorry OpenMath/Chapter3/Section342.lean` — returns 0.
+3. `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section342.lean`
+   — returns no matches (tautology scanner clean).
+4. `lean_verify OpenMath.Chapter3.Section342.butcherGaussLegendreRK_satisfiesD`
+   — returns `[propext, sorryAx, Classical.choice, Quot.sound]`
+   (sorryAx leak is pre-existing from cycle 301 upstream, expected).
+5. Spot-check the two non-vacuity examples (n=2 and gaussLegendre1Stage
+   round-trip) compile.
+6. `lake env lean OpenMath/Chapter3.lean` (aggregator) — exits 0,
+   confirming no downstream regression.
+
+Update `extraction/formalization_data/lean_status.json`: bump the
+cycle reference on the §342 row but **do not** mark `cor:342D` as
+formalized (it's still partial — only the C(n) and D(n) prongs ship,
+not the full iff). The `lem:342B` row stays `formalized` (cycle 305).
+
+Update `plan.md`: add a one-line cycle 311 closure paragraph to the
+`cor:342D` row's existing Phase 3 progress notes (the cycle 310 line
+already records C(n); cycle 311 line records D(n)).
+
+Write `.prover-state/task_results/cycle_311.md` documenting the
+deliverables, axiom profiles, LOC delta, and Phase C completion
+status (full ship vs partial vs abort).
+
+## §J — Commit message template
+
+```
+Cycle 311 — §342 D(n) lift: polynomial antiderivative + IBP capstone.
+
+Phase A: butcherShiftedLegendre_lagrangeAntideriv + 4 lemmas (~80 LOC).
+Phase B: ∫₀¹ X^k · Lⱼ = bⱼ · cⱼ^k via B(2n) + Kronecker δ (~40 LOC).
+Phase C: butcherGaussLegendreRK_satisfiesD via IBP (~100 LOC).
+P4: non-vacuity at n=2 + gaussLegendre1Stage round-trip.
+
+All axiom-clean ([propext, sorryAx, Classical.choice, Quot.sound];
+sorryAx pre-existing from cycle 301 upstream). Closes 2/3 prongs of
+cor:342D (C(n) + D(n)); B(2n) shipped cycle 309. Full cor:342D
+capstone deferred to thm:342C + thm:314A multi-cycle effort.
+```

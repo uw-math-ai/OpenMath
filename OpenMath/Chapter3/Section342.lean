@@ -7094,4 +7094,363 @@ example : (OpenMath.Chapter3.Section321.gaussLegendre1Stage).SatisfiesC 1 := by
       ← butcherGaussLegendreRK_one_eq]
   exact butcherGaussLegendreRK_satisfiesC 1
 
+/-! ### Phase 3.2 — `D(n)` lift via polynomial antiderivative + IBP (cycle 311)
+
+Cycle 310 shipped the `C(n)` prong of `cor:342D`; cycle 311 ships the
+`D(n)` prong via the textbook IBP argument (Butcher §342 p. 240).
+
+The recipe has three moves:
+
+1. *(Phase A)* Build a polynomial antiderivative `F_j` of the Lagrange
+   basis `L_j := Lagrange.basis _ _ j` with `F_j(0) = 0`. Mathlib has
+   no `Polynomial.integral`, so we construct it explicitly term by
+   term from the `as_sum_range` expansion of `L_j`.
+2. *(Phase B)* Show `∫₀¹ x^k · L_j(x) dx = b_j · c_j^k` for `k ≤ n`,
+   via cycle 304's `2n`-degree quadrature exactness on the polynomial
+   `X^k · L_j` (whose degree is `k + (n - 1) ≤ 2n - 1 < 2n`) plus the
+   Kronecker-delta property `L_j(c_i) = δ_{ij}`.
+3. *(Phase C)* Use cycle 304's `2n`-degree quadrature exactness on
+   `X^(k-1) · F_j` to convert the LHS `∑ᵢ bᵢ · cᵢ^(k-1) · A_ij` into
+   `∫₀¹ x^(k-1) · F_j(x) dx`; apply IBP with `u := F_j`,
+   `dv := X^(k-1) dx`; identify the boundary `F_j(1) = ∫₀¹ L_j = b_j`
+   and reduce the remainder via Phase B. -/
+
+/-- **Polynomial antiderivative of `L_j`.** Term-by-term integration of
+the `as_sum_range` expansion of the Lagrange basis polynomial
+`L_j := Lagrange.basis Finset.univ (butcherShiftedLegendre_zeros n) j`:
+
+  `F_j := ∑_{k ≤ deg L_j} C(L_j.coeff k / (k + 1)) · X^{k+1}`.
+
+By construction `F_j' = L_j` (Phase A.1) and `F_j(0) = 0` (Phase A.2),
+with `natDegree F_j ≤ n` (Phase A.3). The FTC bridge
+`F_j(c) = ∫₀^c L_j(x) dx` (Phase A.4) lifts these algebraic identities
+into the analytic setting needed for Phases B and C. -/
+private noncomputable def butcherShiftedLegendre_lagrangeAntideriv
+    (n : ℕ) (j : Fin n) : Polynomial ℝ :=
+  ∑ k ∈ Finset.range
+        ((Lagrange.basis Finset.univ
+            (butcherShiftedLegendre_zeros n) j).natDegree + 1),
+    Polynomial.C
+      ((Lagrange.basis Finset.univ
+          (butcherShiftedLegendre_zeros n) j).coeff k / ((k : ℝ) + 1)) *
+      Polynomial.X ^ (k + 1)
+
+/-- **Phase A.1.** Derivative of the polynomial antiderivative equals
+the Lagrange basis `L_j`. Each summand
+`derivative (C (c_k / (k+1)) · X^(k+1)) = C ((c_k / (k+1)) · (k+1)) · X^k
+                                      = C c_k · X^k`
+collapses to the matching monomial term; the sum then reconstitutes
+`L_j` via `Polynomial.as_sum_range`. -/
+private theorem butcherShiftedLegendre_lagrangeAntideriv_derivative
+    (n : ℕ) (j : Fin n) :
+    (butcherShiftedLegendre_lagrangeAntideriv n j).derivative
+      = Lagrange.basis Finset.univ (butcherShiftedLegendre_zeros n) j := by
+  set L : Polynomial ℝ :=
+    Lagrange.basis Finset.univ (butcherShiftedLegendre_zeros n) j with hL_def
+  unfold butcherShiftedLegendre_lagrangeAntideriv
+  rw [← hL_def, Polynomial.derivative_sum]
+  have hper : ∀ k ∈ Finset.range (L.natDegree + 1),
+      (Polynomial.C (L.coeff k / ((k : ℝ) + 1)) *
+        Polynomial.X ^ (k + 1)).derivative
+        = Polynomial.C (L.coeff k) * Polynomial.X ^ k := by
+    intro k _
+    rw [Polynomial.derivative_C_mul_X_pow]
+    have hk1 : (k + 1 : ℕ) - 1 = k := by omega
+    rw [hk1]
+    congr 1
+    have hcast : (((k + 1 : ℕ) : ℝ)) = (k : ℝ) + 1 := by push_cast; ring
+    rw [hcast]
+    have hne : ((k : ℝ) + 1) ≠ 0 := by positivity
+    field_simp
+  rw [Finset.sum_congr rfl hper]
+  conv_rhs => rw [Polynomial.as_sum_range L]
+  refine Finset.sum_congr rfl ?_
+  intro k _
+  rw [Polynomial.C_mul_X_pow_eq_monomial]
+
+/-- **Phase A.2.** The polynomial antiderivative vanishes at `0`. Each
+summand `C (c_k / (k+1)) · X^{k+1}` evaluates at `0` to
+`(c_k / (k+1)) · 0^{k+1} = 0` since `k + 1 ≥ 1`. -/
+private theorem butcherShiftedLegendre_lagrangeAntideriv_eval_zero
+    (n : ℕ) (j : Fin n) :
+    (butcherShiftedLegendre_lagrangeAntideriv n j).eval 0 = 0 := by
+  unfold butcherShiftedLegendre_lagrangeAntideriv
+  rw [Polynomial.eval_finset_sum]
+  apply Finset.sum_eq_zero
+  intro k _
+  simp [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+        Polynomial.eval_X, zero_pow (Nat.succ_ne_zero k)]
+
+/-- **Phase A.3.** The polynomial antiderivative has `natDegree ≤ n`.
+Each summand `C(c_k / (k+1)) · X^{k+1}` has `natDegree ≤ k + 1`, and
+the maximum exponent `k + 1` in the range `k < L_j.natDegree + 1` is
+`L_j.natDegree + 1 ≤ (n - 1) + 1 = n`. Here `L_j.natDegree ≤ n - 1`
+comes from `Lagrange.natDegree_basis` (Lagrange basis on `n` nodes). -/
+private theorem butcherShiftedLegendre_lagrangeAntideriv_natDegree_le
+    (n : ℕ) (j : Fin n) :
+    (butcherShiftedLegendre_lagrangeAntideriv n j).natDegree ≤ n := by
+  have hn_pos : 0 < n := lt_of_le_of_lt (Nat.zero_le _) j.isLt
+  set v : Fin n → ℝ := butcherShiftedLegendre_zeros n with hv_def
+  have hv : Function.Injective v := butcherShiftedLegendre_zeros_injective n
+  have hv_injOn : Set.InjOn v (Finset.univ : Finset (Fin n)) := hv.injOn
+  set L : Polynomial ℝ := Lagrange.basis Finset.univ v j with hL_def
+  have hj_mem : j ∈ (Finset.univ : Finset (Fin n)) := Finset.mem_univ _
+  have hL_natDeg : L.natDegree = n - 1 := by
+    rw [hL_def, Lagrange.natDegree_basis hv_injOn hj_mem,
+        Finset.card_univ, Fintype.card_fin]
+  unfold butcherShiftedLegendre_lagrangeAntideriv
+  rw [← hv_def, ← hL_def]
+  apply Polynomial.natDegree_sum_le_of_forall_le
+  intro k hk
+  have hk_in : k < L.natDegree + 1 := Finset.mem_range.mp hk
+  have hbound :
+      (Polynomial.C (L.coeff k / ((k : ℝ) + 1)) *
+        Polynomial.X ^ (k + 1)).natDegree ≤ k + 1 := by
+    calc (Polynomial.C (L.coeff k / ((k : ℝ) + 1)) *
+            Polynomial.X ^ (k + 1)).natDegree
+        ≤ (Polynomial.C (L.coeff k / ((k : ℝ) + 1))).natDegree +
+            (Polynomial.X ^ (k + 1) : Polynomial ℝ).natDegree :=
+              Polynomial.natDegree_mul_le
+      _ = 0 + (k + 1) := by
+            rw [Polynomial.natDegree_C, Polynomial.natDegree_X_pow]
+      _ = k + 1 := zero_add _
+  have hkn : k + 1 ≤ n := by rw [hL_natDeg] at hk_in; omega
+  exact hbound.trans hkn
+
+/-- **Phase A.4.** FTC bridge: the polynomial antiderivative evaluates
+to the integral of the Lagrange basis from `0` to `c`. Combines
+`intervalIntegral.integral_eq_sub_of_hasDerivAt` with Phase A.1 (the
+derivative) and Phase A.2 (the boundary value at `0`). -/
+private theorem butcherShiftedLegendre_lagrangeAntideriv_eval_integral
+    (n : ℕ) (j : Fin n) (c : ℝ) :
+    (butcherShiftedLegendre_lagrangeAntideriv n j).eval c
+      = ∫ x in (0:ℝ)..c,
+          (Lagrange.basis Finset.univ
+            (butcherShiftedLegendre_zeros n) j).eval x := by
+  have hderiv := butcherShiftedLegendre_lagrangeAntideriv_derivative n j
+  have h_evalAt : ∀ x ∈ Set.uIcc (0:ℝ) c,
+      HasDerivAt
+        (fun y => (butcherShiftedLegendre_lagrangeAntideriv n j).eval y)
+        ((Lagrange.basis Finset.univ
+            (butcherShiftedLegendre_zeros n) j).eval x) x := by
+    intro x _
+    have h := (butcherShiftedLegendre_lagrangeAntideriv n j).hasDerivAt x
+    rw [hderiv] at h
+    exact h
+  have h_intble :
+      IntervalIntegrable
+        (fun x =>
+          (Lagrange.basis Finset.univ
+              (butcherShiftedLegendre_zeros n) j).eval x)
+        MeasureTheory.volume 0 c :=
+    (Polynomial.continuous _).intervalIntegrable _ _
+  have h_ftc :=
+    intervalIntegral.integral_eq_sub_of_hasDerivAt h_evalAt h_intble
+  rw [butcherShiftedLegendre_lagrangeAntideriv_eval_zero n j, sub_zero] at h_ftc
+  exact h_ftc.symm
+
+/-- **Phase B.** For every `k ≤ n`,
+`∫₀¹ x^k · L_j(x) dx = b_j · c_j^k`, where `L_j` is the Lagrange basis
+at the shifted Legendre zeros and `b_j`, `c_j` are the canonical
+quadrature weight and zero at index `j`. The polynomial `X^k · L_j`
+has `natDegree ≤ k + (n - 1) ≤ 2n - 1 < 2n`, so cycle 304's
+`2n`-degree quadrature exactness reduces the integral to the
+quadrature sum `∑ᵢ bᵢ · c_i^k · L_j(c_i)`; the Kronecker-delta
+property collapses this to `b_j · c_j^k · 1`. -/
+private theorem butcherShiftedLegendre_integral_X_pow_lagrange_basis
+    (n : ℕ) (hn : 0 < n) (j : Fin n) (k : ℕ) (hk : k ≤ n) :
+    (∫ x in (0:ℝ)..1,
+        x ^ k *
+        (Lagrange.basis Finset.univ
+            (butcherShiftedLegendre_zeros n) j).eval x)
+      = butcherShiftedLegendre_quadratureWeights n j *
+        butcherShiftedLegendre_zeros n j ^ k := by
+  set v : Fin n → ℝ := butcherShiftedLegendre_zeros n with hv_def
+  have hv : Function.Injective v := butcherShiftedLegendre_zeros_injective n
+  have hv_injOn : Set.InjOn v (Finset.univ : Finset (Fin n)) := hv.injOn
+  set L : Polynomial ℝ := Lagrange.basis Finset.univ v j with hL_def
+  have hj_mem : j ∈ (Finset.univ : Finset (Fin n)) := Finset.mem_univ _
+  have hL_natDeg : L.natDegree = n - 1 := by
+    rw [hL_def, Lagrange.natDegree_basis hv_injOn hj_mem,
+        Finset.card_univ, Fintype.card_fin]
+  set φ : Polynomial ℝ := Polynomial.X ^ k * L with hφ_def
+  have hφ_deg : φ.natDegree < 2 * n := by
+    rw [hφ_def]
+    calc (Polynomial.X ^ k * L).natDegree
+        ≤ (Polynomial.X ^ k : Polynomial ℝ).natDegree + L.natDegree :=
+            Polynomial.natDegree_mul_le
+      _ = k + (n - 1) := by rw [Polynomial.natDegree_X_pow, hL_natDeg]
+      _ < 2 * n := by omega
+  have h_exact :=
+    butcherShiftedLegendre_quadrature_exact_lt_two_n n hn φ hφ_deg
+  have h_eval : ∀ x : ℝ, φ.eval x = x ^ k * L.eval x := by
+    intro x
+    rw [hφ_def, Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_X]
+  -- Convert the LHS integrand to `φ.eval x`, then apply exactness.
+  rw [show (∫ x in (0:ℝ)..1, x ^ k * L.eval x)
+        = (∫ x in (0:ℝ)..1, φ.eval x) by
+      apply intervalIntegral.integral_congr
+      intro x _; exact (h_eval x).symm]
+  rw [h_exact]
+  -- Collapse the quadrature sum by the Kronecker-delta property.
+  rw [Finset.sum_eq_single j]
+  · rw [h_eval, hL_def, Lagrange.eval_basis_self hv_injOn hj_mem]
+    ring
+  · intro i _ hij
+    have h0 : (Lagrange.basis Finset.univ v j).eval (v i) = 0 :=
+      Lagrange.eval_basis_of_ne hij.symm (Finset.mem_univ i)
+    rw [h_eval, hL_def, h0]
+    ring
+  · intro habs; exact absurd (Finset.mem_univ j) habs
+
+/-- **Headline cycle 311 corollary: §342 ↔ §321 `D(n)` lift.** The
+general-`n` Gauss–Legendre `RKTableau` (collocation `A`-matrix,
+canonical Lagrange weights, shifted Legendre zeros) satisfies the
+Butcher §321 `D(n)` adjoint order condition.
+
+The textbook proof (Butcher §342 p. 240) is the IBP move:
+substitute `A_ij = F_j(c_i)` (Phase A.4 on the antiderivative `F_j`)
+to recognise the LHS sum as the `2n`-degree-exact quadrature of
+`X^(k-1) · F_j`; equate that to `∫₀¹ x^(k-1) · F_j(x) dx`; integrate
+by parts with `u := F_j`, `dv := X^(k-1) dx` to surface the boundary
+`F_j(1) = b_j` and reduce the remainder to `b_j · c_j^k` (Phase B). -/
+theorem butcherGaussLegendreRK_satisfiesD (n : ℕ) :
+    (butcherGaussLegendreRK n).SatisfiesD n := by
+  intro j k h1 hk
+  have hn : 0 < n := lt_of_le_of_lt (Nat.zero_le _) j.isLt
+  show (∑ i : Fin n,
+          butcherShiftedLegendre_quadratureWeights n i *
+            butcherShiftedLegendre_zeros n i ^ (k - 1) *
+            butcherShiftedLegendre_collocationA n i j)
+        = butcherShiftedLegendre_quadratureWeights n j / (k : ℝ) *
+          (1 - butcherShiftedLegendre_zeros n j ^ k)
+  set v : Fin n → ℝ := butcherShiftedLegendre_zeros n with hv_def
+  set L : Polynomial ℝ :=
+    Lagrange.basis Finset.univ v j with hL_def
+  set F : Polynomial ℝ :=
+    butcherShiftedLegendre_lagrangeAntideriv n j with hF_def
+  -- Phase A.4 at c = c_i: A_ij = F.eval (c_i).
+  have hA_subst : ∀ i : Fin n,
+      butcherShiftedLegendre_collocationA n i j = F.eval (v i) := by
+    intro i
+    rw [butcherShiftedLegendre_collocationA, hF_def, hv_def,
+        butcherShiftedLegendre_lagrangeAntideriv_eval_integral]
+  -- Phase A.3: deg F ≤ n.
+  have hF_natDeg : F.natDegree ≤ n :=
+    butcherShiftedLegendre_lagrangeAntideriv_natDegree_le n j
+  -- Phase B(2n) test polynomial φ := X^(k-1) · F.
+  set φ : Polynomial ℝ := Polynomial.X ^ (k - 1) * F with hφ_def
+  have hφ_deg : φ.natDegree < 2 * n := by
+    rw [hφ_def]
+    calc (Polynomial.X ^ (k - 1) * F).natDegree
+        ≤ (Polynomial.X ^ (k - 1) : Polynomial ℝ).natDegree + F.natDegree :=
+            Polynomial.natDegree_mul_le
+      _ = (k - 1) + F.natDegree := by rw [Polynomial.natDegree_X_pow]
+      _ ≤ (k - 1) + n := by omega
+      _ < 2 * n := by omega
+  have h_exact :=
+    butcherShiftedLegendre_quadrature_exact_lt_two_n n hn φ hφ_deg
+  have h_eval : ∀ x : ℝ, φ.eval x = x ^ (k - 1) * F.eval x := by
+    intro x
+    rw [hφ_def, Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_X]
+  -- Step 1: rewrite the LHS sum as ∫₀¹ φ.eval x dx.
+  have hLHS_eq :
+      (∑ i : Fin n,
+        butcherShiftedLegendre_quadratureWeights n i *
+          v i ^ (k - 1) *
+          butcherShiftedLegendre_collocationA n i j)
+       = ∫ x in (0:ℝ)..1, φ.eval x := by
+    rw [h_exact]
+    apply Finset.sum_congr rfl
+    intro i _
+    rw [hA_subst i, h_eval]
+    ring
+  rw [hLHS_eq]
+  -- Step 2: IBP scaffolding. g := C (1/k) · X^k; g.derivative = X^(k-1).
+  have hk_pos : 0 < (k : ℝ) := by exact_mod_cast h1
+  have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
+  set g : Polynomial ℝ := Polynomial.C (1 / (k : ℝ)) * Polynomial.X ^ k
+    with hg_def
+  have hg_deriv : g.derivative = Polynomial.X ^ (k - 1) := by
+    rw [hg_def, Polynomial.derivative_C_mul_X_pow]
+    have h_kk_eq : (k - 1 : ℕ) + 1 = k := Nat.sub_add_cancel h1
+    have h_pow : (Polynomial.X : Polynomial ℝ) ^ ((k : ℕ) - 1)
+        = Polynomial.X ^ (k - 1) := rfl
+    -- Simplify (k - 1) inside the exponent via Nat subtraction symmetry.
+    have h_exp : k - 1 = (k : ℕ) - 1 := rfl
+    -- C (1/k * ↑k) = C 1; collapse to X^(k-1).
+    have h_coef : (1 / (k : ℝ)) * (k : ℝ) = 1 := by field_simp
+    rw [show ((k : ℕ) : ℝ) = (k : ℝ) from rfl, h_coef, Polynomial.C_1, one_mul]
+  -- Convert the integrand φ.eval x to F.eval x · g.derivative.eval x.
+  have hφ_eq_F_gd : ∀ x : ℝ, φ.eval x = F.eval x * g.derivative.eval x := by
+    intro x
+    rw [hg_deriv, h_eval, Polynomial.eval_pow, Polynomial.eval_X]
+    ring
+  rw [show (∫ x in (0:ℝ)..1, φ.eval x)
+        = ∫ x in (0:ℝ)..1, F.eval x * g.derivative.eval x by
+      apply intervalIntegral.integral_congr
+      intro x _; exact hφ_eq_F_gd x]
+  rw [poly_ibp F g]
+  -- Step 3: Compute boundary terms and remainder.
+  have hF_eval_1 : F.eval 1
+      = butcherShiftedLegendre_quadratureWeights n j := by
+    rw [hF_def, butcherShiftedLegendre_lagrangeAntideriv_eval_integral n j 1,
+        butcherShiftedLegendre_quadratureWeights]
+  have hF_eval_0 : F.eval 0 = 0 := by
+    rw [hF_def, butcherShiftedLegendre_lagrangeAntideriv_eval_zero]
+  have hg_eval_0 : g.eval 0 = 0 := by
+    rw [hg_def, Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+        Polynomial.eval_X, zero_pow (by omega : k ≠ 0), mul_zero]
+  have hg_eval_1 : g.eval 1 = 1 / (k : ℝ) := by
+    rw [hg_def, Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+        Polynomial.eval_X, one_pow, mul_one]
+  -- Remainder: ∫ F.derivative.eval x · g.eval x = (1/k) · b_j · c_j^k.
+  have hF_deriv : F.derivative = L := by
+    rw [hF_def, hL_def]
+    exact butcherShiftedLegendre_lagrangeAntideriv_derivative n j
+  have h_rem :
+      (∫ x in (0:ℝ)..1, F.derivative.eval x * g.eval x)
+        = (1 / (k : ℝ)) *
+          (butcherShiftedLegendre_quadratureWeights n j *
+            v j ^ k) := by
+    rw [hF_deriv]
+    have h_int_congr :
+        (∫ x in (0:ℝ)..1, L.eval x * g.eval x)
+          = ∫ x in (0:ℝ)..1, (1 / (k : ℝ)) * (x ^ k * L.eval x) := by
+      apply intervalIntegral.integral_congr
+      intro x _
+      show L.eval x * g.eval x = (1 / (k : ℝ)) * (x ^ k * L.eval x)
+      rw [hg_def]
+      simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+            Polynomial.eval_X]
+      ring
+    rw [h_int_congr, intervalIntegral.integral_const_mul]
+    have hL_eq : L = Lagrange.basis Finset.univ
+        (butcherShiftedLegendre_zeros n) j := by rw [hL_def]
+    rw [hL_eq]
+    rw [butcherShiftedLegendre_integral_X_pow_lagrange_basis n hn j k hk]
+  rw [hF_eval_1, hF_eval_0, hg_eval_0, hg_eval_1, h_rem]
+  field_simp
+  ring
+
+/-- **Non-vacuity witness at `n = 2`.** Exercises the cycle 311 `D(n)`
+theorem at the smallest non-anchor stage count: the 2-stage
+Gauss–Legendre method satisfies the §321 `D(2)` condition (two adjoint
+identities `∑ᵢ bᵢ · cᵢ^(k-1) · Aᵢⱼ = (bⱼ/k)(1 - cⱼ^k)` for `k = 1, 2`
+and `j = 0, 1`). -/
+example : (butcherGaussLegendreRK 2).SatisfiesD 2 :=
+  butcherGaussLegendreRK_satisfiesD 2
+
+/-- **Round-trip witness through §321's `gaussLegendre1Stage`.**
+Cycle 306 proved this `D(1)` fact directly via `interval_cases k`;
+cycle 311 re-derives it through the general theorem
+`butcherGaussLegendreRK_satisfiesD` at `n = 1`, validating that the
+cycle 311 `D(n)` bridge is downstream-consumable: §321's hand-built
+implicit-midpoint tableau is `D(1)`-correct *via* the §342
+collocation construction. -/
+example : (OpenMath.Chapter3.Section321.gaussLegendre1Stage).SatisfiesD 1 := by
+  rw [← butcherGaussLegendreRK_one_eq_gaussLegendre1Stage,
+      ← butcherGaussLegendreRK_one_eq]
+  exact butcherGaussLegendreRK_satisfiesD 1
+
 end OpenMath.Chapter3.Section342
