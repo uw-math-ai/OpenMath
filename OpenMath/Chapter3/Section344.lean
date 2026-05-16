@@ -2569,4 +2569,19 @@ example : butcherLobattoIIIA_three.SatisfiesB 4 := by
   · simp [butcherLobattoIIIADirect_three, Fin.sum_univ_three]; norm_num
   · simp [butcherLobattoIIIADirect_three, Fin.sum_univ_three]; norm_num
 
+/-- **`SatisfiesC 3` certificate** for the cycle 333
+collocation-assembled Lobatto IIIA `s = 3` tableau: the C(s)-defining
+collocation simplifying assumption holds. Routes via cycle 333's
+coincidence theorem `butcherLobattoIIIA_three_eq_direct` to the direct
+Simpson's-rule form. Mirrors cycle 332's
+`butcherRadauI_collocation_two.SatisfiesC 2` certificate at one higher
+dimension. -/
+theorem butcherLobattoIIIA_three_satisfiesC :
+    butcherLobattoIIIA_three.SatisfiesC 3 := by
+  rw [butcherLobattoIIIA_three_eq_direct]
+  intro i k h1 hk
+  fin_cases i <;> interval_cases k <;>
+    simp [butcherLobattoIIIADirect_three, Fin.sum_univ_three] <;>
+    norm_num
+
 end OpenMath.Chapter3.Section344
