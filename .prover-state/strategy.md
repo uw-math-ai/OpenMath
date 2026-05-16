@@ -1,231 +1,321 @@
-# Cycle 303 Strategy — Phase A.2 of lem:342B (Lagrange quadrature weights + exactness)
+# Cycle 305 Strategy — `lem:342B` Phase B.2 (Weight Positivity)
 
-## State summary
+## Context
 
-* HEAD = `d511f55` (cycle 302). 0 sorries. 71/175 entities done.
-* Cycle 302 SHIPPED Phase A.1 of `lem:342B`: `butcherShiftedLegendre_zeros`
-  (`Fin n → ℝ` enumeration via `Finset.orderEmbOfFin` on cycle 301's
-  concrete root finset) plus four spec lemmas
-  (`_mem_Ioo`, `_isRoot`, `_injective`, `_card_eq`). All axiom-clean.
-  `Section342.lean` is now 6200 LOC.
-* `lem:342A` fully closed cycle 301 (all seven clauses (342a)–(342g)).
-* Aristotle queue empty.
-* No active blockers in `.prover-state/issues/` for §342.
+**Cycle 304 shipped Phase B.1 cleanly** (headline 2n-degree exactness
+`butcherShiftedLegendre_quadrature_exact_lt_two_n` + P2 consistency
+witness `butcherShiftedLegendre_quadratureWeights_sum_eq_one`,
++~130 LOC, axiom-clean, 0 sorries). File now 6418 LOC. No Aristotle
+results pending. No blockers reported.
 
-## Priority 0 — Health checks (sanity, ≤5 min)
+**`lem:342B` roadmap**: Phase A.1 (cycle 301, zero finset) → A.2 (cycle
+302, canonical enumeration) → A.2.b (cycle 303, Lagrange weights + <n
+exactness) → **B.1 (cycle 304, 2n-degree exactness) ← DONE** → **B.2
+(THIS CYCLE, positivity `0 < bⱼ`)** → B.3 (cycle 306, uniqueness).
+After B.3 lands, `lem:342B` row flips to `formalized`.
 
-1. Confirm HEAD = `d511f55` via `git log -1 --format='%h %s'`.
-2. `lake env lean OpenMath/Chapter3/Section342.lean` exits 0.
-3. Sorry count 0: `grep -c sorry OpenMath/Chapter3/Section342.lean`.
-4. `#print axioms OpenMath.Chapter3.Section342.butcherShiftedLegendre_zeros`
-   returns `[propext, Classical.choice, Quot.sound]` only.
+## This cycle: Phase B.2 — positivity of quadrature weights
 
-If any check fails, stop and file an issue. Do NOT touch unrelated files.
-
-## Priority 1 — Phase A.2: Lagrange quadrature weights (~120–180 LOC)
-
-**Target**: define quadrature weights `bⱼ` indexed by the cycle 302
-`butcherShiftedLegendre_zeros n j` nodes, and prove exactness on
-polynomials of degree `< n` (Butcher §342 p. 237 — half of `lem:342B`;
-the full `2n`-degree exactness is Phase B and uses both Phase A.2's
-exactness-up-to-`n−1` and the (342a) orthogonality).
-
-### Deliverable D1 — `butcherShiftedLegendre_quadratureWeights`
+### Target
 
 ```lean
-noncomputable def butcherShiftedLegendre_quadratureWeights
-    (n : ℕ) (j : Fin n) : ℝ :=
-  ∫ x in (0 : ℝ)..1,
-    (Lagrange.basis Finset.univ (butcherShiftedLegendre_zeros n) j).eval x
+theorem butcherShiftedLegendre_quadratureWeights_pos (n : ℕ) (hn : 0 < n)
+    (j : Fin n) :
+    0 < butcherShiftedLegendre_quadratureWeights n j
 ```
 
-(Adjust the Mathlib hook name to whatever fires — see the §"Mathlib
-hooks" subsection below for verification steps.)
+i.e. each Gaussian quadrature weight `bⱼ` is strictly positive. This
+is the "positive numbers b₁, …, bₛ" clause of Butcher's `lem:342B`
+statement (§342 p. 237).
 
-### Deliverable D2 — `butcherShiftedLegendre_quadrature_exact_lt_n`
+### Approach — verbatim execution of Butcher's textbook recipe
+
+Butcher (p. 237):
+
+> To prove the bᵢ are positive, let φ(x) denote the square of the
+> polynomial formed by dividing Pₛ*(x) by x − cᵢ. Substitute into
+> (342h), and the result follows.
+
+Concretely, the proof breaks into 5 steps. Ship each as a `private`
+auxiliary lemma where useful; only the headline
+`butcherShiftedLegendre_quadratureWeights_pos` needs to be public.
+
+#### Step 1: define the test polynomial `φⱼ`
+
+Define
+```lean
+private noncomputable def butcherShiftedLegendre_lagrangeFactor
+    (n : ℕ) (hn : 0 < n) (j : Fin n) : Polynomial ℝ :=
+  butcherShiftedLegendre n /ₘ (Polynomial.X - Polynomial.C
+    (butcherShiftedLegendre_zeros n hn j))
+```
+
+(Polynomial division by the monic `X - C cⱼ`; use Mathlib's
+`Polynomial.divByMonic` — verify name with `lean_local_search "divByMonic"`
+or `lean_loogle "Polynomial./ₘ"`.)
+
+Then define
+```lean
+private noncomputable def butcherShiftedLegendre_lagrangeFactorSq
+    (n : ℕ) (hn : 0 < n) (j : Fin n) : Polynomial ℝ :=
+  (butcherShiftedLegendre_lagrangeFactor n hn j) ^ 2
+```
+
+This is the textbook φⱼ — a non-negative-valued polynomial of degree
+`2(n - 1) < 2n`.
+
+#### Step 2: degree bound
 
 ```lean
-theorem butcherShiftedLegendre_quadrature_exact_lt_n
-    (n : ℕ) (φ : Polynomial ℝ) (hdeg : φ.natDegree < n) :
-    (∫ x in (0 : ℝ)..1, φ.eval x)
-      = ∑ j : Fin n,
-          butcherShiftedLegendre_quadratureWeights n j *
-          φ.eval (butcherShiftedLegendre_zeros n j)
+private lemma butcherShiftedLegendre_lagrangeFactorSq_natDegree_lt
+    (n : ℕ) (hn : 0 < n) (j : Fin n) :
+    (butcherShiftedLegendre_lagrangeFactorSq n hn j).natDegree < 2 * n
 ```
 
-Proof recipe (textbook standard):
-1. Let `L_j` be the Lagrange basis polynomial at node `j` over the
-   `butcherShiftedLegendre_zeros n` family.
-2. Since `n` distinct nodes interpolate any polynomial of degree
-   `< n` uniquely, `φ = ∑ j, φ(c_j) • L_j` as polynomials.
-3. Integrate both sides over `[0, 1]`:
-   `∫ φ = ∑ j, φ(c_j) · ∫ L_j = ∑ j, φ(c_j) · b_j`.
+Proof: `lagrangeFactor.natDegree ≤ n - 1` since `(X - C cⱼ)` is monic
+of degree 1 and `Pₙ*.natDegree = n` (cycle 273's
+`butcherShiftedLegendre_natDegree`). Use
+`Polynomial.natDegree_divByMonic` (verify name). Then square doubles:
+`(p^2).natDegree ≤ 2 · p.natDegree` via `Polynomial.natDegree_pow_le`
+or compute directly. Combine with `n ≥ 1 ⇒ 2(n - 1) < 2n` via `omega`.
 
-Distinctness of the nodes for the Lagrange basis construction comes
-from cycle 302's `butcherShiftedLegendre_zeros_injective`.
-
-### Deliverable D3 (P3 stretch) — n=2 non-vacuity witness
-
-If LOC budget allows, ship an `example` exercising D2 at `n = 2` on
-a concrete polynomial (e.g. `φ = X` to test `b₁ + b₂ = 1/2`, which
-is the integral of `x` over `[0,1]`). Use cycle 294's
-`butcherShiftedLegendre_two_roots` to get the explicit nodes
-`(3 ± √3)/6`. The closed-form Gauss-2 weights are both `1/2`.
-
-This anchor is NOT required for Phase A.2 closure; ship if Phase A.2
-proper closes within budget.
-
-## Mathlib hooks to verify EARLY (before writing any proof body)
-
-The Mathlib Lagrange API has had name churn over the past year.
-Verify the following with `lean_local_search` and `lean_loogle` BEFORE
-committing to D1's signature:
-
-| Concept | Candidate name | Verification |
-|---|---|---|
-| Lagrange basis polynomial | `Lagrange.basis Finset.univ ν j` or `Polynomial.Lagrange.basis` | `lean_local_search "Lagrange.basis"` |
-| Lagrange interpolation polynomial | `Lagrange.interpolate Finset.univ ν φ` | `lean_local_search "Lagrange.interpolate"` |
-| Interpolation = identity for low-degree polys | `Lagrange.eq_interpolate_of_eval_eq` or `Polynomial.eq_of_degree_lt_of_eval_finset_eq` | `lean_loogle "Polynomial _ = Polynomial.Lagrange.interpolate _ _ _"` |
-| Polynomial → integrable | `Polynomial.continuous` + `Continuous.intervalIntegrable` | (already used cycle 277/281) |
-| `intervalIntegral.integral_finset_sum` | for swapping integral and `∑ j : Fin n` | std |
-| Lagrange node injectivity → distinct values | `Function.Injective.injOn` lift to `Set.InjOn ν Finset.univ` | std |
-
-If `Lagrange.basis` doesn't fire on `Fin n → ℝ` directly, the
-adapter is `Finset.univ.image (butcherShiftedLegendre_zeros n)` —
-a `Finset ℝ` of size `n` (cardinality preserved by injectivity from
-cycle 302). Switch to the `Finset`-indexed Lagrange API as needed.
-
-If the cleanest path is `Finset`-indexed, build a small adapter:
-```lean
-noncomputable def butcherShiftedLegendre_quadratureWeights_finset
-    (n : ℕ) (c : ℝ) (hc : c ∈ butcherShiftedLegendre_rootsInIoo n) : ℝ
-```
-indexed by membership in `butcherShiftedLegendre_rootsInIoo n` rather
-than `Fin n`. Choose the indexing scheme that minimises Mathlib churn.
-
-## Approach (concrete)
-
-1. (10 min) Run Priority 0 health checks.
-2. (15 min) `lean_local_search` / `lean_loogle` audit of the Lagrange
-   API names above. Verify on a small `#check Lagrange.basis ...`
-   stub before committing to D1's signature.
-3. (30 min) Ship D1 + a small `_eq` helper if needed (unfolding the
-   weight as the integral of the basis polynomial). Run
-   `lake env lean OpenMath/Chapter3/Section342.lean`; confirm
-   axiom-clean.
-4. (45 min) Ship D2. The proof body should be ~20–40 LOC:
-   * `have hφ_interp : φ = Lagrange.interpolate ... φ.eval := …`
-     (via the degree-`< n` characterisation).
-   * `rw [hφ_interp]`, expand the interpolation as a sum, swap
-     integral and sum via `intervalIntegral.integral_finset_sum`,
-     `intervalIntegral.integral_const_mul` (or `integral_smul`),
-     fold back into `quadratureWeights`.
-5. (15 min, optional) Ship D3 (n=2 witness) if Phase A.2 closed
-   within budget.
-6. (10 min) `#print axioms` on D1, D2 (and D3 if shipped) — confirm
-   `[propext, Classical.choice, Quot.sound]` only. Write
-   `task_results/cycle_303.md`.
-7. (5 min) Update `plan.md` `lem:342B` row from `[ ]` to `[~]`,
-   `lean_status.json` `lem:342B` row from `unformalized` to
-   `partial` with a Phase A.2 closure note.
-8. Commit, push.
-
-LOC budget: 150 ± 30. If at 60 min the audit/D1 is still stalled,
-fall back to the **Backup B** plan below.
-
-## Backup B — if Lagrange API churn blocks D1/D2
-
-If Mathlib's Lagrange interpolation API doesn't compose cleanly with
-the `Fin n → ℝ` enumeration (e.g. unification failures, namespace
-issues, or unavailable interpolation-identity lemma), pivot to
-**direct construction** of `bⱼ`:
+#### Step 3: φⱼ(cₖ) = 0 for k ≠ j (Lagrange-style vanishing)
 
 ```lean
-noncomputable def butcherShiftedLegendre_quadratureWeights
-    (n : ℕ) (j : Fin n) : ℝ :=
-  ∫ x in (0 : ℝ)..1,
-    ∏ k ∈ Finset.univ.filter (· ≠ j),
-      (x - butcherShiftedLegendre_zeros n k) /
-      (butcherShiftedLegendre_zeros n j - butcherShiftedLegendre_zeros n k)
+private lemma butcherShiftedLegendre_lagrangeFactor_eval_zeros_ne
+    (n : ℕ) (hn : 0 < n) (j k : Fin n) (hjk : k ≠ j) :
+    (butcherShiftedLegendre_lagrangeFactor n hn j).eval
+      (butcherShiftedLegendre_zeros n hn k) = 0
 ```
 
-Prove D2 via direct induction on the basis polynomials. The
-denominators are nonzero by `butcherShiftedLegendre_zeros_injective`
-(cycle 302) plus `sub_ne_zero.mpr`. This is more LOC (~200) but
-avoids Mathlib API guessing.
+Proof: `lagrangeFactor n j · (X - C cⱼ) = Pₙ*` (the
+`divByMonic` identity — Mathlib's `Polynomial.modByMonic_add_div` or
+`Polynomial.divByMonic_eq_iff` flavour; verify via
+`lean_local_search "divByMonic"`). Evaluate both sides at `cₖ`. The
+RHS is `Pₙ*(cₖ) = 0` by cycle 302's `butcherShiftedLegendre_zeros_isRoot`.
+The factor `(cₖ - cⱼ) ≠ 0` by cycle 302's
+`butcherShiftedLegendre_zeros_injective` applied to `hjk`. Conclude
+the other factor is 0.
 
-If even Backup B looks shaky after 90 min total, ship D1 only
-(definition + non-vacuity that the integral is a real number), defer
-D2 to cycle 304, and fire Aristotle on D2 with the cycle 302
-infrastructure as cited axioms.
+Corollary (immediate):
+```lean
+private lemma butcherShiftedLegendre_lagrangeFactorSq_eval_zeros_ne
+    (n : ℕ) (hn : 0 < n) (j k : Fin n) (hjk : k ≠ j) :
+    (butcherShiftedLegendre_lagrangeFactorSq n hn j).eval
+      (butcherShiftedLegendre_zeros n hn k) = 0
+```
+
+via `Polynomial.eval_pow` and `0^2 = 0`.
+
+#### Step 4: φⱼ(cⱼ) > 0 (the load-bearing step)
+
+```lean
+private lemma butcherShiftedLegendre_lagrangeFactorSq_eval_self_pos
+    (n : ℕ) (hn : 0 < n) (j : Fin n) :
+    0 < (butcherShiftedLegendre_lagrangeFactorSq n hn j).eval
+      (butcherShiftedLegendre_zeros n hn j)
+```
+
+Routes through proving `(lagrangeFactor n j).eval cⱼ ≠ 0`, then
+squaring via `sq_pos_of_ne_zero` (or `pow_two_pos_of_ne_zero`; verify
+the right name).
+
+To show `(lagrangeFactor n j).eval cⱼ ≠ 0`: by the `divByMonic`
+identity `(X - C cⱼ) * lagrangeFactor n j = Pₙ*` (re-orient as
+needed), differentiate both sides. Product rule gives
+`Pₙ*'(x) = lagrangeFactor n j (x) + (x - cⱼ) · (lagrangeFactor n j)'(x)`.
+Evaluate at `cⱼ`: `Pₙ*'(cⱼ) = lagrangeFactor n j (cⱼ)`. So it suffices
+to show `Pₙ*'(cⱼ) ≠ 0`.
+
+The fact that `cⱼ` is a *simple* root of `Pₙ*` (hence `Pₙ*'(cⱼ) ≠ 0`)
+follows from cycle 301's distinct-roots result: `Pₙ*` has `n` distinct
+real zeros (the canonical `butcherShiftedLegendre_zeros`), and `Pₙ*`
+has degree `n`, so each root has multiplicity exactly 1.
+
+**Mathlib hooks to verify**:
+- `Polynomial.derivative_eval_root_simple` or
+  `Polynomial.eval_derivative_ne_zero_of_isRoot_of_rootMultiplicity_one`
+  (one of these should give `Pₙ*'(cⱼ) ≠ 0` from simple-root
+  hypothesis; verify with `lean_local_search "rootMultiplicity"` and
+  `lean_local_search "derivative_root"`).
+- An alternative cleaner route: search for an `eval_divByMonic` hook
+  that directly gives the evaluation of `Pₙ* /ₘ (X - C cⱼ)` at `cⱼ`
+  in closed form (possibly as `Pₙ*.derivative.eval cⱼ` already).
+  **Verify this hook exists before committing to the longer proof.**
+
+If neither hook is available, fall back to showing `Pₙ*` has rootMultiplicity 1
+at each cⱼ via cycle 301's `butcherShiftedLegendre_n_distinct_real_zeros`
+together with `Polynomial.card_roots_le_natDegree` + the n-distinct-zeros
+bound forcing all multiplicities to be exactly 1.
+
+#### Step 5: integral positivity + headline closure
+
+```lean
+private lemma butcherShiftedLegendre_lagrangeFactorSq_integral_pos
+    (n : ℕ) (hn : 0 < n) (j : Fin n) :
+    0 < ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre_lagrangeFactorSq n hn j).eval x
+```
+
+Proof: the integrand is non-negative everywhere (it's a square) and
+strictly positive at `cⱼ ∈ (0, 1)` (Step 4 + the `_mem_Ioo` cycle 302
+lemma). Continuity (polynomial) + a non-vanishing point in the open
+interval forces the integral to be positive.
+
+**Mathlib hooks**:
+- `intervalIntegral.integral_pos` (verify name) — likely the right
+  shape: continuous, non-negative on the interval, positive at one
+  interior point.
+- Or `MeasureTheory.integral_pos_iff_support_of_nonneg_ae` for the
+  measure-theoretic version, then bridge to interval integral.
+
+**Headline closure**:
+
+Apply Phase B.1's `butcherShiftedLegendre_quadrature_exact_lt_two_n n
+hn (butcherShiftedLegendre_lagrangeFactorSq n hn j) hdeg` (with `hdeg`
+from Step 2):
+```
+∫₀¹ φⱼ(x) dx = ∑ₖ bₖ · φⱼ(cₖ).
+```
+
+Split the RHS sum: use `Finset.sum_eq_single j` to isolate the `k = j`
+term (the others vanish by Step 3's corollary). RHS reduces to
+`bⱼ · φⱼ(cⱼ)`. So `bⱼ · φⱼ(cⱼ) = ∫₀¹ φⱼ dx > 0` (Step 5). Combined
+with `φⱼ(cⱼ) > 0` (Step 4) and the elementary `a · b > 0 ∧ b > 0 ⇒ a > 0`
+(e.g. `pos_of_mul_pos_left` or `lt_div_iff` reorder; verify),
+conclude `bⱼ > 0`.
+
+### Estimated scope
+
+~150–200 LOC across 5–6 private auxiliaries plus the headline.
+Mathlib hook verification is the main risk — budget 15 minutes
+upfront with `lean_local_search` / `lean_loogle` for:
+
+1. `Polynomial.divByMonic` API: `natDegree_divByMonic`,
+   the canonical identity `(X - C r) * (p /ₘ (X - C r)) = p` when
+   `(X - C r) ∣ p`, etc.
+2. Simple-root derivative non-vanishing: search for
+   `derivative.*root.*simple`, `rootMultiplicity.*one`,
+   `eval_derivative_ne_zero`.
+3. `intervalIntegral.integral_pos` with non-negativity + interior
+   positivity hypotheses.
+4. `pow_pos`, `sq_pos_of_ne_zero`, or `pow_two_pos_of_ne_zero` for
+   `x ≠ 0 ⇒ 0 < x^2`.
+
+### Aristotle directive: DO NOT submit
+
+Phase B.2's recipe is concrete and the Mathlib hooks are well-
+established (`Polynomial.divByMonic` plumbing has been in Mathlib
+for years). Manual closure is faster than a poll cycle. Save the
+Aristotle slot.
 
 ## What NOT to try
 
-* **Do NOT** attempt the full `lem:342B` headline (`2n`-degree
-  exactness) in cycle 303. That is Phase B and requires (342a)
-  orthogonality composed with the polynomial-division argument
-  `φ = q · P_n^* + r` with `deg q, deg r < n`. Multi-cycle scope.
-* **Do NOT** introduce sorries. If D2 stalls past 90 min, ship D1
-  only with a non-vacuity witness, NOT a sorry-first D2.
-* **Do NOT** redefine `butcherShiftedLegendre_zeros` — cycle 302's
-  `orderEmbOfFin`-based definition is what downstream Phase A.2/A.3
-  consume. Build adapters if Mathlib hooks want a different shape.
-* **Do NOT** edit cycle 301/302 deliverables. The Phase A.1
-  infrastructure is settled.
-* **Do NOT** retry Aristotle batches for §342 — `lem:342A` is closed,
-  no live jobs to incorporate.
-* **Do NOT** raise `maxHeartbeats`. If the D2 proof times out,
-  decompose into a per-basis-polynomial helper.
-* **Do NOT** attempt to compile `OpenMath/Chapter4/Section441.lean`
-  (43+ consecutive GPFS timeouts since cycle 182; skip per
-  `cycle_182_gpfs_slowness.md`).
-* **Do NOT** edit `scripts/autonomous_loop.py` — supervisor scoring
-  bugs are loop-maintainer territory (see
-  `tautology_scanner_false_positives.md`).
-* **Do NOT** treat the prompt's "consultant_advice_cycle_263" issue
-  reference as actionable on §342 work — it's a §300/§310
-  labelled-tree plan, orthogonal to this cycle's §342 target.
+- **DO NOT** redefine `butcherShiftedLegendre_quadratureWeights` — the
+  cycle 303 Lagrange-basis definition is correct and the textbook
+  Phase B.1 proof routes through it.
+- **DO NOT** attempt to prove positivity by a *direct* argument on
+  the Lagrange weight formula `bⱼ = ∫₀¹ Lⱼ(x) dx`. The Lagrange basis
+  polynomial `Lⱼ` changes sign on `(0, 1)` (it equals 1 at `cⱼ` and
+  0 at the other `cₖ`s, so it must oscillate), so its integral has
+  no obvious sign. Butcher's φⱼ-square trick is the canonical recipe;
+  don't deviate.
+- **DO NOT** use `rw [intervalIntegral.integral_add ...]` style for
+  the polynomial unfolding — per cycle 304's discovery, prefer `calc`
+  blocks with each step's conclusion type pinned, so Lean's HO
+  unification doesn't blow up on the integrand.
+- **DO NOT** raise `maxHeartbeats` above 200000 — decompose the
+  step-4 derivative argument if needed.
+- **DO NOT** introduce `axiom` / `constant` declarations.
+- **DO NOT** ship Phase B.2 with sorries. If any step stalls past 60
+  minutes of focused work, file an issue at
+  `.prover-state/issues/lem_342B_phase_B2_stall.md` documenting the
+  specific Mathlib hook gap and ship the closed sub-steps separately
+  (Step 1 + 2 + 3 are mechanical; Step 4 is the only real risk).
+- **DO NOT** preemptively extract to `Section342Quadrature.lean`.
+  Per strategy §F of cycle 304's task results, evaluate extraction
+  only after B.2 + B.3 ship AND if compile time exceeds 90s. File
+  is 6418 LOC now; estimated ~6600 LOC after Phase B.2 — still
+  manageable.
 
-## Faithfulness notes
+## Faithfulness check requirement
 
-* `butcherShiftedLegendre_quadratureWeights` is Butcher's `b_j` from
-  §342 p. 237 ("there exist positive numbers `b_1, …, b_s` such that
-  ∫₀¹ φ(x) dx = ∑ b_i φ(c_i) for polynomials of degree `< 2s`"). The
-  positivity claim (`0 < b_j`) is a separate clause that Phase B
-  proves; we are NOT required to ship it in cycle 303.
-* The textbook lemma (`lem:342B`) is the full `2n`-degree exactness
-  + positivity + uniqueness. Phase A.2 (this cycle) ships only the
-  `n`-degree half. `lean_status.json` should reflect `partial`, not
-  `formalized`, until Phase B lands.
-* Definition smuggling check: `b_j := ∫₀¹ L_j` is the canonical
-  textbook formula, NOT a smuggling of the exactness conclusion.
-  The exactness theorem D2 is genuine work — Phase B's `2n`-degree
-  extension is the substantive content of `lem:342B`.
+Before commit, verify:
+- `butcherShiftedLegendre_quadratureWeights_pos`'s statement matches
+  Butcher's "there exist positive numbers b₁, …, bₛ" clause of
+  `lem:342B` verbatim (positivity of each `bⱼ`, not just non-negativity).
+- No hypothesis stronger than `0 < n` is introduced (the textbook only
+  requires `s ≥ 1`, matching our `hn : 0 < n`).
+- The `φⱼ`-square test polynomial is genuinely the textbook φ from
+  Butcher p. 237 (the square of `Pₙ*(x) / (x - cⱼ)`, not some
+  variant).
+- The auxiliary lemmas don't smuggle in conclusions as hypotheses
+  (e.g. Step 4's `(lagrangeFactor n j).eval cⱼ ≠ 0` must be proved
+  from cycle 301's distinct-roots fact + the derivative argument,
+  NOT taken as a hypothesis).
 
-## Decision tree
+## Build commands
 
-```
-Health checks pass (P0)?
-├── No → File issue, stop.
-└── Yes → Lagrange API audit
-    ├── Clean → Ship D1 + D2 (Priority 1)
-    │   ├── Time remaining → Ship D3 (n=2 witness)
-    │   └── Done → Update plan/status, commit
-    └── Stalls past 60 min → Backup B (direct construction)
-        ├── Closes in 60 min → Ship D1 + D2, commit
-        └── Stalls past 90 min total → Ship D1 only, defer D2 to
-            cycle 304, fire Aristotle on D2 if you have budget for
-            a single submission
+```bash
+lake env lean OpenMath/Chapter3/Section342.lean    # primary verification
 ```
 
-## Files touched (expected)
+The aggregator `OpenMath/Chapter3.lean` should also build, but is
+slower; run only after `Section342.lean` passes.
 
-* `OpenMath/Chapter3/Section342.lean` (add ~150 LOC after cycle 302's
-  Phase A.1 block; `end` of namespace stays at file bottom).
-* `extraction/formalization_data/lean_status.json` — bump `lem:342B`
-  row to `partial`, cycle 303, lean_symbol set to
-  `butcherShiftedLegendre_quadrature_exact_lt_n`.
-* `plan.md` — `lem:342B` row `[ ]` → `[~]`.
-* `.prover-state/task_results/cycle_303.md` — standard format.
+## Verify axiom-cleanness
 
-No other files should change.
+```lean
+#print axioms butcherShiftedLegendre_quadratureWeights_pos
+-- Expected: [propext, Classical.choice, Quot.sound]
+```
+
+If any other axiom appears (especially `sorryAx`), the proof is
+incomplete — do not commit.
+
+## Stretch (only if Phase B.2 closes in ≤ 60 min)
+
+**Phase B.3** — uniqueness of weights (~50 LOC):
+
+```lean
+theorem butcherShiftedLegendre_quadratureWeights_unique (n : ℕ) (hn : 0 < n)
+    (b : Fin n → ℝ)
+    (hb : ∀ φ : Polynomial ℝ, φ.natDegree < n →
+       ∫ x in (0 : ℝ)..1, φ.eval x = ∑ j, b j * φ.eval (butcherShiftedLegendre_zeros n hn j)) :
+    b = butcherShiftedLegendre_quadratureWeights n
+```
+
+Proof: apply `hb` to each Lagrange basis polynomial `Lⱼ`
+(`Polynomial.Lagrange.basis (Finset.univ : Finset (Fin n))
+(butcherShiftedLegendre_zeros n hn) j`). The Kronecker-delta property
+`Lⱼ(cₖ) = δⱼₖ` (Mathlib's `Lagrange.basis_eq_one_iff` or similar; this
+is what cycle 303 used) collapses the sum to `b j`. The LHS is exactly
+the definition of `butcherShiftedLegendre_quadratureWeights n j`. So
+`b j = quadratureWeights n j` for all `j`, hence `b = quadratureWeights`
+by `funext`.
+
+If B.3 lands, **`lem:342B` is fully formalized** — flip
+`lean_status.json` row from `partial` to `formalized`, update plan.md
+to `[x]`, and the lem:342B work is done. After B.3, the next entity
+target (per plan.md Ch.3 ordering) would be `cor:342D` (Gaussian
+quadrature Runge-Kutta order condition) or one of the §351 stability
+entities.
+
+If B.3 doesn't fit, save for cycle 306 with no harm done; B.2 alone
+is a substantive ship.
+
+## Cycle 305 checklist
+
+Before commit:
+1. `lake env lean OpenMath/Chapter3/Section342.lean` exits 0.
+2. `grep -c sorry OpenMath/Chapter3/Section342.lean` returns 0.
+3. `#print axioms butcherShiftedLegendre_quadratureWeights_pos` shows
+   only `[propext, Classical.choice, Quot.sound]`.
+4. Pre-commit faithfulness check (per CLAUDE.md) passes — quoted
+   textbook statement, Lean type match, no definition smuggling, no
+   tautology, no hypothesis strengthening.
+5. Task results written to `.prover-state/task_results/cycle_305.md`
+   per the CLAUDE.md template.
+6. `plan.md` lem:342B row updated to reflect Phase B.2 closure (still
+   `[~]` partial unless B.3 also lands).
+7. `extraction/formalization_data/lean_status.json` cycle reference
+   bumped on the `lem:342B` row.

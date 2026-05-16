@@ -6410,4 +6410,312 @@ theorem butcherShiftedLegendre_quadratureWeights_sum_eq_one
     mul_one, sub_zero] at h
   linarith [h]
 
+/-! ### Phase B.2 of `lem:342B` — positivity of quadrature weights (cycle 305)
+
+Butcher §342 p. 237 (`lem:342B`, second clause): *"To prove the `bᵢ` are
+positive, let `φ(x)` denote the square of the polynomial formed by dividing
+`P_s^*(x)` by `x − cᵢ`. Substitute into (342h), and the result follows."*
+
+Verbatim execution of the textbook recipe:
+
+1. Define `φⱼ := (P_n^* /ₘ (X - C cⱼ))²` — a non-negative-valued polynomial
+   of natDegree `2(n - 1) < 2n`.
+2. Vanishing at the other zeros: `φⱼ(cₖ) = 0` for `k ≠ j`, via the identity
+   `(X - C cⱼ) · (P_n^* /ₘ (X - C cⱼ)) = P_n^*` (since `cⱼ` is a root) and
+   `cⱼ ≠ cₖ` (cycle 302's `butcherShiftedLegendre_zeros_injective`).
+3. Positivity at the own zero: `φⱼ(cⱼ) > 0`. Routes through showing each
+   `cⱼ` is a *simple* root of `P_n^*` (rootMultiplicity = 1, from cycle
+   301's distinct-roots fact plus `natDegree = n`) and then invoking
+   `Polynomial.eval_divByMonic_pow_rootMultiplicity_ne_zero`.
+4. `∫₀¹ φⱼ > 0`: continuous (polynomial), non-negative everywhere (square),
+   positive at `cⱼ ∈ (0, 1)` ⇒ `intervalIntegral.integral_pos`.
+5. Headline closure: Phase B.1's `2n`-degree exactness on `φⱼ` reduces the
+   integral to `bⱼ · φⱼ(cⱼ)` (other terms vanish by Step 2). Combined with
+   the LHS positivity and `φⱼ(cⱼ) > 0`, we get `bⱼ > 0`. -/
+
+/-- **Auxiliary: the Lagrange factor `P_n^* /ₘ (X - C cⱼ)`.** Polynomial
+division of `P_n^*` by the monic linear factor at the canonical zero `cⱼ`.
+This is the polynomial `q` such that `(X - C cⱼ) · q = P_n^*` (since `cⱼ`
+is a root of `P_n^*`). Butcher §342 p. 237 names this *"the polynomial
+formed by dividing `P_s^*(x)` by `x − cᵢ`"* and squares it to build the
+positive test polynomial. -/
+private noncomputable def butcherShiftedLegendre_lagrangeFactor
+    (n : ℕ) (j : Fin n) : Polynomial ℝ :=
+  butcherShiftedLegendre n /ₘ
+    (Polynomial.X - Polynomial.C (butcherShiftedLegendre_zeros n j))
+
+/-- **Auxiliary: Butcher's test polynomial `φⱼ`.** The square of the
+Lagrange factor `P_n^* /ₘ (X - C cⱼ)`. By construction, `φⱼ(cⱼ) > 0`
+(non-zero by simple-root, squared) and `φⱼ(cₖ) = 0` for `k ≠ j` (other
+zeros of `P_n^*`). Used in Butcher's positivity argument for the
+quadrature weights. -/
+private noncomputable def butcherShiftedLegendre_lagrangeFactorSq
+    (n : ℕ) (j : Fin n) : Polynomial ℝ :=
+  (butcherShiftedLegendre_lagrangeFactor n j) ^ 2
+
+/-- The factorisation identity `(X - C cⱼ) · lagrangeFactor n j = P_n^*`,
+which holds because `cⱼ` is a root of `P_n^*` (cycle 302's
+`butcherShiftedLegendre_zeros_isRoot`). Routes through Mathlib's
+`Polynomial.mul_divByMonic_eq_iff_isRoot`. -/
+private lemma butcherShiftedLegendre_lagrangeFactor_mul_factor_eq
+    (n : ℕ) (j : Fin n) :
+    (Polynomial.X - Polynomial.C (butcherShiftedLegendre_zeros n j))
+        * butcherShiftedLegendre_lagrangeFactor n j
+      = butcherShiftedLegendre n := by
+  unfold butcherShiftedLegendre_lagrangeFactor
+  exact Polynomial.mul_divByMonic_eq_iff_isRoot.mpr
+    (butcherShiftedLegendre_zeros_isRoot n j)
+
+/-- The natDegree of the Lagrange factor `P_n^* /ₘ (X - C cⱼ)` is `n - 1`.
+Combines `Polynomial.natDegree_divByMonic` (for `(X - C cⱼ)` monic),
+`butcherShiftedLegendre_natDegree` (cycle 273), and `natDegree_X_sub_C`. -/
+private lemma butcherShiftedLegendre_lagrangeFactor_natDegree
+    (n : ℕ) (j : Fin n) :
+    (butcherShiftedLegendre_lagrangeFactor n j).natDegree = n - 1 := by
+  unfold butcherShiftedLegendre_lagrangeFactor
+  rw [Polynomial.natDegree_divByMonic _ (Polynomial.monic_X_sub_C _),
+      butcherShiftedLegendre_natDegree, Polynomial.natDegree_X_sub_C]
+
+/-- **Step 2: degree bound `(φⱼ).natDegree < 2n`.** The square of a
+polynomial of natDegree `n - 1` has natDegree `2(n - 1) = 2n - 2 < 2n`
+(given `0 < n`). Combines the Lagrange-factor natDegree lemma with
+`Polynomial.natDegree_pow` (valid over the integral domain `ℝ`). -/
+private lemma butcherShiftedLegendre_lagrangeFactorSq_natDegree_lt
+    (n : ℕ) (hn : 0 < n) (j : Fin n) :
+    (butcherShiftedLegendre_lagrangeFactorSq n j).natDegree < 2 * n := by
+  unfold butcherShiftedLegendre_lagrangeFactorSq
+  rw [Polynomial.natDegree_pow,
+      butcherShiftedLegendre_lagrangeFactor_natDegree n j]
+  omega
+
+/-- **Step 3 (pre-square version).** For `k ≠ j`, the Lagrange factor
+`P_n^* /ₘ (X - C cⱼ)` vanishes at `cₖ`. Proof: evaluate the identity
+`(X - C cⱼ) · lagrangeFactor n j = P_n^*` at `x = cₖ`; the RHS is `0`
+(by `butcherShiftedLegendre_zeros_isRoot`), and the factor `cₖ - cⱼ` is
+non-zero (by `butcherShiftedLegendre_zeros_injective`). -/
+private lemma butcherShiftedLegendre_lagrangeFactor_eval_zeros_ne
+    (n : ℕ) (j k : Fin n) (hjk : k ≠ j) :
+    (butcherShiftedLegendre_lagrangeFactor n j).eval
+      (butcherShiftedLegendre_zeros n k) = 0 := by
+  have h_id := butcherShiftedLegendre_lagrangeFactor_mul_factor_eq n j
+  have h_root : (butcherShiftedLegendre n).eval
+      (butcherShiftedLegendre_zeros n k) = 0 :=
+    butcherShiftedLegendre_zeros_isRoot n k
+  have h_eval := congrArg
+    (Polynomial.eval (butcherShiftedLegendre_zeros n k)) h_id
+  simp only [Polynomial.eval_mul, Polynomial.eval_sub, Polynomial.eval_X,
+    Polynomial.eval_C] at h_eval
+  rw [h_root] at h_eval
+  have h_ne : butcherShiftedLegendre_zeros n k
+      - butcherShiftedLegendre_zeros n j ≠ 0 := by
+    intro h
+    apply hjk
+    exact butcherShiftedLegendre_zeros_injective n
+      (sub_eq_zero.mp h)
+  exact (mul_eq_zero.mp h_eval).resolve_left h_ne
+
+/-- **Step 3 (squared corollary).** `φⱼ(cₖ) = 0` for `k ≠ j`. Immediate
+from the unsquared version and `0^2 = 0`. -/
+private lemma butcherShiftedLegendre_lagrangeFactorSq_eval_zeros_ne
+    (n : ℕ) (j k : Fin n) (hjk : k ≠ j) :
+    (butcherShiftedLegendre_lagrangeFactorSq n j).eval
+      (butcherShiftedLegendre_zeros n k) = 0 := by
+  unfold butcherShiftedLegendre_lagrangeFactorSq
+  rw [Polynomial.eval_pow,
+      butcherShiftedLegendre_lagrangeFactor_eval_zeros_ne n j k hjk]
+  ring
+
+/-- The cardinality of the roots multiset of `P_n^*` equals `n`.
+Combines the upper bound (`Polynomial.card_roots'` ≤ `natDegree = n`) and
+the lower bound: the toFinset filtered to `(0,1)` already has cardinality
+`n` (cycle 301), and `filter ≤ toFinset ≤ roots`. -/
+private lemma butcherShiftedLegendre_roots_card_eq (n : ℕ) :
+    (butcherShiftedLegendre n).roots.card = n := by
+  apply le_antisymm
+  · calc (butcherShiftedLegendre n).roots.card
+        ≤ (butcherShiftedLegendre n).natDegree := Polynomial.card_roots' _
+      _ = n := butcherShiftedLegendre_natDegree n
+  · calc n = (butcherShiftedLegendre_rootsInIoo n).card :=
+            (butcherShiftedLegendre_rootsInIoo_card_eq n).symm
+      _ ≤ (butcherShiftedLegendre n).roots.toFinset.card :=
+          Finset.card_filter_le _ _
+      _ ≤ (butcherShiftedLegendre n).roots.card :=
+          Multiset.toFinset_card_le _
+
+/-- The roots multiset of `P_n^*` has no duplicates: each root has
+multiplicity exactly `1`. Proof: the toFinset (which dedup's the
+multiset) has cardinality `n` (since the filter to `(0,1)` already has
+that cardinality, and the unfiltered toFinset is a superset). The
+multiset itself also has cardinality `n` (the natDegree upper bound is
+saturated). Equal cardinalities of toFinset and multiset force `Nodup`
+via `Multiset.toFinset_card_eq_card_iff_nodup`. -/
+private lemma butcherShiftedLegendre_roots_nodup (n : ℕ) :
+    (butcherShiftedLegendre n).roots.Nodup := by
+  rw [← Multiset.toFinset_card_eq_card_iff_nodup]
+  apply le_antisymm
+  · exact Multiset.toFinset_card_le _
+  · calc (butcherShiftedLegendre n).roots.card
+        = n := butcherShiftedLegendre_roots_card_eq n
+      _ = (butcherShiftedLegendre_rootsInIoo n).card :=
+          (butcherShiftedLegendre_rootsInIoo_card_eq n).symm
+      _ ≤ (butcherShiftedLegendre n).roots.toFinset.card :=
+          Finset.card_filter_le _ _
+
+/-- **Simple-root multiplicity.** Each canonical zero `cⱼ` of `P_n^*` has
+`rootMultiplicity` equal to `1`. Lower bound: `cⱼ` is a root and `P_n^*`
+is non-zero. Upper bound: the roots multiset is `Nodup`, so each
+element's count (= rootMultiplicity, via `Polynomial.count_roots`) is at
+most `1`. -/
+private lemma butcherShiftedLegendre_rootMultiplicity_eq_one
+    (n : ℕ) (j : Fin n) :
+    (butcherShiftedLegendre n).rootMultiplicity
+        (butcherShiftedLegendre_zeros n j) = 1 := by
+  have hp_ne : butcherShiftedLegendre n ≠ 0 := butcherShiftedLegendre_ne_zero n
+  classical
+  have h_lb : 1 ≤ (butcherShiftedLegendre n).rootMultiplicity
+      (butcherShiftedLegendre_zeros n j) := by
+    rw [Nat.one_le_iff_ne_zero]
+    intro h0
+    rw [Polynomial.rootMultiplicity_eq_zero_iff] at h0
+    exact hp_ne (h0 (butcherShiftedLegendre_zeros_isRoot n j))
+  have h_ub : (butcherShiftedLegendre n).rootMultiplicity
+      (butcherShiftedLegendre_zeros n j) ≤ 1 := by
+    rw [← Polynomial.count_roots]
+    exact Multiset.nodup_iff_count_le_one.mp
+      (butcherShiftedLegendre_roots_nodup n) _
+  omega
+
+/-- **Step 4: `φⱼ(cⱼ) > 0`.** Combines the simple-root multiplicity fact
+with `Polynomial.eval_divByMonic_pow_rootMultiplicity_ne_zero` (which
+states that the dehomogenisation of `P_n^*` at the root, divided by the
+power `(X - C cⱼ)^m`, evaluates to a non-zero value at `cⱼ`). For
+multiplicity `m = 1`, that division is exactly the Lagrange factor.
+Squaring a non-zero real gives a positive real (`sq_pos_of_ne_zero`). -/
+private lemma butcherShiftedLegendre_lagrangeFactorSq_eval_self_pos
+    (n : ℕ) (j : Fin n) :
+    0 < (butcherShiftedLegendre_lagrangeFactorSq n j).eval
+      (butcherShiftedLegendre_zeros n j) := by
+  unfold butcherShiftedLegendre_lagrangeFactorSq
+  rw [Polynomial.eval_pow]
+  apply sq_pos_of_ne_zero
+  -- Reduce to `eval_divByMonic_pow_rootMultiplicity_ne_zero`.
+  have h_mult := butcherShiftedLegendre_rootMultiplicity_eq_one n j
+  have h_ne := Polynomial.eval_divByMonic_pow_rootMultiplicity_ne_zero
+    (butcherShiftedLegendre_zeros n j) (butcherShiftedLegendre_ne_zero n)
+  rw [h_mult, pow_one] at h_ne
+  exact h_ne
+
+/-- **Step 5: `∫₀¹ φⱼ > 0`.** Apply `intervalIntegral.integral_pos`:
+- `0 < 1` (the integration bounds).
+- `φⱼ` is continuous on `[0, 1]` (polynomial).
+- `φⱼ x ≥ 0` for all `x` (square of a real).
+- `φⱼ cⱼ > 0` with `cⱼ ∈ (0, 1) ⊂ [0, 1]` (Step 4 + cycle 302's
+  `butcherShiftedLegendre_zeros_mem_Ioo`). -/
+private lemma butcherShiftedLegendre_lagrangeFactorSq_integral_pos
+    (n : ℕ) (j : Fin n) :
+    0 < ∫ x in (0 : ℝ)..1,
+      (butcherShiftedLegendre_lagrangeFactorSq n j).eval x := by
+  apply intervalIntegral.integral_pos (by norm_num : (0 : ℝ) < 1)
+  · exact (Polynomial.continuous _).continuousOn
+  · intro x _
+    unfold butcherShiftedLegendre_lagrangeFactorSq
+    rw [Polynomial.eval_pow]
+    exact sq_nonneg _
+  · refine ⟨butcherShiftedLegendre_zeros n j, ?_, ?_⟩
+    · exact Set.Ioo_subset_Icc_self
+        (butcherShiftedLegendre_zeros_mem_Ioo n j)
+    · exact butcherShiftedLegendre_lagrangeFactorSq_eval_self_pos n j
+
+/-- **Phase B.2 headline: positivity of the Gaussian quadrature weights.**
+Butcher §342 p. 237 (`lem:342B`): each weight `bⱼ` in the Gaussian
+quadrature formula at the canonical zeros of `P_n^*` is strictly positive.
+
+The textbook recipe (verbatim): apply Phase B.1's `2n`-degree exactness
+to the test polynomial `φⱼ := (P_n^* /ₘ (X - C cⱼ))²`. The RHS sum
+collapses to the single term `bⱼ · φⱼ(cⱼ)` (other terms vanish by Step 3).
+The LHS `∫₀¹ φⱼ > 0` (Step 5, square integrand). Combined with
+`φⱼ(cⱼ) > 0` (Step 4), conclude `bⱼ > 0`. -/
+theorem butcherShiftedLegendre_quadratureWeights_pos
+    (n : ℕ) (hn : 0 < n) (j : Fin n) :
+    0 < butcherShiftedLegendre_quadratureWeights n j := by
+  set φ := butcherShiftedLegendre_lagrangeFactorSq n j with hφ_def
+  have hdeg : φ.natDegree < 2 * n :=
+    butcherShiftedLegendre_lagrangeFactorSq_natDegree_lt n hn j
+  have h_exact := butcherShiftedLegendre_quadrature_exact_lt_two_n n hn φ hdeg
+  have h_int_pos : 0 < ∫ x in (0 : ℝ)..1, φ.eval x :=
+    butcherShiftedLegendre_lagrangeFactorSq_integral_pos n j
+  -- RHS sum collapses to the single `k = j` term.
+  have h_sum : ∑ k : Fin n,
+      butcherShiftedLegendre_quadratureWeights n k *
+        φ.eval (butcherShiftedLegendre_zeros n k)
+      = butcherShiftedLegendre_quadratureWeights n j *
+        φ.eval (butcherShiftedLegendre_zeros n j) := by
+    apply Finset.sum_eq_single j
+    · intro k _ hkj
+      rw [butcherShiftedLegendre_lagrangeFactorSq_eval_zeros_ne n j k hkj,
+          mul_zero]
+    · intro h; exact absurd (Finset.mem_univ j) h
+  rw [h_sum] at h_exact
+  -- So `bⱼ · φⱼ(cⱼ) > 0`. With `φⱼ(cⱼ) > 0`, conclude `bⱼ > 0`.
+  have h_prod_pos : 0 < butcherShiftedLegendre_quadratureWeights n j *
+      φ.eval (butcherShiftedLegendre_zeros n j) := h_exact ▸ h_int_pos
+  have h_φj_pos : 0 < φ.eval (butcherShiftedLegendre_zeros n j) :=
+    butcherShiftedLegendre_lagrangeFactorSq_eval_self_pos n j
+  exact (mul_pos_iff_of_pos_right h_φj_pos).mp h_prod_pos
+
+/-! ### Phase B.3 of `lem:342B` — uniqueness of quadrature weights (cycle 305 stretch)
+
+Butcher §342 p. 237 (`lem:342B`, final clause): *"The `bᵢ` are unique."*
+That is, if `(b_j)_{j < n}` is any other family of coefficients satisfying
+the `< n`-degree exactness identity at the canonical zeros `(c_j)_{j < n}`,
+then `b = butcherShiftedLegendre_quadratureWeights n`.
+
+Proof: instantiate the hypothesis at each Lagrange basis polynomial
+`L_j := Lagrange.basis Finset.univ v j` (where `v = butcherShiftedLegendre_zeros n`).
+The Kronecker-delta property `L_j(c_k) = δ_{jk}` (`Lagrange.eval_basis_self` /
+`Lagrange.eval_basis_of_ne`) collapses the RHS sum to `b j`. The LHS is
+the definition of `butcherShiftedLegendre_quadratureWeights n j`. Hence
+`b j = quadratureWeights n j` for all `j`. -/
+
+/-- **Uniqueness of the Gaussian quadrature weights.** Phase B.3 of
+`lem:342B` (Butcher §342 p. 237 "The `bᵢ` are unique"): any other family
+`(b_j)_{j < n}` satisfying the `< n`-degree exactness identity at the
+canonical zeros must agree with `butcherShiftedLegendre_quadratureWeights`
+pointwise. The hypothesis only requires exactness on the `< n` half (the
+weaker half of the conditions in (342h)); the `2n`-degree exactness is
+not needed for uniqueness. -/
+theorem butcherShiftedLegendre_quadratureWeights_unique
+    (n : ℕ) (hn : 0 < n) (b : Fin n → ℝ)
+    (hb : ∀ φ : Polynomial ℝ, φ.natDegree < n →
+        (∫ x in (0 : ℝ)..1, φ.eval x)
+          = ∑ j : Fin n, b j *
+              φ.eval (butcherShiftedLegendre_zeros n j)) :
+    b = butcherShiftedLegendre_quadratureWeights n := by
+  funext j
+  set v : Fin n → ℝ := butcherShiftedLegendre_zeros n with hv_def
+  have hv : Function.Injective v := butcherShiftedLegendre_zeros_injective n
+  have hv_injOn : Set.InjOn v (Finset.univ : Finset (Fin n)) :=
+    hv.injOn
+  set φ := Lagrange.basis (Finset.univ : Finset (Fin n)) v j with hφ_def
+  have hj_mem : j ∈ (Finset.univ : Finset (Fin n)) := Finset.mem_univ _
+  have h_natDeg : φ.natDegree < n := by
+    rw [hφ_def, Lagrange.natDegree_basis hv_injOn hj_mem,
+        Finset.card_univ, Fintype.card_fin]
+    omega
+  have h := hb φ h_natDeg
+  -- RHS sum collapses to `b j` via the Kronecker-delta property of the basis.
+  have h_rhs : (∑ k : Fin n, b k * φ.eval (v k)) = b j := by
+    rw [Finset.sum_eq_single j]
+    · rw [hφ_def, Lagrange.eval_basis_self hv_injOn hj_mem, mul_one]
+    · intro k _ hkj
+      rw [hφ_def, Lagrange.eval_basis_of_ne hkj.symm (Finset.mem_univ k),
+          mul_zero]
+    · intro habs; exact absurd (Finset.mem_univ j) habs
+  -- LHS is precisely the definition of `quadratureWeights n j`.
+  have h_lhs : (∫ x in (0 : ℝ)..1, φ.eval x) =
+      butcherShiftedLegendre_quadratureWeights n j := by
+    rw [butcherShiftedLegendre_quadratureWeights, hφ_def, hv_def]
+  rw [h_lhs, h_rhs] at h
+  exact h.symm
+
 end OpenMath.Chapter3.Section342
