@@ -1155,4 +1155,81 @@ example : butcherLobatto_quadratureWeights_three ⟨0, by omega⟩
       butcherLobatto_quadratureWeights_three_apply_two]
   norm_num
 
+/-! ## Deliverable D.2 — Small-`s` RKTableau (Radau IIA, `s = 1`)
+
+Cycle 322: lift cycle 320's `butcherRadauII_zeros_one`, cycle 321's
+`butcherRadauII_quadratureWeights_one`, and this cycle's
+`butcherRadauII_collocationA_one` into a concrete `RKTableau 1`
+matching backward Euler. Mirrors cycle 308's
+`butcherGaussLegendreRK_one` template
+(`Section342.lean:6840–6912`). -/
+
+/-- **Butcher §344 — Radau II collocation A-matrix at `s = 1`**.
+The single entry `A_{0,0} = ∫₀^{c_1} L_0(x) dx`, where the unique
+Lagrange basis `L_0` at the singleton `{0}` is identically `1`
+(`Lagrange.basis_singleton`), so the integral collapses to
+`∫₀^1 1 dx = 1`. This recovers the standard **backward Euler**
+A-matrix entry. -/
+noncomputable def butcherRadauII_collocationA_one : Fin 1 → Fin 1 → ℝ
+  | _, _ => ∫ x in (0 : ℝ)..butcherRadauII_zeros_one 0,
+      (Lagrange.basis Finset.univ butcherRadauII_zeros_one 0).eval x
+
+/-- The unique entry of `butcherRadauII_collocationA_one` is `1`.
+At `s = 1` with `c_1 = 1`, the Lagrange basis on the singleton
+`{0}` is identically `1`, and `∫₀^1 1 dx = 1`. Recovers the
+backward Euler `A`-matrix entry. -/
+theorem butcherRadauII_collocationA_one_apply :
+    butcherRadauII_collocationA_one ⟨0, by omega⟩ ⟨0, by omega⟩ = 1 := by
+  unfold butcherRadauII_collocationA_one
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_one 0,
+      (Lagrange.basis Finset.univ butcherRadauII_zeros_one 0).eval x = 1
+  simp [butcherRadauII_zeros_one, Lagrange.basis_singleton, Polynomial.eval_one]
+
+/-- **The 1-stage Radau IIA `RKTableau`** assembled from the
+canonical Lagrange weights, zeros, and collocation A-matrix of
+the Radau II quadrature. At `s = 1` this is backward Euler with
+`c = 1`, `b = 1`, `A = 1`. -/
+noncomputable def butcherRadauIIA_one :
+    OpenMath.Chapter3.Section312.RKTableau 1 where
+  A := butcherRadauII_collocationA_one
+  b := butcherRadauII_quadratureWeights_one
+  c := butcherRadauII_zeros_one
+
+/-- **Direct backward-Euler tableau** for cross-validation:
+`c = 1`, `b = 1`, `A = 1` declared inline rather than via
+collocation. -/
+noncomputable def butcherBackwardEulerRK :
+    OpenMath.Chapter3.Section312.RKTableau 1 where
+  A := fun _ _ => 1
+  b := fun _ => 1
+  c := fun _ => 1
+
+/-- **Coincidence**: the cycle-322 collocation-assembled Radau IIA
+tableau at `s = 1` equals the direct backward-Euler tableau. The
+bridge routes through three small-`s` `_apply` evaluations: A-field
+(`butcherRadauII_collocationA_one_apply` = 1), b-field
+(`butcherRadauII_quadratureWeights_one_apply` = 1), c-field
+(`butcherRadauII_zeros_one` evaluated at `⟨0, _⟩` reduces to `1`). -/
+theorem butcherRadauIIA_one_eq_backwardEuler :
+    butcherRadauIIA_one = butcherBackwardEulerRK := by
+  refine OpenMath.Chapter3.Section312.RKTableau.mk.injEq .. |>.mpr ⟨?_, ?_, ?_⟩
+  · funext i j; fin_cases i; fin_cases j
+    show butcherRadauII_collocationA_one ⟨0, by omega⟩ ⟨0, by omega⟩ = 1
+    exact butcherRadauII_collocationA_one_apply
+  · funext i; fin_cases i
+    show butcherRadauII_quadratureWeights_one ⟨0, by omega⟩ = 1
+    exact butcherRadauII_quadratureWeights_one_apply
+  · funext i; fin_cases i
+    rfl
+
+/-- **Non-vacuity**: the collocation-assembled Radau IIA tableau at
+`s = 1` satisfies the order-1 quadrature condition `B(1)`. Routes
+through the coincidence theorem to the direct backward-Euler form,
+where `∑ᵢ b_i · c_i^0 = 1 · 1 = 1 = 1/1` follows by `simp`. -/
+example : butcherRadauIIA_one.SatisfiesB 1 := by
+  rw [butcherRadauIIA_one_eq_backwardEuler]
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherBackwardEulerRK]
+
 end OpenMath.Chapter3.Section344
