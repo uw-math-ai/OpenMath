@@ -1880,4 +1880,78 @@ example : butcherRadauIIDirect_two.SatisfiesD 2 := by
   fin_cases j <;> interval_cases k <;>
     simp [butcherRadauIIDirect_two, Fin.sum_univ_two] <;> norm_num
 
+/-! ## Deliverable D.9 — Small-`s` RKTableau (Radau I, `s = 2`, C(s) variant)
+
+Cycle 329. Per Butcher Table 344(I) p. 244 (`ch03.txt:5219`), the
+Radau I family uses `Choice of A = C(s)` — the matrix satisfying the
+C(s) simplifying assumption. C(s) is the plain Lagrange-collocation
+matrix `A_{ij} = ∫₀^{c_i} L_j(x) dx` at the chosen abscissae (Butcher
+§321 (321b)), so for Radau I `s = 2` the printed direct-form values
+**agree** with plain collocation at the Radau I abscissae `(0, 2/3)`.
+
+The cycle 329 §C faithfulness audit (Butcher Table 344(I) p. 225,
+`ch03.txt:5265-5270`) confirms this coincidence: plain collocation
+gives rows `(0, 0)` and `(1/3, 1/3)`, matching the printed Radau I
+`s = 2` table entry-for-entry. This is the OPPOSITE of cycle 326
+(Radau IA, "reflections of Radau II") and cycle 328 (Radau II, D(s)
+variant), where direct-form diverged from collocation; cycle 329
+exhibits an audit outcome where direct-form coincides with
+collocation, and confirms that the audit-first protocol catches both
+divergent and coincident cases cleanly.
+
+As with cycles 326/327/328's direct-form ships, the formal lift from
+plain collocation to a `RKTableau` (mirroring cycle 324's
+`butcherRadauII_collocationA_two` construction) is deferred to a
+future cycle; this cycle ships the printed values inline. -/
+
+/-- **Butcher §344 — Radau I `s = 2` tableau (C(s) variant)**
+declared inline from Butcher's printed Table 344(I), p. 225
+(`extraction/raw_text/ch03.txt:5265-5270`): `c = (0, 2/3)`,
+`b = (1/4, 3/4)`, `A = !![0, 0; 1/3, 1/3]`. This is the classical
+Radau I two-stage method (Butcher's `Choice of A = C(s)` row of
+Table 344(I)), with attainable order `p = 2s − 1 = 3`.
+
+The A-matrix follows Butcher's *C(s) simplifying-assumption* recipe,
+which at the Radau I abscissae coincides with plain Lagrange
+collocation `A_{ij} = ∫₀^{c_i} L_j(x) dx` (cycle 329 audit). Distinct
+from `butcherRadauIADirect_two` (cycle 326), which is the
+"reflections of Radau II" variant at the same abscissae and ships
+`A = !![1/4, -1/4; 1/4, 5/12]`. -/
+noncomputable def butcherRadauIDirect_two :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := !![0, 0; 1/3, 1/3]
+  b := ![1/4, 3/4]
+  c := ![0, 2/3]
+
+/-- **Non-vacuity (B(3))**: the direct Radau I `s = 2` tableau
+satisfies the order-3 quadrature condition `B(3)` (Radau I at
+`s = 2` is exact for polynomials of degree `2s − 1 = 3`). The
+`b` and `c` agree with `butcherRadauIADirect_two`, so the same
+arithmetic applies:
+`∑ⱼ bⱼ · cⱼ^0 = 1/4 + 3/4 = 1 = 1/1`,
+`∑ⱼ bⱼ · cⱼ^1 = (1/4)·0 + (3/4)·(2/3) = 1/2`,
+`∑ⱼ bⱼ · cⱼ^2 = (1/4)·0 + (3/4)·(4/9) = 1/3`. -/
+example : butcherRadauIDirect_two.SatisfiesB 3 := by
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherRadauIDirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherRadauIDirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherRadauIDirect_two, Fin.sum_univ_two]; norm_num
+
+/-- **Non-vacuity (C(2))** — the certificate that characterises this
+tableau as the C(s) variant of Radau I: the direct Radau I `s = 2`
+tableau satisfies the order-2 collocation simplifying assumption
+`C(2)`, namely `∑ⱼ Aᵢⱼ · cⱼ^(k-1) = cᵢ^k / k` for `i ∈ {0, 1}` and
+`k ∈ {1, 2}`.
+
+Arithmetic checks:
+- `(i=0, k=1)`: `0·1 + 0·1 = 0 = 0^1/1`.
+- `(i=0, k=2)`: `0·0 + 0·(2/3) = 0 = 0^2/2`.
+- `(i=1, k=1)`: `(1/3)·1 + (1/3)·1 = 2/3 = (2/3)^1/1`.
+- `(i=1, k=2)`: `(1/3)·0 + (1/3)·(2/3) = 2/9 = (4/9)/2`. -/
+example : butcherRadauIDirect_two.SatisfiesC 2 := by
+  intro i k h1 hk
+  fin_cases i <;> interval_cases k <;>
+    simp [butcherRadauIDirect_two, Fin.sum_univ_two] <;> norm_num
+
 end OpenMath.Chapter3.Section344
