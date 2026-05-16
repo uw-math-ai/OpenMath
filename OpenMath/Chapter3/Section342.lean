@@ -6285,4 +6285,129 @@ example : butcherShiftedLegendre_quadratureWeights 1 ⟨0, by omega⟩ = 1 := by
   unfold butcherShiftedLegendre_quadratureWeights
   simp [Lagrange.basis_singleton, Polynomial.eval_one]
 
+/-! ### Phase B.1 of `lem:342B` — `2n`-degree exactness (cycle 304)
+
+Butcher §342 p. 237 (342h): *"To prove that (342h) holds for degree up
+to `2s − 1`, write `φ(x) = P_s^*(x) Q(x) + R(x)`, where the quotient `Q`
+and the remainder `R` have degrees not exceeding `s − 1`. We now have
+`∫₀¹ φ(x) dx = ∫₀¹ P_s^*(x) Q(x) dx + ∫₀¹ R(x) dx = 0 + ∑ᵢ bᵢ R(cᵢ) =
+∑ᵢ bᵢ φ(cᵢ)`."*
+
+The proof is the textbook recipe verbatim:
+1. Polynomial division `φ = P_n^* · Q + R` via Mathlib's
+   `EuclideanDomain.div_add_mod` for the Euclidean ring `ℝ[X]`.
+2. Degree of the remainder `R.natDegree < n` from
+   `Polynomial.degree_mod_lt` and `butcherShiftedLegendre_natDegree`.
+3. Degree of the quotient `Q.natDegree < n` from
+   `(P_n^* · Q).natDegree = n + Q.natDegree` (via
+   `Polynomial.natDegree_mul` over the integral domain `ℝ`) combined
+   with `φ.natDegree < 2n` and the fact that
+   `(P_n^* · Q).natDegree > R.natDegree`, so the leading term of `φ`
+   matches that of `P_n^* · Q`.
+4. The high-degree summand vanishes via cycle 292's
+   `butcherShiftedLegendre_orthogonal_to_lower_degree`.
+5. The low-degree summand `∫₀¹ R = ∑ⱼ bⱼ R(cⱼ)` via Phase A.2's
+   `butcherShiftedLegendre_quadrature_exact_lt_n`.
+6. `R(cⱼ) = φ(cⱼ)` because `P_n^*(cⱼ) = 0` via Phase A.2a's
+   `butcherShiftedLegendre_zeros_isRoot`.
+
+`lem:342B` remains `partial` after this cycle because positivity
+(`0 < bⱼ`) and uniqueness clauses are deferred to subsequent cycles. -/
+
+/-- **Gaussian quadrature exactness on polynomials of degree `< 2n`.**
+Phase B.1 of `lem:342B` (Butcher §342 p. 237 (342h)): for every
+polynomial `φ ∈ ℝ[X]` with `natDegree < 2n`,
+`∫₀¹ φ(x) dx = ∑ⱼ bⱼ · φ(cⱼ)`, where the `bⱼ` are the Lagrange weights
+at the shifted Legendre zeros `cⱼ`. This is the headline result for the
+existence half of `lem:342B`; positivity of the `bⱼ` and uniqueness of
+the rule are Phase B.2 and Phase B.3 respectively. -/
+theorem butcherShiftedLegendre_quadrature_exact_lt_two_n
+    (n : ℕ) (hn : 0 < n) (φ : Polynomial ℝ) (hdeg : φ.natDegree < 2 * n) :
+    (∫ x in (0 : ℝ)..1, φ.eval x)
+      = ∑ j : Fin n,
+          butcherShiftedLegendre_quadratureWeights n j *
+          φ.eval (butcherShiftedLegendre_zeros n j) := by
+  have hPn_nz : butcherShiftedLegendre n ≠ 0 := butcherShiftedLegendre_ne_zero n
+  have hPn_natDeg : (butcherShiftedLegendre n).natDegree = n :=
+    butcherShiftedLegendre_natDegree n
+  set Q := φ / butcherShiftedLegendre n with hQ_def
+  set R := φ % butcherShiftedLegendre n with hR_def
+  have hdiv : butcherShiftedLegendre n * Q + R = φ :=
+    EuclideanDomain.div_add_mod φ (butcherShiftedLegendre n)
+  -- Degree bound: R.natDegree < n via `Polynomial.degree_mod_lt`.
+  have hR_lt : R.natDegree < n := by
+    rcases eq_or_ne R 0 with hR0 | hR0
+    · rw [hR0, Polynomial.natDegree_zero]; exact hn
+    · have h := Polynomial.degree_mod_lt φ hPn_nz
+      rw [← hR_def] at h
+      rw [Polynomial.degree_eq_natDegree hR0,
+          Polynomial.degree_eq_natDegree hPn_nz, hPn_natDeg] at h
+      exact_mod_cast h
+  -- Degree bound: Q.natDegree < n from `φ = P_n^* · Q + R` and `φ.natDegree < 2n`.
+  have hQ_lt : Q.natDegree < n := by
+    rcases eq_or_ne Q 0 with hQ0 | hQ0
+    · rw [hQ0, Polynomial.natDegree_zero]; exact hn
+    · have hPQ_nd : (butcherShiftedLegendre n * Q).natDegree = n + Q.natDegree := by
+        rw [Polynomial.natDegree_mul hPn_nz hQ0, hPn_natDeg]
+      have hPQ_gt_R : R.natDegree < (butcherShiftedLegendre n * Q).natDegree := by
+        rw [hPQ_nd]; omega
+      have hφ_natDeg : φ.natDegree = (butcherShiftedLegendre n * Q).natDegree := by
+        rw [← hdiv, add_comm (butcherShiftedLegendre n * Q) R]
+        exact Polynomial.natDegree_add_eq_right_of_natDegree_lt hPQ_gt_R
+      rw [hφ_natDeg, hPQ_nd] at hdeg
+      omega
+  -- Pointwise decomposition `φ(x) = P_n^*(x) · Q(x) + R(x)`.
+  have h_eval : ∀ x : ℝ, φ.eval x =
+      (butcherShiftedLegendre n).eval x * Q.eval x + R.eval x := by
+    intro x
+    have := congrArg (Polynomial.eval x) hdiv.symm
+    simp only [Polynomial.eval_add, Polynomial.eval_mul] at this
+    exact this
+  calc (∫ x in (0 : ℝ)..1, φ.eval x)
+      = ∫ x in (0 : ℝ)..1,
+          (butcherShiftedLegendre n).eval x * Q.eval x + R.eval x := by
+        apply intervalIntegral.integral_congr
+        intro x _; exact h_eval x
+    _ = (∫ x in (0 : ℝ)..1, (butcherShiftedLegendre n).eval x * Q.eval x)
+          + (∫ x in (0 : ℝ)..1, R.eval x) :=
+        intervalIntegral.integral_add
+          (((butcherShiftedLegendre n).continuous.mul Q.continuous).intervalIntegrable 0 1)
+          (R.continuous.intervalIntegrable 0 1)
+    -- Step 4: orthogonality kills `∫ P_n^* · Q` (cycle 292, `Q.natDegree < n`).
+    _ = 0 + ∫ x in (0 : ℝ)..1, R.eval x := by
+        rw [butcherShiftedLegendre_orthogonal_to_lower_degree n Q hQ_lt]
+    _ = ∫ x in (0 : ℝ)..1, R.eval x := zero_add _
+    -- Step 5: Phase A.2 on `R` (cycle 303, `R.natDegree < n`).
+    _ = ∑ j : Fin n,
+          butcherShiftedLegendre_quadratureWeights n j *
+            R.eval (butcherShiftedLegendre_zeros n j) :=
+        butcherShiftedLegendre_quadrature_exact_lt_n n R hR_lt
+    -- Step 6: `R(c_j) = φ(c_j)` because `P_n^*(c_j) = 0` (cycle 302).
+    _ = ∑ j : Fin n,
+          butcherShiftedLegendre_quadratureWeights n j *
+            φ.eval (butcherShiftedLegendre_zeros n j) := by
+        apply Finset.sum_congr rfl
+        intro j _
+        congr 1
+        have hzero :
+            (butcherShiftedLegendre n).eval (butcherShiftedLegendre_zeros n j) = 0 :=
+          butcherShiftedLegendre_zeros_isRoot n j
+        rw [h_eval (butcherShiftedLegendre_zeros n j), hzero, zero_mul, zero_add]
+
+/-- **Consistency witness: `∑ⱼ bⱼ = 1`.** Apply Phase A.2's quadrature
+exactness to the constant polynomial `φ = 1` (whose `natDegree = 0 < n`)
+and use `∫₀¹ 1 dx = 1` to recover the textbook identity that the
+Gaussian quadrature weights sum to the length of the interval. This
+serves as a sanity check independent of Phase B.1: even before
+`2n`-degree exactness is in scope, the `< n` exactness already forces
+`∑ⱼ bⱼ = ∫₀¹ 1 dx = 1`. -/
+theorem butcherShiftedLegendre_quadratureWeights_sum_eq_one
+    (n : ℕ) (hn : 0 < n) :
+    ∑ j : Fin n, butcherShiftedLegendre_quadratureWeights n j = 1 := by
+  have h := butcherShiftedLegendre_quadrature_exact_lt_n n (1 : Polynomial ℝ)
+    (by rw [Polynomial.natDegree_one]; exact hn)
+  simp only [Polynomial.eval_one, intervalIntegral.integral_const, smul_eq_mul,
+    mul_one, sub_zero] at h
+  linarith [h]
+
 end OpenMath.Chapter3.Section342
