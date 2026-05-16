@@ -347,4 +347,138 @@ theorem Eq422a_congr {k : ℕ}
   subst h
   rfl
 
+/-! ### Phase D pre-infrastructure (cycle 341) — τ-additivity of
+`elementaryWeightQ_phi` under the §383 group
+
+Load-bearing infrastructure for Phase D.1's `η(τ)` base-case solver.
+At the single-vertex tree `τ`, the elementary weight on the §383
+quotient group is *additive* under group multiplication: for
+representatives `M₁, M₂`, the bottom-block sum `Σᵢ M₂.b i ·
+M₂.derivativeWeightWithSrc M₁ i τ` collapses to `M₂.elementaryWeight
+τ` because every `derivativeWeightWithSrc M₁ i τ = 1` (the empty
+list case of `derivativeWeightWithSrcProd`). Inverse and integer
+powers follow as corollaries via the §383 group structure.
+
+The full τ-additivity chain (P1+P2+P3) makes the (422a) equation at
+`u = τ` linear in `η(τ) := elementaryWeightQ_phi η_q τ`, unlocking
+Phase D.1's closed-form base-case solver. -/
+
+/-- *Phase D pre-infrastructure (cycle 341) P0:* at the single-vertex
+tree `τ`, the helper `derivativeWeightWithSrc M₁ i τ` is `1` for every
+source tableau `M₁` and bottom-block stage `i`. Direct from the empty-
+list base case of `derivativeWeightWithSrcProd` (`Section381.lean:2690`):
+`τ = mk []`, so `derivativeWeightWithSrc M₁ i (mk []) =
+derivativeWeightWithSrcProd M₁ i [] = 1`.
+
+`WithSrc` analog of cycle 187's `RKTableau.derivativeWeight_vertex`. -/
+theorem RKTableau.derivativeWeightWithSrc_vertex
+    {s₁ s₂ : ℕ} (M₂ : RKTableau s₂) (M₁ : RKTableau s₁) (i : Fin s₂) :
+    M₂.derivativeWeightWithSrc M₁ i RootedTree.vertex = 1 := by
+  show M₂.derivativeWeightWithSrcProd M₁ i [] = 1
+  rfl
+
+/-- *Phase D pre-infrastructure (cycle 341) P1:* at the single-vertex
+tree `τ`, the elementary weight on the §383 quotient group is
+*additive* under group multiplication. Load-bearing for Phase D.1's
+`η(τ)` base-case solver.
+
+Recipe: `Quotient.inductionOn` on each factor gives concrete
+representatives `M₁, M₂`. `instMul_phi` unfolds `*` to `composeQ_phi`,
+and cycle 239's `elementaryWeightQ_phi_composeQ_phi_mk` decomposes
+the LHS into `M₁.elementaryWeight τ + Σᵢ M₂.b i · derivativeWeightWithSrc
+M₁ i τ`. Every `derivativeWeightWithSrc M₁ i τ = 1` (P0) and every
+`derivativeWeight i τ = 1` (cycle 187), so the bottom-block sum collapses
+to `M₂.elementaryWeight τ`, matching the RHS. -/
+theorem elementaryWeightQ_phi_mul_vertex
+    (η_q η_q' : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi (η_q * η_q') RootedTree.vertex
+      = elementaryWeightQ_phi η_q RootedTree.vertex
+        + elementaryWeightQ_phi η_q' RootedTree.vertex := by
+  induction η_q using Quotient.inductionOn with | _ p₁ => ?_
+  induction η_q' using Quotient.inductionOn with | _ p₂ => ?_
+  obtain ⟨s₁, M₁⟩ := p₁
+  obtain ⟨s₂, M₂⟩ := p₂
+  show elementaryWeightQ_phi (composeQ_phi
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩)
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₂, M₂⟩))
+        RootedTree.vertex = _
+  rw [elementaryWeightQ_phi_composeQ_phi_mk M₁ M₂ RootedTree.vertex]
+  congr 1
+
+/-- *Phase D pre-infrastructure (cycle 341) P2:* at the single-vertex
+tree `τ`, the elementary weight of the §383 group inverse is the
+negation of the original's. Corollary of P1's additivity applied to
+`η_q * η_q⁻¹ = 1` and cycle 239's `elementaryWeightQ_phi_id`. -/
+theorem elementaryWeightQ_phi_inv_vertex
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi η_q⁻¹ RootedTree.vertex
+      = - elementaryWeightQ_phi η_q RootedTree.vertex := by
+  have h_cancel : η_q * η_q⁻¹ = 1 := mul_inv_cancel η_q
+  have h_w := elementaryWeightQ_phi_eq_of_eq h_cancel RootedTree.vertex
+  rw [elementaryWeightQ_phi_mul_vertex] at h_w
+  have h_one : (1 : Quotient PhiEquivalent.setoidSigma)
+      = Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩ := rfl
+  rw [h_one, elementaryWeightQ_phi_id] at h_w
+  linarith
+
+/-- *Phase D pre-infrastructure (cycle 341) P3:* at the single-vertex
+tree `τ`, the elementary weight of the §383 integer power scales
+linearly with the exponent. Combines P1 (induction on `m : ℕ` over
+`pow_succ`) with P2 (sign flip via `zpow_negSucc`) and a case split
+on `Int` constructors. Closed form for Butcher §422's `η^{-i}(τ)`
+factors that appear in the (422a) equation. -/
+theorem elementaryWeightQ_phi_zpow_vertex
+    (η_q : Quotient PhiEquivalent.setoidSigma) (n : ℤ) :
+    elementaryWeightQ_phi (η_q ^ n) RootedTree.vertex
+      = (n : ℝ) * elementaryWeightQ_phi η_q RootedTree.vertex := by
+  have h_nat : ∀ m : ℕ,
+      elementaryWeightQ_phi (η_q ^ m) RootedTree.vertex
+        = (m : ℝ) * elementaryWeightQ_phi η_q RootedTree.vertex := by
+    intro m
+    induction m with
+    | zero =>
+      rw [pow_zero]
+      have h_one : (1 : Quotient PhiEquivalent.setoidSigma)
+          = Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩ := rfl
+      rw [h_one, elementaryWeightQ_phi_id]
+      simp
+    | succ k ih =>
+      rw [pow_succ, elementaryWeightQ_phi_mul_vertex, ih]
+      push_cast
+      ring
+  cases n with
+  | ofNat m =>
+    rw [Int.ofNat_eq_natCast, zpow_natCast, h_nat m]
+    push_cast
+    ring
+  | negSucc m =>
+    rw [zpow_negSucc, elementaryWeightQ_phi_inv_vertex, h_nat (m + 1)]
+    push_cast
+    ring
+
+/-- *Phase D pre-infrastructure (cycle 341) P4(a) — non-vacuity:*
+additivity at τ on `D_element`. Combines cycle 337's
+`D_element_elementaryWeight_vertex = 1` with P1: `Φ_{D·D}(τ) = 1 + 1 = 2`. -/
+example :
+    elementaryWeightQ_phi (D_element * D_element) RootedTree.vertex
+      = 2 := by
+  rw [elementaryWeightQ_phi_mul_vertex, D_element_elementaryWeight_vertex]
+  norm_num
+
+/-- *Phase D pre-infrastructure (cycle 341) P4(b) — non-vacuity:*
+inverse at τ on `D_element`. Combines cycle 337's
+`D_element_elementaryWeight_vertex = 1` with P2: `Φ_{D⁻¹}(τ) = -1`. -/
+example :
+    elementaryWeightQ_phi D_element⁻¹ RootedTree.vertex = -1 := by
+  rw [elementaryWeightQ_phi_inv_vertex, D_element_elementaryWeight_vertex]
+
+/-- *Phase D pre-infrastructure (cycle 341) P4(c) — non-vacuity:*
+zpow at τ on `D_element`. Combines cycle 337's
+`D_element_elementaryWeight_vertex = 1` with P3: `Φ_{D³}(τ) = 3`. -/
+example :
+    elementaryWeightQ_phi (D_element ^ (3 : ℤ)) RootedTree.vertex
+      = 3 := by
+  rw [elementaryWeightQ_phi_zpow_vertex, D_element_elementaryWeight_vertex]
+  norm_num
+
 end OpenMath.Chapter4.Section422

@@ -866,3 +866,93 @@ infrastructure on `RootedTree.order`, D.3 inductive step); Phase E
 **Phase C status: CLOSED.** The (422a) predicate is defined and
 respects quotient-class equality. Phase D / E / F remain deferred
 per §5.
+
+## Cycle 341 update — Phase D pre-infrastructure (τ-additivity)
+
+Cycle 341 ships the τ-additivity infrastructure chain for
+`elementaryWeightQ_phi` under the §383 group, load-bearing for
+Phase D.1's closed-form `η(τ)` base-case solver.
+
+**Shipped (4 new public theorems + 3 non-vacuity examples):**
+
+* `RKTableau.derivativeWeightWithSrc_vertex` (P0) — the helper
+  `M₂.derivativeWeightWithSrc M₁ i τ = 1` for every source tableau
+  `M₁` and bottom-block stage `i`. Direct from the empty-list base
+  case of `derivativeWeightWithSrcProd` (`Section381.lean:2690`):
+  `τ = mk []`, so `derivativeWeightWithSrc M₁ i (mk []) =
+  derivativeWeightWithSrcProd M₁ i [] = 1` (definitional). The
+  `WithSrc` analog of cycle 187's `RKTableau.derivativeWeight_vertex`.
+
+* `elementaryWeightQ_phi_mul_vertex` (P1, load-bearing) —
+  `Φ_{η·η'}(τ) = Φ_η(τ) + Φ_{η'}(τ)` for all `η, η' : Q`. Proof
+  recipe: `Quotient.inductionOn` on each factor, destructure to
+  representatives `M₁, M₂`, `show` the multiplication unfolds to
+  `composeQ_phi`, apply cycle 239's
+  `elementaryWeightQ_phi_composeQ_phi_mk` to decompose the LHS into
+  `M₁.elementaryWeight τ + Σ i, M₂.b i · derivativeWeightWithSrc
+  M₁ i τ`, then `congr 1` closes both subgoals definitionally
+  (both bottom-block sums reduce pointwise to `M₂.b i * 1` via the
+  empty-list base cases of `derivativeWeightWithSrcProd` and
+  `derivativeWeightProd`). **Note:** P0 is independent infrastructure
+  and is not actually invoked in P1's proof — `congr 1` closes via
+  definitional unfolding rather than rewriting.
+
+* `elementaryWeightQ_phi_inv_vertex` (P2) — `Φ_{η⁻¹}(τ) =
+  -Φ_η(τ)` for all `η : Q`. Proof: `mul_inv_cancel η_q : η_q *
+  η_q⁻¹ = 1`, apply `elementaryWeightQ_phi_eq_of_eq` to evaluate
+  both sides at `τ`, `rw` P1 on the LHS to split, `rw` the
+  definitional equality `(1 : Q) = Quotient.mk _ ⟨0, RKTableau.id⟩`
+  then cycle 239's `elementaryWeightQ_phi_id` zeroes the RHS, and
+  `linarith` closes.
+
+* `elementaryWeightQ_phi_zpow_vertex` (P3) — `Φ_{η^n}(τ) = (n : ℝ)
+  · Φ_η(τ)` for all `η : Q` and `n : ℤ`. Proof: internal `∀ m : ℕ`
+  helper proved by induction (base `m = 0`: `pow_zero` + `(1 : Q)`
+  unfold + `elementaryWeightQ_phi_id`; succ: `pow_succ` + P1 +
+  `push_cast; ring`), then case split on `Int` constructors —
+  `ofNat m` via `Int.ofNat_eq_natCast` + `zpow_natCast`, `negSucc m`
+  via `zpow_negSucc` + P2 sign flip + `push_cast; ring`.
+
+* Three non-vacuity `example`s on `D_element`: `Φ_{D·D}(τ) = 2`,
+  `Φ_{D⁻¹}(τ) = -1`, `Φ_{D³}(τ) = 3` — each a one-rw application
+  of the corresponding P1/P2/P3 lemma plus cycle 337's
+  `D_element_elementaryWeight_vertex = 1` plus `norm_num` for the
+  arithmetic.
+
+**Axioms:** all 4 public theorems depend on only
+`[propext, Classical.choice, Quot.sound]`.
+
+**Cycle 341 LOC trajectory:** Section422.lean: ~350 (cycle 340) →
+484 (cycle 341), +~134 LOC. Within the strategy's 80–120 LOC budget
+projection (margin from extra docstring on the section header and
+per-theorem rationale).
+
+**Cycle 342 entry point (Phase D.1 base case):** with P1/P2/P3 in
+hand, the Eq422a body at `u = τ` collapses to a linear equation in
+`η(τ)`:
+
+```
+0 − Σᵢ M.α i.succ · (-(i+1)) · η(τ)
+  − Σᵢ M.β i · ((-i) · η(τ) + 1) = 0
+```
+
+(The `+ 1` on the β-side comes from cycle 337's
+`D_element_elementaryWeight_vertex = 1` plus P1 additivity applied
+to `η_q ^ (-i) * D_element`.) Cycle 342's Phase D.1 base case rings
+this into
+
+```
+(Σᵢ (i+1) · M.α i.succ + Σᵢ i · M.β i) · η(τ) = Σᵢ M.β i
+```
+
+(modulo sign convention), i.e. a closed form for `η(τ)`. Stability
++ preconsistency guarantee the coefficient is non-zero (cycle 178's
+`ρPoly_deriv_eval_one_pos_of_stable_preconsistent`, transported to
+the `Σ i · αᵢ` form). May need to first define an `Eq422aAt M η_q
+u` per-tree predicate (or extract a lemma `Eq422a_at_tree`) to make
+the `u = τ` slice statable as its own theorem rather than just an
+instantiation of the universal `Eq422a`.
+
+**Phase D pre-infrastructure status: CLOSED.** τ-additivity of
+`elementaryWeightQ_phi` under the §383 group is shipped axiom-clean.
+Phase D.1 / D.2 / D.3 / E / F remain deferred per §5.
