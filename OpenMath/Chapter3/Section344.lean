@@ -2270,4 +2270,303 @@ example : butcherRadauI_collocation_two.SatisfiesC 2 := by
   fin_cases i <;> interval_cases k <;>
     simp [butcherRadauIDirect_two, Fin.sum_univ_two] <;> norm_num
 
+/-! ## Deliverable D.13 — Lobatto IIIA `s = 3` collocation `RKTableau`
+
+Cycle 333: lift cycle 320's `butcherLobatto_zeros_three`, cycle 321's
+`butcherLobatto_quadratureWeights_three`, and this cycle's
+`butcherLobatto_collocationA_three` into a concrete `RKTableau 3`
+matching Butcher §344 Table 344(I) "Lobatto IIIA `s = 3`" (Simpson's
+rule). Direct port of cycle 332's Radau I C(s) `s = 2` template
+scaled to `s = 3`. Per Butcher Table 344(I), Lobatto IIIA is a
+C(s)-family entry and thus coincides with plain Lagrange collocation.
+
+  `c = (0, 1/2, 1)`, `b = (1/6, 2/3, 1/6)`,
+  `A = !![0, 0, 0; 5/24, 1/3, -1/24; 1/6, 2/3, 1/6]`. -/
+
+/-- **Butcher §344 — Lobatto IIIA collocation A-matrix at `s = 3`**.
+Entry `(i, j) = ∫₀^{c_i} L_j(x) dx`, where the Lagrange basis
+polynomials `L_j` are taken over the three-leaf Lobatto abscissae
+`c = (c_0, c_1, c_2) = (0, 1/2, 1)` (`butcherLobatto_zeros_three`,
+cycle 320). At `s = 3` the nine entries reproduce Simpson's rule and
+match Butcher Table 344(I) p. 226 "Lobatto IIIA" row. -/
+noncomputable def butcherLobatto_collocationA_three
+    (i j : Fin 3) : ℝ :=
+  ∫ x in (0 : ℝ)..butcherLobatto_zeros_three i,
+    (Lagrange.basis Finset.univ butcherLobatto_zeros_three j).eval x
+
+/-- The `(0, 0)` entry of `butcherLobatto_collocationA_three` is `0`.
+The upper limit is `c_0 = 0`, so the integral is vacuous. -/
+theorem butcherLobatto_collocationA_three_apply_zero_zero :
+    butcherLobatto_collocationA_three ⟨0, by omega⟩ ⟨0, by omega⟩ = 0 := by
+  unfold butcherLobatto_collocationA_three
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨0, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_three
+          ⟨0, by omega⟩).eval x = 0
+  simp [butcherLobatto_zeros_three, intervalIntegral.integral_same]
+
+/-- The `(0, 1)` entry of `butcherLobatto_collocationA_three` is `0`.
+The upper limit is `c_0 = 0`, so the integral is vacuous. -/
+theorem butcherLobatto_collocationA_three_apply_zero_one :
+    butcherLobatto_collocationA_three ⟨0, by omega⟩ ⟨1, by omega⟩ = 0 := by
+  unfold butcherLobatto_collocationA_three
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨0, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_three
+          ⟨1, by omega⟩).eval x = 0
+  simp [butcherLobatto_zeros_three, intervalIntegral.integral_same]
+
+/-- The `(0, 2)` entry of `butcherLobatto_collocationA_three` is `0`.
+The upper limit is `c_0 = 0`, so the integral is vacuous. -/
+theorem butcherLobatto_collocationA_three_apply_zero_two :
+    butcherLobatto_collocationA_three ⟨0, by omega⟩ ⟨2, by omega⟩ = 0 := by
+  unfold butcherLobatto_collocationA_three
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨0, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_three
+          ⟨2, by omega⟩).eval x = 0
+  simp [butcherLobatto_zeros_three, intervalIntegral.integral_same]
+
+/-- The `(1, 0)` entry of `butcherLobatto_collocationA_three` is `5/24`.
+The upper limit is `c_1 = 1/2` and the integrand is the basis
+polynomial `L_0(x) = 2x² − 3x + 1`, so
+`∫₀^(1/2) (2x² − 3x + 1) dx = 1/12 − 3/8 + 1/2 = 5/24`. -/
+theorem butcherLobatto_collocationA_three_apply_one_zero :
+    butcherLobatto_collocationA_three ⟨1, by omega⟩ ⟨0, by omega⟩ = 5 / 24 := by
+  unfold butcherLobatto_collocationA_three
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨1, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_three
+          ⟨0, by omega⟩).eval x = 5 / 24
+  have h_erase : ((Finset.univ : Finset (Fin 3)).erase ⟨0, by omega⟩)
+      = ({⟨1, by omega⟩, ⟨2, by omega⟩} : Finset (Fin 3)) := by decide
+  have h_ne : (⟨1, by omega⟩ : Fin 3) ≠ ⟨2, by omega⟩ := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 3)) butcherLobatto_zeros_three
+          ⟨0, by omega⟩).eval x = 2 * x ^ 2 - 3 * x + 1 := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_pair h_ne, Polynomial.eval_mul,
+        Lagrange.basisDivisor, Lagrange.basisDivisor]
+    simp [butcherLobatto_zeros_three, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨1, by omega⟩,
+      ((2 : ℝ) * x ^ 2 - 3 * x + 1) = 5 / 24
+  have h_c1 : butcherLobatto_zeros_three ⟨1, by omega⟩ = 1 / 2 := rfl
+  rw [h_c1]
+  have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2)
+      MeasureTheory.volume 0 (1/2) :=
+    (continuous_pow 2).intervalIntegrable 0 (1/2)
+  have hi_x : IntervalIntegrable (fun x : ℝ => x)
+      MeasureTheory.volume 0 (1/2) :=
+    continuous_id.intervalIntegrable 0 (1/2)
+  have h2 : ∫ x in (0 : ℝ)..(1/2 : ℝ), x ^ 2 = 1 / 24 := by
+    rw [integral_pow]; norm_num
+  have h1 : ∫ x in (0 : ℝ)..(1/2 : ℝ), x = 1 / 8 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := (1/2 : ℝ)) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_add
+        ((hi_x2.const_mul 2).sub (hi_x.const_mul 3))
+        intervalIntegrable_const,
+      intervalIntegral.integral_sub (hi_x2.const_mul 2) (hi_x.const_mul 3),
+      intervalIntegral.integral_const_mul, intervalIntegral.integral_const_mul,
+      h2, h1, integral_one]
+  norm_num
+
+/-- The `(1, 1)` entry of `butcherLobatto_collocationA_three` is `1/3`.
+The upper limit is `c_1 = 1/2` and the integrand is the basis
+polynomial `L_1(x) = −4x² + 4x`, so
+`∫₀^(1/2) (−4x² + 4x) dx = −1/6 + 1/2 = 1/3`. -/
+theorem butcherLobatto_collocationA_three_apply_one_one :
+    butcherLobatto_collocationA_three ⟨1, by omega⟩ ⟨1, by omega⟩ = 1 / 3 := by
+  unfold butcherLobatto_collocationA_three
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨1, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_three
+          ⟨1, by omega⟩).eval x = 1 / 3
+  have h_erase : ((Finset.univ : Finset (Fin 3)).erase ⟨1, by omega⟩)
+      = ({⟨0, by omega⟩, ⟨2, by omega⟩} : Finset (Fin 3)) := by decide
+  have h_ne : (⟨0, by omega⟩ : Fin 3) ≠ ⟨2, by omega⟩ := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 3)) butcherLobatto_zeros_three
+          ⟨1, by omega⟩).eval x = -4 * x ^ 2 + 4 * x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_pair h_ne, Polynomial.eval_mul,
+        Lagrange.basisDivisor, Lagrange.basisDivisor]
+    simp [butcherLobatto_zeros_three, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨1, by omega⟩,
+      ((-4 : ℝ) * x ^ 2 + 4 * x) = 1 / 3
+  have h_c1 : butcherLobatto_zeros_three ⟨1, by omega⟩ = 1 / 2 := rfl
+  rw [h_c1]
+  have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2)
+      MeasureTheory.volume 0 (1/2) :=
+    (continuous_pow 2).intervalIntegrable 0 (1/2)
+  have hi_x : IntervalIntegrable (fun x : ℝ => x)
+      MeasureTheory.volume 0 (1/2) :=
+    continuous_id.intervalIntegrable 0 (1/2)
+  have h2 : ∫ x in (0 : ℝ)..(1/2 : ℝ), x ^ 2 = 1 / 24 := by
+    rw [integral_pow]; norm_num
+  have h1 : ∫ x in (0 : ℝ)..(1/2 : ℝ), x = 1 / 8 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := (1/2 : ℝ)) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_add (hi_x2.const_mul (-4)) (hi_x.const_mul 4),
+      intervalIntegral.integral_const_mul, intervalIntegral.integral_const_mul,
+      h2, h1]
+  norm_num
+
+/-- The `(1, 2)` entry of `butcherLobatto_collocationA_three` is `-1/24`.
+The upper limit is `c_1 = 1/2` and the integrand is the basis
+polynomial `L_2(x) = 2x² − x`, so
+`∫₀^(1/2) (2x² − x) dx = 1/12 − 1/8 = −1/24`. -/
+theorem butcherLobatto_collocationA_three_apply_one_two :
+    butcherLobatto_collocationA_three ⟨1, by omega⟩ ⟨2, by omega⟩
+      = -(1 / 24) := by
+  unfold butcherLobatto_collocationA_three
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨1, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_three
+          ⟨2, by omega⟩).eval x = -(1 / 24)
+  have h_erase : ((Finset.univ : Finset (Fin 3)).erase ⟨2, by omega⟩)
+      = ({⟨0, by omega⟩, ⟨1, by omega⟩} : Finset (Fin 3)) := by decide
+  have h_ne : (⟨0, by omega⟩ : Fin 3) ≠ ⟨1, by omega⟩ := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 3)) butcherLobatto_zeros_three
+          ⟨2, by omega⟩).eval x = 2 * x ^ 2 - x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_pair h_ne, Polynomial.eval_mul,
+        Lagrange.basisDivisor, Lagrange.basisDivisor]
+    simp [butcherLobatto_zeros_three, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨1, by omega⟩,
+      ((2 : ℝ) * x ^ 2 - x) = -(1 / 24)
+  have h_c1 : butcherLobatto_zeros_three ⟨1, by omega⟩ = 1 / 2 := rfl
+  rw [h_c1]
+  have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2)
+      MeasureTheory.volume 0 (1/2) :=
+    (continuous_pow 2).intervalIntegrable 0 (1/2)
+  have hi_x : IntervalIntegrable (fun x : ℝ => x)
+      MeasureTheory.volume 0 (1/2) :=
+    continuous_id.intervalIntegrable 0 (1/2)
+  have h2 : ∫ x in (0 : ℝ)..(1/2 : ℝ), x ^ 2 = 1 / 24 := by
+    rw [integral_pow]; norm_num
+  have h1 : ∫ x in (0 : ℝ)..(1/2 : ℝ), x = 1 / 8 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := (1/2 : ℝ)) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub (hi_x2.const_mul 2) hi_x,
+      intervalIntegral.integral_const_mul, h2, h1]
+  norm_num
+
+/-- The `(2, 0)` entry of `butcherLobatto_collocationA_three` is `1/6`.
+With `c_2 = 1`, the collocation integral coincides with the
+quadrature weight `b_0` (cycle 321). -/
+theorem butcherLobatto_collocationA_three_apply_two_zero :
+    butcherLobatto_collocationA_three ⟨2, by omega⟩ ⟨0, by omega⟩ = 1 / 6 := by
+  unfold butcherLobatto_collocationA_three
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨2, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_three
+          ⟨0, by omega⟩).eval x = 1 / 6
+  have h_c2 : butcherLobatto_zeros_three ⟨2, by omega⟩ = 1 := rfl
+  rw [h_c2]
+  exact butcherLobatto_quadratureWeights_three_apply_zero
+
+/-- The `(2, 1)` entry of `butcherLobatto_collocationA_three` is `2/3`.
+With `c_2 = 1`, the collocation integral coincides with the
+quadrature weight `b_1` (cycle 321). -/
+theorem butcherLobatto_collocationA_three_apply_two_one :
+    butcherLobatto_collocationA_three ⟨2, by omega⟩ ⟨1, by omega⟩ = 2 / 3 := by
+  unfold butcherLobatto_collocationA_three
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨2, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_three
+          ⟨1, by omega⟩).eval x = 2 / 3
+  have h_c2 : butcherLobatto_zeros_three ⟨2, by omega⟩ = 1 := rfl
+  rw [h_c2]
+  exact butcherLobatto_quadratureWeights_three_apply_one
+
+/-- The `(2, 2)` entry of `butcherLobatto_collocationA_three` is `1/6`.
+With `c_2 = 1`, the collocation integral coincides with the
+quadrature weight `b_2` (cycle 321). -/
+theorem butcherLobatto_collocationA_three_apply_two_two :
+    butcherLobatto_collocationA_three ⟨2, by omega⟩ ⟨2, by omega⟩ = 1 / 6 := by
+  unfold butcherLobatto_collocationA_three
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨2, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_three
+          ⟨2, by omega⟩).eval x = 1 / 6
+  have h_c2 : butcherLobatto_zeros_three ⟨2, by omega⟩ = 1 := rfl
+  rw [h_c2]
+  exact butcherLobatto_quadratureWeights_three_apply_two
+
+/-- **The 3-stage Lobatto IIIA `RKTableau`** assembled from the
+canonical Lagrange weights, zeros, and collocation A-matrix of the
+Lobatto quadrature. At `s = 3` this is Simpson's rule with
+`c = (0, 1/2, 1)`, `b = (1/6, 2/3, 1/6)`,
+`A = !![0, 0, 0; 5/24, 1/3, -1/24; 1/6, 2/3, 1/6]`. -/
+noncomputable def butcherLobattoIIIA_three :
+    OpenMath.Chapter3.Section312.RKTableau 3 where
+  A := butcherLobatto_collocationA_three
+  b := butcherLobatto_quadratureWeights_three
+  c := butcherLobatto_zeros_three
+
+/-- **Direct Lobatto IIIA `s = 3` tableau** for cross-validation:
+`c = (0, 1/2, 1)`, `b = (1/6, 2/3, 1/6)`,
+`A = !![0, 0, 0; 5/24, 1/3, -1/24; 1/6, 2/3, 1/6]` declared inline
+rather than via collocation. Butcher Table 344(I) p. 226. -/
+noncomputable def butcherLobattoIIIADirect_three :
+    OpenMath.Chapter3.Section312.RKTableau 3 where
+  A := !![0, 0, 0; 5/24, 1/3, -(1/24); 1/6, 2/3, 1/6]
+  b := ![1/6, 2/3, 1/6]
+  c := ![0, 1/2, 1]
+
+/-- **Coincidence**: the cycle-333 collocation-assembled Lobatto IIIA
+tableau at `s = 3` equals the direct Simpson's-rule tableau. Validates
+that the C(s)-variant family coincides with plain Lagrange collocation,
+mirroring the cycles 322 (Radau IIA s=1), 323 (Lobatto IIIA s=2), 324
+(Radau IIA s=2), 325 (Radau IA s=1), and 332 (Radau I C(s) s=2)
+C(s)-coincidence theorems. -/
+theorem butcherLobattoIIIA_three_eq_direct :
+    butcherLobattoIIIA_three = butcherLobattoIIIADirect_three := by
+  refine OpenMath.Chapter3.Section312.RKTableau.mk.injEq .. |>.mpr ⟨?_, ?_, ?_⟩
+  · funext i j; fin_cases i <;> fin_cases j
+    · show butcherLobatto_collocationA_three ⟨0, by omega⟩ ⟨0, by omega⟩ = _
+      rw [butcherLobatto_collocationA_three_apply_zero_zero]; rfl
+    · show butcherLobatto_collocationA_three ⟨0, by omega⟩ ⟨1, by omega⟩ = _
+      rw [butcherLobatto_collocationA_three_apply_zero_one]; rfl
+    · show butcherLobatto_collocationA_three ⟨0, by omega⟩ ⟨2, by omega⟩ = _
+      rw [butcherLobatto_collocationA_three_apply_zero_two]; rfl
+    · show butcherLobatto_collocationA_three ⟨1, by omega⟩ ⟨0, by omega⟩ = _
+      rw [butcherLobatto_collocationA_three_apply_one_zero]; rfl
+    · show butcherLobatto_collocationA_three ⟨1, by omega⟩ ⟨1, by omega⟩ = _
+      rw [butcherLobatto_collocationA_three_apply_one_one]; rfl
+    · show butcherLobatto_collocationA_three ⟨1, by omega⟩ ⟨2, by omega⟩ = _
+      rw [butcherLobatto_collocationA_three_apply_one_two]; rfl
+    · show butcherLobatto_collocationA_three ⟨2, by omega⟩ ⟨0, by omega⟩ = _
+      rw [butcherLobatto_collocationA_three_apply_two_zero]; rfl
+    · show butcherLobatto_collocationA_three ⟨2, by omega⟩ ⟨1, by omega⟩ = _
+      rw [butcherLobatto_collocationA_three_apply_two_one]; rfl
+    · show butcherLobatto_collocationA_three ⟨2, by omega⟩ ⟨2, by omega⟩ = _
+      rw [butcherLobatto_collocationA_three_apply_two_two]; rfl
+  · funext i; fin_cases i
+    · show butcherLobatto_quadratureWeights_three ⟨0, by omega⟩ = _
+      rw [butcherLobatto_quadratureWeights_three_apply_zero]; rfl
+    · show butcherLobatto_quadratureWeights_three ⟨1, by omega⟩ = _
+      rw [butcherLobatto_quadratureWeights_three_apply_one]; rfl
+    · show butcherLobatto_quadratureWeights_three ⟨2, by omega⟩ = _
+      rw [butcherLobatto_quadratureWeights_three_apply_two]; rfl
+  · funext i; fin_cases i <;> rfl
+
+/-- **Non-vacuity**: the collocation-assembled Lobatto IIIA tableau at
+`s = 3` (Simpson's rule) achieves classical order `2s − 2 = 4`, so
+`B(4)` is the maximal quadrature condition. Verified by routing
+through the cycle 333 coincidence theorem to the direct form. -/
+example : butcherLobattoIIIA_three.SatisfiesB 4 := by
+  rw [butcherLobattoIIIA_three_eq_direct]
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherLobattoIIIADirect_three, Fin.sum_univ_three]; norm_num
+  · simp [butcherLobattoIIIADirect_three, Fin.sum_univ_three]; norm_num
+  · simp [butcherLobattoIIIADirect_three, Fin.sum_univ_three]; norm_num
+  · simp [butcherLobattoIIIADirect_three, Fin.sum_univ_three]; norm_num
+
 end OpenMath.Chapter3.Section344

@@ -1,369 +1,468 @@
-# Cycle 332 — Strategy
+# Cycle 333 Strategy — §344 Phase D.13: Lobatto IIIA `s = 3` collocation-form `RKTableau` + coincidence theorem
 
-## TL;DR
+## A. Context
 
-The §344 small-`s` direct-form D-ladder (cycles 322–331) is **saturated**
-— six consecutive direct-form ships at `s ∈ {1, 2}` covering every
-Radau/Lobatto subfamily that admits a small-`s` instance. Cycle 331's
-task results explicitly flag diminishing returns on further mechanical
-rungs.
+Cycle 332 closed cleanly. `Section344.lean` is 2273 LOC, sorry count 0,
+axiom-clean, no pending Aristotle results. The cycle 332 task results
+recommended option 1 (mechanical port to Lobatto IIIA `s = 3`); this
+strategy executes that recommendation.
 
-Pivot this cycle to the **C(s)-coincidence theorem for Radau I `s = 2`**
-— the audit-confirmed *first non-trivial step beyond mechanical direct-
-form transcription* within §344. Mechanical port of cycle 324's
-`butcherRadauII_collocationA_two` recipe (lines 1417–1614 of
-`Section344.lean`) to Radau I abscissae `(0, 2/3)`, then prove the
-coincidence theorem
-`butcherRadauI_collocation_two = butcherRadauIDirect_two` against cycle
-329's direct form.
+The §344 small-`s` ladder is now structured as follows (after cycle 332):
 
-Estimated 150–180 LOC, single cycle, axiom-clean target.
+| `s` | family       | direct-form          | collocation-form         | coincidence shipped? |
+|-----|--------------|----------------------|--------------------------|----------------------|
+| 1   | Radau IA     | `butcherForwardEulerRK` | `butcherRadauIA_one`     | yes (cycle 325)      |
+| 1   | Radau IIA    | `butcherBackwardEulerRK` | `butcherRadauIIA_one`    | yes (cycle 322)      |
+| 2   | Lobatto IIIA | `butcherTrapezoidalRK` | `butcherLobattoIIIA_two` | yes (cycle 323)      |
+| 2   | Radau I (C(s))   | `butcherRadauIDirect_two` | `butcherRadauI_collocation_two` | yes (cycle 332) |
+| 2   | Radau IIA    | `butcherRadauIIADirect_two` | `butcherRadauIIA_two` | yes (cycle 324)      |
+| 2   | Radau I (reflections) | `butcherRadauIADirect_two` | none (divergent) | n/a (cycle 326)  |
+| 2   | Radau II (D(s)) | `butcherRadauIIDirect_two` | none (divergent) | n/a (cycle 328) |
+| 2   | Lobatto IIIC | `butcherLobattoIIICDirect_two` | none (divergent) | n/a (cycle 330) |
+| 2   | Lobatto III  | `butcherLobattoIIIDirect_two` | none (divergent) | n/a (cycle 331) |
+| 3   | Lobatto IIIB | `butcherLobattoIIIBDirect_three` | none (divergent) | n/a (cycle 327) |
+| 3   | Lobatto IIIA | **MISSING**          | **MISSING**              | **cycle 333 target** |
 
-## What to ship (in order)
+Cycle 333 fills the missing `s = 3` Lobatto IIIA row. Per Butcher
+Table 344(I) line "Lobatto IIIA — Lobatto quadrature — C(s)", this is
+a C(s)-family entry and will coincide with plain Lagrange collocation
+at the Lobatto nodes `(0, 1/2, 1)` — exactly the cycle 332 template
+applied to a 3-leaf tree. All prerequisite infrastructure is in place:
 
-All deliverables append to `OpenMath/Chapter3/Section344.lean` **after
-cycle 331's `butcherLobattoIIIDirect_two` block** (currently the file's
-last block, ending around line 2093). Open a new Phase D.12 section
-heading.
+* `butcherLobatto_zeros_three` (cycle 320) — abscissae `(0, 1/2, 1)`.
+* `butcherLobatto_quadratureWeights_three` (cycle 321) — weights
+  `(1/6, 2/3, 1/6)` (Simpson's rule).
+* `butcherLobatto_quadratureWeights_three_apply_{zero,one,two}` —
+  closed-form evaluations of each weight (Section344.lean lines
+  1024–1125).
+* Lagrange basis evaluations at `(0, 1/2, 1)` are already worked out
+  inside the cycle 321 weight proofs:
+  - `L_0(x) = 2x² − 3x + 1` (lines 1030–1038)
+  - `L_1(x) = −4x² + 4x` (lines 1068–1076)
+  - `L_2(x) = 2x² − x` (lines 1103–1111)
 
-### Deliverable 1 — `butcherRadauI_collocationA_two` (def, ~6 LOC)
+## B. Deliverables (Priority 1 = ship; Priority 2 = stretch)
+
+### B.1 P1 — `butcherLobatto_collocationA_three` definition
 
 ```lean
-/-! ## Deliverable D.12 — Small-`s` RKTableau (Radau I C(s), `s = 2`,
-collocation form)
-
-Cycle 332: the *first non-trivial step beyond mechanical direct-form
-transcription* in the §344 D-ladder. Mirror cycle 324's
-`butcherRadauII_collocationA_two` template at the Radau I abscissae
-`(0, 2/3)` and prove the coincidence theorem with cycle 329's
-`butcherRadauIDirect_two`. This formalises the cycle 329 audit's
-confirmed coincidence (the C(s)-variant of plain-quadrature families
-agrees with plain Lagrange collocation, unlike the reflection-style /
-D(s) / C(s−1) variants of cycles 326/327/328/330/331 which all diverge).
-
-  `c = (0, 2/3)`, `b = (1/4, 3/4)`,
-  `A = !![0, 0; 1/3, 1/3]`. -/
-
-/-- **Butcher §344 — Radau I collocation A-matrix at `s = 2`**.
-Entry `(i, j) = ∫₀^{c_i} L_j(x) dx`, where the Lagrange basis
-polynomials `L_j` are taken over the two-leaf Radau I abscissae
-`c = (c_0, c_1) = (0, 2/3)` (`butcherRadauI_zeros_two`, cycle 320). At
-`s = 2` the four entries are `(0, 0, 1/3, 1/3)` — matching Butcher
-Table 344(I) p. 225 (the C(s)-variant Radau I A-matrix). -/
-noncomputable def butcherRadauI_collocationA_two
-    (i j : Fin 2) : ℝ :=
-  ∫ x in (0 : ℝ)..butcherRadauI_zeros_two i,
-    (Lagrange.basis Finset.univ butcherRadauI_zeros_two j).eval x
+/-- The 3-stage Lobatto IIIA collocation A-matrix.
+For each `(i, j)`, the entry is the Lagrange-collocation integral
+`∫₀^{c_i} L_j(x) dx` evaluated at the Lobatto abscissae
+`c = (0, 1/2, 1)` with Lagrange basis `L_0, L_1, L_2`. -/
+noncomputable def butcherLobatto_collocationA_three
+    (i j : Fin 3) : ℝ :=
+  ∫ x in (0 : ℝ)..butcherLobatto_zeros_three i,
+    (Lagrange.basis Finset.univ butcherLobatto_zeros_three j).eval x
 ```
 
-### Deliverable 2 — Four `_apply` theorems (~110 LOC total)
+Place immediately after cycle 332's `butcherRadauI_collocation_two_eq_direct`
+(currently the last declaration, line ~2273) inside the
+`OpenMath.Chapter3.Section344` namespace.
 
-Lagrange basis at `(0, 2/3)`:
-- `L_0(x) = (x − 2/3) / (0 − 2/3) = 1 − (3/2)x`
-- `L_1(x) = (x − 0) / (2/3 − 0) = (3/2)x`
+### B.2 P1 — Nine `_apply` evaluation theorems
 
-Expected entries:
-- **`A_{0,0} = 0`**: `∫₀^0 L_0 = 0` (upper = lower limit).
-- **`A_{0,1} = 0`**: `∫₀^0 L_1 = 0`.
-- **`A_{1,0} = 1/3`**: `∫₀^{2/3} (1 − (3/2)x) dx
-  = 2/3 − (3/4)(4/9) = 2/3 − 1/3 = 1/3`.
-- **`A_{1,1} = 1/3`**: `∫₀^{2/3} (3/2)x dx = (3/4)(4/9) = 1/3`.
+Closed-form values per Butcher Table 344(I) "Lobatto IIIA `s = 3`":
 
-#### Recipe for `A_{0,*}` (short, ~6 LOC each)
-
-```lean
-/-- The `(0, 0)` entry of `butcherRadauI_collocationA_two` is `0`.
-Since `c_0 = 0`, the integral is over `[0, 0]` and vanishes. -/
-theorem butcherRadauI_collocationA_two_apply_zero_zero :
-    butcherRadauI_collocationA_two ⟨0, by omega⟩ ⟨0, by omega⟩ = 0 := by
-  unfold butcherRadauI_collocationA_two
-  have h_c0 : butcherRadauI_zeros_two ⟨0, by omega⟩ = 0 := rfl
-  rw [h_c0]
-  exact intervalIntegral.integral_same
+```
+A = !![ 0,     0,     0   ;
+        5/24,  1/3,  -1/24;
+        1/6,   2/3,   1/6 ]
 ```
 
-The `_apply_zero_one` body is verbatim with `⟨0,_⟩ ⟨0,_⟩` → `⟨0,_⟩ ⟨1,_⟩`
-(the integrand changes but `intervalIntegral.integral_same` doesn't care).
-
-#### Recipe for `A_{1,*}` (port cycle 324 verbatim)
-
-Mirror cycle 324's `_apply_one_zero` (lines 1501–1532) and `_apply_one_one`
-(lines 1539–1570) with these substitutions:
-
-1. `butcherRadauII_*` → `butcherRadauI_*` throughout.
-2. `h_c1 : butcherRadauII_zeros_two ⟨1, _⟩ = 1` → `h_c1 : butcherRadauI_zeros_two ⟨1, _⟩ = 2/3`.
-3. `IntervalIntegrable _ _ 0 1` → `IntervalIntegrable _ _ 0 (2/3)`.
-4. `hx : ∫₀¹ x = 1/2` → `hx : ∫₀^{2/3} x = 2/9` (via `integral_pow` at
-   `b = 2/3`, `pow_one`).
-5. Lagrange `h_eval`: Radau II's `(3/2) - (3/2)*x` and `(3/2)*x - (1/2)`
-   (basis at `(1/3, 1)`) → Radau I's `1 - (3/2)*x` and `(3/2)*x` (basis
-   at `(0, 2/3)`).
-
-Computing the `h_eval` shapes:
-- **For `L_0` at Radau I**: after
-  `rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]`,
-  the body unfolds to `(x - 2/3) * ((0 - 2/3)⁻¹)`. The `simp` with
-  `butcherRadauI_zeros_two, Polynomial.eval_*` should give
-  `(x - 2/3) * (-3/2) = (3/2)*(2/3) - (3/2)*x = 1 - (3/2)*x`.
-  Close the `h_eval` with `ring`.
-- **For `L_1` at Radau I**: similarly, body unfolds to
-  `(x - 0) * ((2/3 - 0)⁻¹) = x * (3/2) = (3/2)*x`. Close with `ring`.
-
-Final closure for `_apply_one_zero`:
+Theorem signatures (name pattern matches cycles 323/324/332):
 
 ```lean
--- Goal after simp_rw [h_eval] + show + rw [h_c1]:
--- ∫ x in (0 : ℝ)..(2/3 : ℝ), (1 - (3/2) * x) = 1 / 3
-rw [intervalIntegral.integral_sub intervalIntegrable_const
-      (hi_x.const_mul (3/2)),
-    intervalIntegral.integral_const, intervalIntegral.integral_const_mul,
-    hx]
-norm_num
+butcherLobatto_collocationA_three_apply_zero_zero  : ... = 0
+butcherLobatto_collocationA_three_apply_zero_one   : ... = 0
+butcherLobatto_collocationA_three_apply_zero_two   : ... = 0
+butcherLobatto_collocationA_three_apply_one_zero   : ... = 5/24
+butcherLobatto_collocationA_three_apply_one_one    : ... = 1/3
+butcherLobatto_collocationA_three_apply_one_two    : ... = -1/24
+butcherLobatto_collocationA_three_apply_two_zero   : ... = 1/6
+butcherLobatto_collocationA_three_apply_two_one    : ... = 2/3
+butcherLobatto_collocationA_three_apply_two_two    : ... = 1/6
 ```
 
-Final closure for `_apply_one_one`:
+**Proof recipes by row** (port from existing templates):
+
+* **Row 0 (3 theorems, ~6 LOC each)**: identical to cycle 323's
+  `butcherLobatto_collocationA_two_apply_zero_*` (lines 1263–1280).
+  `unfold` + `show` + `simp [butcherLobatto_zeros_three,
+  intervalIntegral.integral_same]`. The upper limit collapses to
+  `c_0 = 0` so the integrand is irrelevant.
+
+* **Row 1 (3 theorems, ~50–65 LOC each — the substantive work)**:
+  Port from cycle 324's
+  `butcherRadauII_collocationA_two_apply_one_*` (lines 1501–1574,
+  the `c_i = 1/3` template). Pattern:
+  1. `unfold butcherLobatto_collocationA_three`, `show` the
+     integral form.
+  2. `h_erase`: `(Finset.univ : Finset (Fin 3)).erase ⟨j, _⟩ =
+     {two-element set}` via `decide`.
+  3. `h_ne`: pairwise inequality of the two remaining indices via
+     `decide`.
+  4. `h_eval`: the basis polynomial evaluation — **reuse the
+     closed forms from cycle 321 verbatim** (lines 1030–1038 for
+     `L_0`, 1068–1076 for `L_1`, 1103–1111 for `L_2`). Each goes
+     `rw [Lagrange.basis, h_erase, Finset.prod_pair h_ne,
+     Polynomial.eval_mul, Lagrange.basisDivisor, Lagrange.basisDivisor] +
+     simp [butcherLobatto_zeros_three, eval_*] + ring`.
+  5. `simp_rw [h_eval]` to substitute the polynomial closed form
+     into the integrand.
+  6. `show ∫ x in (0:ℝ)..butcherLobatto_zeros_three ⟨1,_⟩, <poly> = <value>`.
+  7. `have h_c1 : butcherLobatto_zeros_three ⟨1, by omega⟩ = 1/2 := rfl`.
+  8. `rw [h_c1]`.
+  9. Integrability witnesses on `[0, 1/2]`:
+     ```lean
+     have hi_x : IntervalIntegrable (fun x : ℝ => x)
+         MeasureTheory.volume 0 (1/2) :=
+       continuous_id.intervalIntegrable 0 (1/2)
+     have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2)
+         MeasureTheory.volume 0 (1/2) :=
+       (continuous_pow 2).intervalIntegrable 0 (1/2)
+     ```
+  10. Compute the two pivotal integrals over `[0, 1/2]`:
+      ```lean
+      have hx : ∫ x in (0 : ℝ)..(1/2), x = 1 / 8 := by
+        have hp1 := integral_pow (a := (0 : ℝ)) (b := 1/2) 1
+        simp only [pow_one, Nat.cast_one] at hp1
+        rw [hp1]; norm_num
+      have hx2 : ∫ x in (0 : ℝ)..(1/2), x ^ 2 = 1 / 24 := by
+        rw [integral_pow]; norm_num
+      ```
+  11. Split via `intervalIntegral.integral_add` / `_sub` /
+      `_const_mul` (the exact splits depend on the polynomial —
+      `2x² − 3x + 1` needs add+sub+sub+const, `−4x² + 4x` needs
+      add+const_mul+const_mul, `2x² − x` needs sub+const_mul+id);
+      close with `hx2`, `hx`, and `norm_num`.
+
+  **Hint**: the row-1 cycle 321 weight proofs (Section344.lean lines
+  1024–1125) use the exact same simp recipes on `[0, 1]`; port them
+  with `1 → 1/2` and adjust the final arithmetic values
+  (`1/2 → 1/8` for `∫ x`, `1/3 → 1/24` for `∫ x²`).
+  Expected values per linearity:
+  - `∫₀^(1/2) (2x² − 3x + 1) = 2·(1/24) − 3·(1/8) + (1/2)
+                              = 1/12 − 3/8 + 1/2 = 5/24` ✓
+  - `∫₀^(1/2) (−4x² + 4x) = −4·(1/24) + 4·(1/8)
+                          = −1/6 + 1/2 = 1/3` ✓
+  - `∫₀^(1/2) (2x² − x) = 2·(1/24) − (1/8)
+                        = 1/12 − 1/8 = −1/24` ✓
+
+* **Row 2 (3 theorems, ~10–30 LOC each — alias route first, port
+  as fallback)**: The collocation integral at `c_2 = 1` IS the
+  quadrature weight integral by definition. **Try the alias route
+  first:**
+  ```lean
+  theorem butcherLobatto_collocationA_three_apply_two_zero :
+      butcherLobatto_collocationA_three ⟨2, by omega⟩ ⟨0, by omega⟩ = 1 / 6 := by
+    unfold butcherLobatto_collocationA_three
+    show ∫ x in (0 : ℝ)..butcherLobatto_zeros_three ⟨2, by omega⟩,
+        (Lagrange.basis Finset.univ butcherLobatto_zeros_three
+            ⟨0, by omega⟩).eval x = 1 / 6
+    have h_c2 : butcherLobatto_zeros_three ⟨2, by omega⟩ = 1 := rfl
+    rw [h_c2]
+    -- Goal: ∫ x in (0:ℝ)..1, L_0(x) = 1/6
+    -- This is definitionally `butcherLobatto_quadratureWeights_three ⟨0, _⟩`
+    -- (with `c_2 = 1` substituted). The weight `_apply_zero` proves the same
+    -- integral = 1/6, so reuse it.
+    exact butcherLobatto_quadratureWeights_three_apply_zero
+  ```
+  If `exact` doesn't unify (because `butcherLobatto_quadratureWeights_three`'s
+  unfolded body has `1` literally vs the post-`rw` goal having
+  `1`), try `show butcherLobatto_quadratureWeights_three ⟨0, by omega⟩ = 1/6;
+  exact butcherLobatto_quadratureWeights_three_apply_zero` after the
+  `rw [h_c2]`.
+
+  **Fallback** (if alias fails): port the cycle 321 weight `_apply`
+  proof body verbatim (~30 LOC each), with the only change being the
+  enclosing `unfold` switching from `_quadratureWeights_three` to
+  `_collocationA_three`. The body is identical: same `h_erase`, same
+  `h_eval`, same integrability witnesses on `[0, 1]`, same `h2`/`h1`
+  closures, same simp set.
+
+### B.3 P1 — Assembled `RKTableau` `butcherLobattoIIIA_three`
 
 ```lean
--- Goal: ∫ x in (0 : ℝ)..(2/3 : ℝ), ((3/2) * x) = 1 / 3
-rw [intervalIntegral.integral_const_mul, hx]
-norm_num
+/-- **The 3-stage Lobatto IIIA `RKTableau`** assembled from the
+canonical Lagrange weights, zeros, and collocation A-matrix of the
+Lobatto quadrature. At `s = 3` this is Simpson's rule with
+`c = (0, 1/2, 1)`, `b = (1/6, 2/3, 1/6)`,
+`A = !![0, 0, 0; 5/24, 1/3, -1/24; 1/6, 2/3, 1/6]`. -/
+noncomputable def butcherLobattoIIIA_three :
+    OpenMath.Chapter3.Section312.RKTableau 3 where
+  A := butcherLobatto_collocationA_three
+  b := butcherLobatto_quadratureWeights_three
+  c := butcherLobatto_zeros_three
 ```
 
-(Note: `_apply_one_one`'s integrand has no additive structure, so only
-`integral_const_mul` is needed — slightly simpler than `_apply_one_zero`.)
-
-### Deliverable 3 — Assembled `RKTableau` (~5 LOC)
+### B.4 P1 — Direct-form `butcherLobattoIIIADirect_three`
 
 ```lean
-/-- **The collocation-form Radau I `RKTableau` at `s = 2`**: assembled
-from cycle 320's `butcherRadauI_zeros_two`, cycle 321's
-`butcherRadauI_quadratureWeights_two`, and cycle 332's
-`butcherRadauI_collocationA_two`. Equal to cycle 329's
-`butcherRadauIDirect_two` by the coincidence theorem below. -/
-noncomputable def butcherRadauI_collocation_two :
-    OpenMath.Chapter3.Section312.RKTableau 2 where
-  A := butcherRadauI_collocationA_two
-  b := butcherRadauI_quadratureWeights_two
-  c := butcherRadauI_zeros_two
+/-- **Direct Lobatto IIIA `s = 3` tableau** for cross-validation,
+declared inline rather than via collocation. Butcher Table 344(I)
+p. 226. -/
+noncomputable def butcherLobattoIIIADirect_three :
+    OpenMath.Chapter3.Section312.RKTableau 3 where
+  A := !![0, 0, 0; 5/24, 1/3, -1/24; 1/6, 2/3, 1/6]
+  b := ![1/6, 2/3, 1/6]
+  c := ![0, 1/2, 1]
 ```
 
-### Deliverable 4 — Coincidence theorem (~14 LOC, headline)
+### B.5 P1 — Coincidence theorem `butcherLobattoIIIA_three_eq_direct`
 
 ```lean
-/-- **Coincidence (the audit-confirmed C(s) variant)**: the cycle-332
-collocation-assembled Radau I tableau at `s = 2` equals cycle 329's
-direct Radau I tableau. Routes through the four collocation `_apply`
-evaluations (`butcherRadauI_collocationA_two_apply_*`) and cycle 321's
-weight `_apply` lemmas. This is the *first non-trivial coincidence
-theorem* in the §344 small-`s` ladder — the reflection-style / D(s) /
-C(s−1) variants (Radau IA, Radau II D(s), Lobatto IIIC, Lobatto III)
-all diverge from plain collocation per audits in cycles
-326/328/330/331. -/
-theorem butcherRadauI_collocation_two_eq_direct :
-    butcherRadauI_collocation_two = butcherRadauIDirect_two := by
+/-- **Coincidence**: the cycle-333 collocation-assembled Lobatto IIIA
+tableau at `s = 3` equals the direct Simpson's-rule tableau.
+Validates that the C(s)-variant family coincides with plain Lagrange
+collocation, mirroring the cycles 322 (Radau IIA s=1), 323 (Lobatto
+IIIA s=2), 324 (Radau IIA s=2), 325 (Radau IA s=1), and 332 (Radau I
+C(s) s=2) C(s)-coincidence theorems. -/
+theorem butcherLobattoIIIA_three_eq_direct :
+    butcherLobattoIIIA_three = butcherLobattoIIIADirect_three := by
   refine OpenMath.Chapter3.Section312.RKTableau.mk.injEq .. |>.mpr ⟨?_, ?_, ?_⟩
   · funext i j; fin_cases i <;> fin_cases j
-    · show butcherRadauI_collocationA_two ⟨0, by omega⟩ ⟨0, by omega⟩ = _
-      rw [butcherRadauI_collocationA_two_apply_zero_zero]; rfl
-    · show butcherRadauI_collocationA_two ⟨0, by omega⟩ ⟨1, by omega⟩ = _
-      rw [butcherRadauI_collocationA_two_apply_zero_one]; rfl
-    · show butcherRadauI_collocationA_two ⟨1, by omega⟩ ⟨0, by omega⟩ = _
-      rw [butcherRadauI_collocationA_two_apply_one_zero]; rfl
-    · show butcherRadauI_collocationA_two ⟨1, by omega⟩ ⟨1, by omega⟩ = _
-      rw [butcherRadauI_collocationA_two_apply_one_one]; rfl
-  · funext i; fin_cases i
-    · show butcherRadauI_quadratureWeights_two ⟨0, by omega⟩ = _
-      rw [butcherRadauI_quadratureWeights_two_apply_zero]; rfl
-    · show butcherRadauI_quadratureWeights_two ⟨1, by omega⟩ = _
-      rw [butcherRadauI_quadratureWeights_two_apply_one]; rfl
+    all_goals first
+      | (show butcherLobatto_collocationA_three _ _ = _
+         rw [butcherLobatto_collocationA_three_apply_zero_zero]; rfl)
+      | -- ... 8 more arms following the same pattern, OR write 9 explicit arms
+        sorry
+  · funext j; fin_cases j
+    · show butcherLobatto_quadratureWeights_three ⟨0, by omega⟩ = _
+      rw [butcherLobatto_quadratureWeights_three_apply_zero]; rfl
+    · show butcherLobatto_quadratureWeights_three ⟨1, by omega⟩ = _
+      rw [butcherLobatto_quadratureWeights_three_apply_one]; rfl
+    · show butcherLobatto_quadratureWeights_three ⟨2, by omega⟩ = _
+      rw [butcherLobatto_quadratureWeights_three_apply_two]; rfl
   · funext i; fin_cases i <;> rfl
 ```
 
-This is **literally** cycle 324's `butcherRadauIIA_two_eq_direct` recipe
-(lines 1597–1614) with `RadauII` → `RadauI` and `RadauIIA` → cycle 332
-naming. No structural change.
+If the `all_goals first | ...` chain is hard to write correctly,
+fall back to **9 explicit arms** for the `A`-field — one `· show
+butcherLobatto_collocationA_three ⟨i, _⟩ ⟨j, _⟩ = _; rw [the
+matching _apply]; rfl` for each `(i, j) ∈ Fin 3 × Fin 3`. This is
+the same shape as cycle 332's 4-arm `A`-field proof (lines
+2242–2256), just scaled.
 
-### Deliverable 5 — Non-vacuity `SatisfiesB 3` (~5 LOC)
+Template recipe identical to cycle 332's
+`butcherRadauI_collocation_two_eq_direct` (lines 2232–2273); just
+scale `fin_cases` from 2 to 3 dimensions (9 arms for `A`, 3 for `b`,
+3 for `c`). Each `A` arm: `rw [butcherLobatto_collocationA_three_apply_<i>_<j>]; rfl`.
+Each `b` arm: `rw [butcherLobatto_quadratureWeights_three_apply_<j>]; rfl`.
+Each `c` arm: `rfl` (pattern-matched abscissae reduction).
+
+### B.6 P1 — Non-vacuity example `SatisfiesB 4`
+
+Lobatto IIIA `s = 3` achieves classical order `p = 2s − 2 = 4`. The
+B(4) quadrature condition `∑ⱼ bⱼ · cⱼ^(k−1) = 1/k` for
+`k ∈ {1, 2, 3, 4}` is therefore the maximal quadrature condition.
 
 ```lean
-/-- **Non-vacuity**: the collocation-assembled Radau I tableau at
-`s = 2` satisfies the order-3 quadrature condition `B(3)` (Radau I at
-`s = 2` achieves classical order `2s − 1 = 3`). Routes via the
-coincidence theorem to cycle 329's direct form. -/
-example : butcherRadauI_collocation_two.SatisfiesB 3 := by
-  rw [butcherRadauI_collocation_two_eq_direct]
-  intro k h1 hk
+/-- **Non-vacuity**: Lobatto IIIA `s = 3` (Simpson's rule) achieves
+classical order `2s − 2 = 4`, so `B(4)` is the maximal quadrature
+condition. Verified via the cycle-333 coincidence theorem. -/
+example : butcherLobattoIIIA_three.SatisfiesB 4 := by
+  rw [butcherLobattoIIIA_three_eq_direct]
+  intro k h1 h4
   interval_cases k
-  · simp [butcherRadauIDirect_two, Fin.sum_univ_two]; norm_num
-  · simp [butcherRadauIDirect_two, Fin.sum_univ_two]; norm_num
-  · simp [butcherRadauIDirect_two, Fin.sum_univ_two]; norm_num
+  all_goals (simp [butcherLobattoIIIADirect_three, Fin.sum_univ_three]; norm_num)
 ```
 
-(Verbatim port of cycle 329's `SatisfiesB 3` example at lines 1934–1939
-with the lead-in `rw [butcherRadauI_collocation_two_eq_direct]` added.)
+If `simp + norm_num` chain over-/under-reduces on any arm, fall back
+to explicit per-arm `unfold` + `show ∑ i : Fin 3, _ = _` +
+`Fin.sum_univ_three` + `simp [butcherLobattoIIIADirect_three]; norm_num`.
 
-## Verification checklist
+### B.7 P2 stretch — `SatisfiesC 3` certificate
+
+C(s) at `s = 3`: `∑ⱼ Aᵢⱼ cⱼ^(k−1) = cᵢ^k / k` for `i ∈ Fin 3`,
+`k ∈ {1, 2, 3}`. Nine arms (3 stages × 3 exponents):
+
+```lean
+example : butcherLobattoIIIA_three.SatisfiesC 3 := by
+  rw [butcherLobattoIIIA_three_eq_direct]
+  intro i k h1 h3
+  fin_cases i <;> interval_cases k <;>
+    (simp [butcherLobattoIIIADirect_three, Fin.sum_univ_three]; norm_num)
+```
+
+If LOC pressure mounts (Phase 1 already at 500+ LOC), defer this to
+a follow-up cycle.
+
+## C. Sequencing recommendation
+
+Total estimated LOC: ~450–550 (cycle 332 was ~150 with 4 entries;
+cycle 333 has 9 entries plus 9 coincidence arms; some of the 9
+entries are degenerate or alias-reused, so net new substantive work
+is ~3 row-1 entries × 60 LOC = 180 LOC + 3 row-2 alias entries × 15
+LOC = 45 LOC + 3 row-0 degenerate × 6 LOC = 18 LOC + assembled
+tableaux + coincidence + B/C examples).
+
+If LOC budget tight, split into two cycles:
+
+* **Cycle 333 (this cycle, P1 only)**: B.1–B.6 (definition + 9
+  `_apply` + assembled tableau + direct tableau + coincidence
+  theorem + `SatisfiesB 4`). ~450 LOC. Skip B.7.
+* **Cycle 334 (follow-up)**: B.7 `SatisfiesC 3` certificate plus a
+  pivot to a fresh entity (see §I below for outlook).
+
+If the row-2 alias route (B.2 paragraph) works definitionally, the
+LOC drops to ~350 and B.7 fits comfortably in this cycle.
+
+## D. What NOT to do
+
+* **Do NOT** attempt the general-`s` `thm:344A` polynomial-exactness
+  headline. That is Phase B.2 of the cycle 317–332 plan and is
+  multi-cycle work (Butcher §344 p. 244 proof requires polynomial
+  division and the `B(2s − 1)`/`B(2s − 2)` order arguments not yet
+  in scope).
+
+* **Do NOT** pursue Lobatto IIIB `s = 3` collocation. Cycle 327's
+  audit established Lobatto IIIB is a D(s)-variant family (not C(s))
+  and diverges from plain collocation. Direct-form
+  `butcherLobattoIIIBDirect_three` is already shipped (cycle 327).
+
+* **Do NOT** start a Phase D.14 (`s = 3` Radau I/IIA collocation
+  ladders). Those families require Radau `s = 3` abscissae
+  infrastructure which is NOT yet shipped (cycle 320 only delivered
+  `s = 1, 2` for Radau I and Radau II).
+
+* **Do NOT** submit to Aristotle this cycle. Per cycle 332's
+  discovery #1, the cycle 323/324/332 template is fully mechanical;
+  an Aristotle round-trip would waste compute. If a row-1 `_apply`
+  proof stalls in a way the template doesn't predict, document the
+  divergence and ship the remaining P1 deliverables; do NOT
+  fire-and-forget.
+
+* **Do NOT** modify `extraction/raw_text/` or any
+  `extraction/formalization_data/entities/*.json` file. These are
+  regenerated; hand-edits would be overwritten.
+
+* **Do NOT** introduce sorries. Phase D.13 must close axiom-clean
+  or be deferred. Use the cycle 149/200/263 rollback precedent: if
+  any P1 deliverable cannot close cleanly, leave it out of the
+  cycle and ship the rest.
+
+* **Do NOT** raise `maxHeartbeats`. If a `simp [..., Fin.sum_univ_three]`
+  call stalls, decompose into explicit `show ∑ i : Fin 3, _ = _` +
+  `Fin.sum_univ_three` + per-term `simp only` + `ring` / `norm_num`.
+
+* **Do NOT** edit `scripts/autonomous_loop.py`. The phantom
+  consultant-prompt-firing pattern (cycles 015, 040, 174, 180, 248,
+  263) is loop-maintainer territory.
+
+* **Do NOT** attempt the `all_goals first | ...` golf if it's
+  brittle. Write 9 explicit arms for the `A`-field coincidence
+  proof; the LOC cost is ~25 lines and matches cycle 332's pattern
+  scaled up.
+
+## E. Risk assessment
+
+| Risk | Mitigation |
+|------|------------|
+| `intervalIntegral` lemma names drift between cycles 321 (`[0,1]`) and 333 (`[0,1/2]`) | All lemmas (`integral_add`, `integral_sub`, `integral_const_mul`, `integral_pow`, `integral_one`) are interval-bound-agnostic. Use them verbatim with `b = 1/2` and `b = 1` instead of `b = 1` everywhere. |
+| Row-2 alias route fails definitionally | Port the cycle 321 weight `_apply` proof bodies verbatim (~30 LOC each). Same simp set, same recipe. Increases total LOC by ~45 LOC; still within budget. |
+| `Fin.sum_univ_three` not in default simp set | It exists in `Mathlib.Algebra.BigOperators.Fin`. Already used in `Fin.sum_univ_two` companion calls in cycles 323–331 with no issues. |
+| Lagrange basis evaluation `simp` blow-up | Already characterised by cycle 321 (lines 1030–1038, 1068–1076, 1103–1111). Reuse the proof bodies verbatim. |
+| `decide` slow on `(Finset.univ : Finset (Fin 3)).erase ⟨j, _⟩` | Pre-shipped: cycle 321 already used this pattern at `Fin 3`. Confirmed working. |
+| Coincidence theorem's 9-arm `fin_cases i <;> fin_cases j` blows up | Cycle 332's 4-arm version closed cleanly; 9-arm version is 2.25× larger but each arm is a one-line `rw + rfl`. If `<;>` chain stalls, write 9 explicit arms. |
+| `SatisfiesB 4` arm at `k = 3` requires `∫₀^1 x² = 1/3` cancellations that don't fire under `simp + norm_num` | Fall back to explicit `show ∑ i : Fin 3, b i * (c i)^2 = 1/3` + `Fin.sum_univ_three` + `simp` + `norm_num`. The arithmetic is `(1/6)·0 + (2/3)·(1/4) + (1/6)·1 = 1/6 + 1/6 = 1/3` ✓. |
+
+## F. Verification gates
+
+Before committing:
 
 1. `lake env lean OpenMath/Chapter3/Section344.lean` exits 0.
-2. `lake env lean OpenMath/Chapter3.lean` exits 0 (aggregator).
+2. `lake env lean OpenMath/Chapter3.lean` exits 0.
 3. `grep -c sorry OpenMath/Chapter3/Section344.lean` returns 0.
-4. `#print axioms` on each of the 6 new public symbols
-   (`butcherRadauI_collocationA_two`,
-   `butcherRadauI_collocationA_two_apply_zero_zero`,
-   `_apply_zero_one`, `_apply_one_zero`, `_apply_one_one`,
-   `butcherRadauI_collocation_two`,
-   `butcherRadauI_collocation_two_eq_direct`)
+4. `#print axioms OpenMath.Chapter3.Section344.butcherLobattoIIIA_three_eq_direct`
    returns `[propext, Classical.choice, Quot.sound]` only.
-5. Tautology-scanner regex
-   `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$` returns no new hits
-   on Section344.lean.
+5. `#print axioms OpenMath.Chapter3.Section344.butcherLobatto_collocationA_three_apply_one_zero`
+   returns the same.
 
-## DO NOT (failure modes from prior cycles)
+## G. Faithfulness check (run before commit per CLAUDE.md)
 
-1. **Do NOT use `simp only [Matrix.dotProduct]`** — `dotProduct` is at
-   root namespace in current Mathlib, not `Matrix.dotProduct`. Use
-   `Fin.sum_univ_two` to expose the sum form directly (cycle 167
-   precedent).
+For each new `def` and `theorem`:
 
-2. **Do NOT attempt a one-shot proof of the coincidence theorem**
-   without the four `_apply` lemmas in scope. Cycle 324's recipe
-   factors the four entries first because `simp` over-reduces the
-   matrix-vector apply structure in the absence of named lemmas
-   (cycle 166 precedent).
+* `butcherLobatto_collocationA_three`: defined as the integral
+  `∫₀^{c_i} L_j(x) dx` at the Lobatto abscissae. Matches the
+  textbook collocation construction (Butcher §342 p. 237 form,
+  reused at §344 for the C(s) family per Table 344(I)).
+* Nine `_apply` theorems: concrete arithmetic identities matching
+  Butcher Table 344(I) p. 226 "Lobatto IIIA" row at `s = 3`.
+  Quote in commit message.
+* `butcherLobattoIIIA_three`: definitional assembly of cycle 320
+  zeros + cycle 321 weights + this cycle's collocation matrix.
+* `butcherLobattoIIIADirect_three`: direct inline declaration of
+  Butcher's printed Table 344(I) values. NOT a redefinition of the
+  collocation construction; it is a separate object that the
+  coincidence theorem bridges.
+* `butcherLobattoIIIA_three_eq_direct`: equality theorem composing
+  nine non-trivial collocation rewrites + three weight rewrites +
+  three `rfl` reductions. Does real work; not a tautology.
+* `SatisfiesB 4` example: certifies the order condition at the
+  maximal degree `p = 2s − 2 = 4` (Lobatto IIIA `s = 3`'s classical
+  order). Not vacuous: at `k = 2`, the identity is
+  `(1/6)·0 + (2/3)·(1/2) + (1/6)·1 = 1/2 = 1/2` — non-trivial.
 
-3. **Do NOT skip the `show ∫ x in (0 : ℝ)..butcherRadauI_zeros_two ⟨_, _⟩, ...`
-   reframing** between `unfold` and the `h_c0`/`h_c1` rewrite. The bare
-   `unfold` leaves the `match`-expression on `Fin 2` unreduced; the
-   `show` step coerces the goal to the integral form `rw` expects
-   (cycle 324 precedent, lines 1429–1431).
+No new `class` or `structure` introduced. No `Prop` fields with
+ambiguous hypothesis-vs-conclusion status. No hypotheses stronger
+than the textbook.
 
-4. **Do NOT use `Polynomial.funext` or `Polynomial.ext` for the
-   `_apply` proofs** — the goal is an `ℝ`-valued integral identity,
-   not a polynomial identity. Use `intervalIntegral.integral_sub` /
-   `_const_mul` / `_const` directly (cycle 324 pattern at lines
-   1453–1456).
+## H. Aristotle status
 
-5. **Do NOT redefine `butcherRadauI_zeros_two`,
-   `butcherRadauI_quadratureWeights_two`, or `butcherRadauIDirect_two`**
-   — all three exist (cycles 320, 321, 329 respectively). Reuse
-   verbatim.
+No active projects. Do not submit this cycle (see §D bullet 4).
 
-6. **Do NOT alter cycle 331's `butcherLobattoIIIDirect_two` block** —
-   it is the immediate prior content of the file. Append after, do not
-   insert before.
+## I. Cycle 334 outlook (worker may sketch in task results)
 
-7. **Do NOT raise `maxHeartbeats`** above the default 200000. Each
-   `_apply` lemma is small enough to fit within budget; cycle 324's
-   four-entry proof compiles within the default for Section344.
+After cycle 333 lands:
 
-8. **Do NOT submit any of these to Aristotle this cycle.** The recipe
-   is a verbatim mechanical port of cycle 324's already-shipped block
-   — manual closure is strictly faster (≤ 30 minutes total for all
-   four `_apply` lemmas) than an Aristotle round-trip.
+* **§344 small-`s` ladder near-saturated** at `s ≤ 3` for Lobatto
+  IIIA and IIIB (the only families with `s = 3` printed in Butcher
+  Table 344(I) p. 225–226). Radau `s = 3` would require new
+  abscissae infrastructure (multi-cycle).
+* **Natural pivots** (planner's choice — write a scoping doc cycle
+  if the deliverable bar is too high for a single cycle):
+  - `def:422B` (underlying one-step method for LMM, §422) —
+    definition-only, single cycle.
+  - `def:442A` (principal sheet, §442) — definition-only.
+  - `thm:535A` (underlying one-step method for GLM, §535) —
+    ~2–3 cycles per the Chapter 5 task results.
+  - `thm:541A` (types of DIMSIM methods, §541) — multi-cycle, would
+    want a scoping doc first.
+* **Phase B.2 of `thm:344A`** (polynomial-exactness headline) —
+  multi-cycle, requires the `B(2s − 1)` / `B(2s − 2)` order-
+  condition machinery.
 
-9. **Do NOT attempt `def:422B` or `def:442A`** as a fresh-entity pivot
-   this cycle. Both are non-trivial multi-cycle deliverables: `def:422B`
-   needs the LMM-side group `G₁` (mappings from rooted trees to ℝ
-   under a tree-convolution operation, currently not formalised) and
-   the (422a) recurrence; `def:442A` needs Riemann-surface and complex-
-   analytic infrastructure that doesn't exist. Both are at least 3–5
-   cycles of upstream work. Stick to the audit-validated mechanical
-   port.
+Recommend the planner pick a fresh entity for cycle 334 to break the
+long §344 streak (which will be 17 consecutive cycles after this
+one). `def:422B` or `def:442A` is the lowest-risk single-cycle
+pivot.
 
-## Recovery / fallback plan
+## J. Step-by-step worker checklist
 
-### Fallback A (most likely): manual `intervalIntegral` chain stalls
-
-If `_apply_one_zero` or `_apply_one_one` stalls — most likely failure
-mode is the `h_eval` `simp + ring` step (Lagrange basis evaluation) or
-the closure `rw [...]; norm_num` — fall back to the **minimal scope**:
-
-- Ship Deliverables 1 + 2's two trivial `_apply` lemmas (A_{0,0} and
-  A_{0,1}, ~12 LOC total).
-- Ship Deliverable 5 directly on `butcherRadauIDirect_two` (cycle 329's
-  existing tableau) so non-vacuity is preserved.
-- File a sub-issue
-  `.prover-state/issues/butcherRadauI_collocation_two_one_row_stall.md`
-  documenting the exact failure point (which integrand, which tactic).
-- Defer Deliverables 3 + 4 to cycle 333.
-- Net cycle effect: +2 axiom-clean lemmas, sorry count unchanged at 0.
-  Cycle bar is met.
-
-### Fallback B (extreme): entire approach stalls
-
-If the `_apply_one_zero` integrand arithmetic doesn't close even after
-the cycle 324 verbatim port (very unlikely given the recipe is
-identical structurally), then this cycle's deliverable is:
-
-- File scoping doc
-  `.prover-state/issues/butcherRadauI_collocation_stall.md`
-  documenting the failure.
-- Ship a single ladder rung `butcherLobattoIIIDirect_three` (Phase D.12
-  mechanical extension, cycle 331 task results option 3) as a fallback.
-  ~150 LOC, mechanical, no recovery needed beyond the cycle 331
-  template extended to three abscissae `(0, 1/2, 1)` and the 9-entry
-  A-matrix `!![1/6, -1/6, 1/24; 1/6, 1/3, -1/24; ...]` (verify against
-  Butcher Table 344(I) p. 225 before transcription).
-
-## Why this target (over the alternatives)
-
-1. **First non-trivial coincidence in §344.** Cycles 326/327/328/330/331's
-   reflection-style / D(s) / C(s−1) variants all *diverged* from plain
-   collocation by audit. Cycle 329's Radau I C(s) variant *coincided*
-   by audit (paper arithmetic at lines 1949–1956 of `Section344.lean`'s
-   cycle 329 task results) but was never formally bridged. This cycle
-   ships the formal bridge.
-
-2. **Single-cycle scope.** The recipe is a verbatim port of cycle
-   324's ~200-LOC block. No new mathematical content; integrals close
-   by `integral_pow` + `intervalIntegral.integral_sub` +
-   `integral_const_mul` + `integral_const` exactly as in cycle 324.
-
-3. **Unlocks future C(s)-coincidence work.** Lobatto IIIA at `s = 2`
-   (cycle 323) and at `s = 3` are also plain-collocation by audit;
-   future cycles can mechanically extend this template if desired.
-
-4. **No multi-cycle dependencies.** Unlike `def:422B`, `def:442A`,
-   `thm:535A` (all genuinely multi-cycle per their dependency chains),
-   this target uses only already-shipped infrastructure (cycles 320,
-   321, 324, 329) plus standard Mathlib interval-integral hooks.
-
-5. **No Aristotle round-trip.** Manual closure is strictly faster than
-   waiting on Aristotle for a mechanical port that already has a
-   working template at hand.
-
-## Stretch goal (only if Deliverables 1–5 close in < 60 min worker time)
-
-Add a `SatisfiesC 2` non-vacuity example on
-`butcherRadauI_collocation_two`. Since the C(s)-variant is *defined*
-by satisfying `C(s)`, this is the natural defining certificate:
-
-```lean
-example : butcherRadauI_collocation_two.SatisfiesC 2 := by
-  rw [butcherRadauI_collocation_two_eq_direct]
-  intro i k h1 hk
-  fin_cases i <;> interval_cases k <;>
-    simp [butcherRadauIDirect_two, Fin.sum_univ_two] <;> norm_num
-```
-
-(Body verbatim from cycle 329 lines 1952–1955 with the
-`rw [butcherRadauI_collocation_two_eq_direct]` lead-in added.)
-
-This adds one more axiom-clean lemma to the coverage matrix at trivial
-LOC cost. **Do not pursue if any earlier deliverable stalled.**
-
-## Cycle 333 outlook (NOT this cycle)
-
-After Deliverables 1–5 land, the next planner has clean options:
-
-1. Extend the collocation template to **Lobatto IIIA `s = 3`**
-   (Simpson's rule abscissae `(0, 1/2, 1)`; 9 collocation entries; ~3×
-   cycle 332 LOC, may span 2 cycles).
-2. **Pivot to a fresh entity** (cycle 331 task results option 1
-   restated): `def:422B`, `def:442A`, `thm:535A`, or `thm:541A`. Each
-   is genuinely multi-cycle but a scoping-doc-only cycle is feasible.
-3. **Phase B.2 of `thm:344A`** (polynomial-exactness `2s − 2` /
-   `2s − 3` headline; deferred from cycle 318). Multi-cycle work.
-
-Cycle 332's job is to close the C(s)-coincidence bridge.
-Cycle 333's job is to decide.
+1. Read cycle 332's `butcherRadauI_collocation_two_eq_direct`
+   (Section344.lean lines 2114–2273) end-to-end. This is the
+   verbatim template.
+2. Read cycle 323's `butcherLobatto_collocationA_two_*` and
+   `butcherLobattoIIIA_two_eq_trapezoidal` (lines 1255–1399) to
+   confirm the row-0 (degenerate) closure pattern and the
+   coincidence theorem shape.
+3. Read cycle 321's `butcherLobatto_quadratureWeights_three_apply_*`
+   (lines 1024–1125) to confirm the basis evaluation closed forms
+   for `L_0, L_1, L_2` and reuse them verbatim.
+4. Write `butcherLobatto_collocationA_three` def + 9 `_apply`
+   theorems in the order: 3 row-0 (degenerate, easy), 3 row-2
+   (alias route, easy if it works), 3 row-1 (substantive,
+   ~50–65 LOC each).
+5. Write `butcherLobattoIIIA_three` + `butcherLobattoIIIADirect_three`
+   defs (each 5 LOC).
+6. Write `butcherLobattoIIIA_three_eq_direct` coincidence theorem
+   (9 + 3 + 3 = 15 arms; estimated 30–50 LOC).
+7. Write `SatisfiesB 4` `example` (4 arms; estimated 15 LOC).
+8. (Optional P2) Write `SatisfiesC 3` `example` (9 arms; estimated
+   15 LOC).
+9. Run all 5 verification gates from §F. Commit only if all pass.
+10. Update `extraction/formalization_data/lean_status.json` and
+    `plan.md` for `thm:344A` (still partial) with cycle 333 note.
+11. Write `.prover-state/task_results/cycle_333.md` per CLAUDE.md
+    template.
