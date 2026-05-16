@@ -6718,4 +6718,89 @@ theorem butcherShiftedLegendre_quadratureWeights_unique
   rw [h_lhs, h_rhs] at h
   exact h.symm
 
+/-! ### Bridge from `lem:342B` to Butcher §321 `B(2n)` (cycle 307)
+
+The cycle 304/305 Phase B results say that the canonical Lagrange weights
+`b_j := butcherShiftedLegendre_quadratureWeights n j` at the shifted
+Legendre zeros `c_j := butcherShiftedLegendre_zeros n j` integrate
+*every* polynomial of degree `< 2n` exactly. Specialising the exactness
+identity to the monomials `φ = X^{k-1}` for `1 ≤ k ≤ 2n` recovers the
+algebraic content of Butcher §321's `B(2n)` quadrature condition:
+`∑ⱼ b_j · c_j^{k-1} = 1/k` for `k = 1, …, 2n`. -/
+
+/-- **Bridge from `lem:342B` 2n-degree exactness to the §321 `B(2n)`
+order condition.** The canonical Lagrange weights at the shifted Legendre
+zeros reproduce the integrals `∫₀¹ x^{k-1} dx = 1/k` exactly for every
+power `1 ≤ k ≤ 2n`:
+
+  `∑ⱼ b_j · c_j^(k-1) = 1/k`
+
+where `c_j = butcherShiftedLegendre_zeros n j` and
+`b_j = butcherShiftedLegendre_quadratureWeights n j`. This is the
+algebraic content of Butcher §321 `B(2n)` for the canonical Gauss-
+Legendre quadrature; lifting it to a `RKTableau` (which would let us
+state it as `(gaussLegendreRK n).SatisfiesB (2 * n)`) requires
+constructing the full Gauss-Legendre tableau (collocation `A`-matrix),
+which is multi-cycle work deferred to cycle 308+. -/
+theorem butcherShiftedLegendre_quadratureWeights_satisfiesB
+    (n : ℕ) (hn : 0 < n) :
+    ∀ k : ℕ, 1 ≤ k → k ≤ 2 * n →
+      (∑ j : Fin n, butcherShiftedLegendre_quadratureWeights n j *
+            butcherShiftedLegendre_zeros n j ^ (k - 1))
+        = 1 / (k : ℝ) := by
+  intro k hk1 hk2n
+  set φ : Polynomial ℝ := (Polynomial.X : Polynomial ℝ) ^ (k - 1) with hφ_def
+  -- Degree bound for cycle 304's exactness lemma.
+  have hdeg : φ.natDegree < 2 * n := by
+    rw [hφ_def, Polynomial.natDegree_X_pow]
+    omega
+  -- Apply cycle 304's `2n`-degree exactness identity.
+  have hex := butcherShiftedLegendre_quadrature_exact_lt_two_n n hn φ hdeg
+  -- Compute the integral side via `intervalIntegral.integral_pow`.
+  have hint : (∫ x in (0 : ℝ)..1, φ.eval x) = 1 / (k : ℝ) := by
+    have heval : (fun x : ℝ => φ.eval x) = (fun x : ℝ => x ^ (k - 1)) := by
+      funext x
+      simp [hφ_def, Polynomial.eval_pow, Polynomial.eval_X]
+    rw [heval, integral_pow]
+    have hkk : (k - 1 : ℕ) + 1 = k := Nat.sub_add_cancel hk1
+    have hzero_pow : (0 : ℝ) ^ ((k - 1 : ℕ) + 1) = 0 := by
+      rw [hkk]
+      exact zero_pow (by omega)
+    rw [one_pow, hzero_pow, sub_zero]
+    rw [show ((k - 1 : ℕ) : ℝ) + 1 = (k : ℝ) by
+          have := congrArg (Nat.cast : ℕ → ℝ) hkk
+          push_cast at this
+          linarith]
+  -- Rewrite the sum side to expose `c_j ^ (k - 1)`.
+  have hsum :
+      (∑ j : Fin n, butcherShiftedLegendre_quadratureWeights n j *
+            φ.eval (butcherShiftedLegendre_zeros n j))
+        = ∑ j : Fin n, butcherShiftedLegendre_quadratureWeights n j *
+            butcherShiftedLegendre_zeros n j ^ (k - 1) := by
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    simp [hφ_def, Polynomial.eval_pow, Polynomial.eval_X]
+  rw [hint, hsum] at hex
+  exact hex.symm
+
+/-- **Non-vacuity anchor for `B(2)` at `n = 1`.** Confirms that the
+canonical Gauss-Legendre quadrature on a single node (`c₁ = 1/2`,
+`b₁ = 1`) satisfies the §321 `B(2)` identity at `k = 2`:
+`1 · (1/2)^1 = 1/2 = 1/2`. -/
+example :
+    (∑ j : Fin 1, butcherShiftedLegendre_quadratureWeights 1 j *
+          butcherShiftedLegendre_zeros 1 j ^ ((2 : ℕ) - 1)) = 1 / (2 : ℝ) :=
+  butcherShiftedLegendre_quadratureWeights_satisfiesB 1 (by norm_num) 2
+    (by norm_num) (by norm_num)
+
+/-- **Non-vacuity anchor for `B(2)` at `n = 1, k = 1`.** Boundary case
+where `k - 1 = 0` and `c_j ^ 0 = 1`, so the identity collapses to
+`∑ⱼ bⱼ = 1` for the `n = 1` Gauss method (i.e. `1 = 1/1`). -/
+example :
+    (∑ j : Fin 1, butcherShiftedLegendre_quadratureWeights 1 j *
+          butcherShiftedLegendre_zeros 1 j ^ ((1 : ℕ) - 1)) = 1 / (1 : ℝ) := by
+  have h := butcherShiftedLegendre_quadratureWeights_satisfiesB 1
+    (by norm_num) 1 (by norm_num) (by norm_num)
+  simpa using h
+
 end OpenMath.Chapter3.Section342
