@@ -4,6 +4,7 @@ import OpenMath.Chapter3.Section310
 import OpenMath.Chapter3.Section311
 import OpenMath.Chapter3.Section312
 import OpenMath.Chapter3.Section319
+import OpenMath.Chapter3.Section321
 import OpenMath.Chapter3.Section322
 import OpenMath.Chapter3.Section323
 import OpenMath.Chapter3.Section342NormSqHelpers
