@@ -582,4 +582,187 @@ theorem butcherLobatto_three_roots :
   · norm_num
   · norm_num
 
+/-! ## Deliverable C.2 — Small-`s` abscissae functions
+
+Package cycle 319's explicit-root theorems into named abscissae
+arrays `Fin s → ℝ`, mirroring cycle 302's
+`butcherShiftedLegendre_zeros`. Each entry of the array is the
+root of the corresponding §344 polynomial at the corresponding
+position in Butcher's strictly increasing enumeration
+`c_1 < c_2 < … < c_s`.
+
+For each abscissae function we ship three properties:
+
+* `_isRoot`: every entry is a root of the §344 polynomial,
+* `_strictMono` (multi-stage only): the abscissae are strictly
+  increasing,
+* `_mem_Icc`: every entry lies in `[0, 1]`.
+
+These are the abscissae-side prerequisites for downstream
+small-`s` Lagrange-interpolation quadrature weights (cycle 321)
+and small-`s` `RKTableau` constructions (Radau IA, IIA, Lobatto IIIB).
+
+| Function                        | Body                              |
+|---------------------------------|-----------------------------------|
+| `butcherRadauI_zeros_one`       | `(0)`                             |
+| `butcherRadauI_zeros_two`       | `(0, 2/3)`                        |
+| `butcherRadauII_zeros_one`      | `(1)`                             |
+| `butcherRadauII_zeros_two`      | `(1/3, 1)`                        |
+| `butcherLobatto_zeros_two`      | `(0, 1)`                          |
+| `butcherLobatto_zeros_three`    | `(0, 1/2, 1)`                     |
+-/
+
+/-- **Butcher §344 abscissae — Radau I, `s = 1`**: the single Radau I
+abscissa at one stage is `c_1 = 0`, the root of `butcherRadauI 1`
+from `butcherRadauI_one_root`. -/
+noncomputable def butcherRadauI_zeros_one : Fin 1 → ℝ
+  | ⟨0, _⟩ => 0
+
+/-- **Butcher §344 abscissae — Radau I, `s = 2`**: the two Radau I
+abscissae at two stages are `c_1 = 0` and `c_2 = 2/3`, the roots of
+`butcherRadauI 2` from `butcherRadauI_two_roots`. -/
+noncomputable def butcherRadauI_zeros_two : Fin 2 → ℝ
+  | ⟨0, _⟩ => 0
+  | ⟨1, _⟩ => 2 / 3
+
+/-- **Butcher §344 abscissae — Radau II, `s = 1`**: the single Radau II
+abscissa at one stage is `c_1 = 1`, the root of `butcherRadauII 1`
+from `butcherRadauII_one_root`. -/
+noncomputable def butcherRadauII_zeros_one : Fin 1 → ℝ
+  | ⟨0, _⟩ => 1
+
+/-- **Butcher §344 abscissae — Radau II, `s = 2`**: the two Radau II
+abscissae at two stages are `c_1 = 1/3` and `c_2 = 1`, the roots of
+`butcherRadauII 2` from `butcherRadauII_two_roots`. -/
+noncomputable def butcherRadauII_zeros_two : Fin 2 → ℝ
+  | ⟨0, _⟩ => 1 / 3
+  | ⟨1, _⟩ => 1
+
+/-- **Butcher §344 abscissae — Lobatto, `s = 2`**: the two Lobatto
+abscissae at two stages are `c_1 = 0` and `c_2 = 1`, the roots of
+`butcherLobatto 2` from `butcherLobatto_two_roots`. -/
+noncomputable def butcherLobatto_zeros_two : Fin 2 → ℝ
+  | ⟨0, _⟩ => 0
+  | ⟨1, _⟩ => 1
+
+/-- **Butcher §344 abscissae — Lobatto, `s = 3`**: the three Lobatto
+abscissae at three stages are `c_1 = 0`, `c_2 = 1/2`, `c_3 = 1`,
+the roots of `butcherLobatto 3` from `butcherLobatto_three_roots`. -/
+noncomputable def butcherLobatto_zeros_three : Fin 3 → ℝ
+  | ⟨0, _⟩ => 0
+  | ⟨1, _⟩ => 1 / 2
+  | ⟨2, _⟩ => 1
+
+/-! ### `_isRoot` theorems — each abscissa is a root of the §344 polynomial. -/
+
+/-- Every entry of `butcherRadauI_zeros_one` is a root of `butcherRadauI 1`. -/
+theorem butcherRadauI_zeros_one_isRoot (i : Fin 1) :
+    (butcherRadauI 1).eval (butcherRadauI_zeros_one i) = 0 := by
+  fin_cases i
+  exact butcherRadauI_one_root
+
+/-- Every entry of `butcherRadauI_zeros_two` is a root of `butcherRadauI 2`. -/
+theorem butcherRadauI_zeros_two_isRoot (i : Fin 2) :
+    (butcherRadauI 2).eval (butcherRadauI_zeros_two i) = 0 := by
+  fin_cases i
+  · exact butcherRadauI_two_roots.1
+  · exact butcherRadauI_two_roots.2.1
+
+/-- Every entry of `butcherRadauII_zeros_one` is a root of `butcherRadauII 1`. -/
+theorem butcherRadauII_zeros_one_isRoot (i : Fin 1) :
+    (butcherRadauII 1).eval (butcherRadauII_zeros_one i) = 0 := by
+  fin_cases i
+  exact butcherRadauII_one_root
+
+/-- Every entry of `butcherRadauII_zeros_two` is a root of `butcherRadauII 2`. -/
+theorem butcherRadauII_zeros_two_isRoot (i : Fin 2) :
+    (butcherRadauII 2).eval (butcherRadauII_zeros_two i) = 0 := by
+  fin_cases i
+  · exact butcherRadauII_two_roots.1
+  · exact butcherRadauII_two_roots.2.1
+
+/-- Every entry of `butcherLobatto_zeros_two` is a root of `butcherLobatto 2`. -/
+theorem butcherLobatto_zeros_two_isRoot (i : Fin 2) :
+    (butcherLobatto 2).eval (butcherLobatto_zeros_two i) = 0 := by
+  fin_cases i
+  · exact butcherLobatto_two_roots.1
+  · exact butcherLobatto_two_roots.2.1
+
+/-- Every entry of `butcherLobatto_zeros_three` is a root of `butcherLobatto 3`. -/
+theorem butcherLobatto_zeros_three_isRoot (i : Fin 3) :
+    (butcherLobatto 3).eval (butcherLobatto_zeros_three i) = 0 := by
+  fin_cases i
+  · exact butcherLobatto_three_roots.1
+  · exact butcherLobatto_three_roots.2.1
+  · exact butcherLobatto_three_roots.2.2.1
+
+/-! ### `_strictMono` theorems — abscissae are strictly increasing. -/
+
+/-- The two-stage Radau I abscissae `(0, 2/3)` are strictly increasing. -/
+theorem butcherRadauI_zeros_two_strictMono :
+    StrictMono butcherRadauI_zeros_two := by
+  intro i j hij
+  fin_cases i <;> fin_cases j <;>
+    simp_all [butcherRadauI_zeros_two]
+
+/-- The two-stage Radau II abscissae `(1/3, 1)` are strictly increasing. -/
+theorem butcherRadauII_zeros_two_strictMono :
+    StrictMono butcherRadauII_zeros_two := by
+  intro i j hij
+  fin_cases i <;> fin_cases j <;>
+    simp_all [butcherRadauII_zeros_two]
+  norm_num
+
+/-- The two-stage Lobatto abscissae `(0, 1)` are strictly increasing. -/
+theorem butcherLobatto_zeros_two_strictMono :
+    StrictMono butcherLobatto_zeros_two := by
+  intro i j hij
+  fin_cases i <;> fin_cases j <;>
+    simp_all [butcherLobatto_zeros_two]
+
+/-- The three-stage Lobatto abscissae `(0, 1/2, 1)` are strictly increasing. -/
+theorem butcherLobatto_zeros_three_strictMono :
+    StrictMono butcherLobatto_zeros_three := by
+  intro i j hij
+  fin_cases i <;> fin_cases j <;>
+    simp_all [butcherLobatto_zeros_three]
+  norm_num
+
+/-! ### `_mem_Icc` theorems — every abscissa lies in `[0, 1]`. -/
+
+/-- Every entry of `butcherRadauI_zeros_one` lies in `[0, 1]`. -/
+theorem butcherRadauI_zeros_one_mem_Icc (i : Fin 1) :
+    butcherRadauI_zeros_one i ∈ Set.Icc (0 : ℝ) 1 := by
+  fin_cases i
+  simp [butcherRadauI_zeros_one, Set.mem_Icc]
+
+/-- Every entry of `butcherRadauI_zeros_two` lies in `[0, 1]`. -/
+theorem butcherRadauI_zeros_two_mem_Icc (i : Fin 2) :
+    butcherRadauI_zeros_two i ∈ Set.Icc (0 : ℝ) 1 := by
+  fin_cases i <;> simp [butcherRadauI_zeros_two, Set.mem_Icc]
+  norm_num
+
+/-- Every entry of `butcherRadauII_zeros_one` lies in `[0, 1]`. -/
+theorem butcherRadauII_zeros_one_mem_Icc (i : Fin 1) :
+    butcherRadauII_zeros_one i ∈ Set.Icc (0 : ℝ) 1 := by
+  fin_cases i
+  simp [butcherRadauII_zeros_one, Set.mem_Icc]
+
+/-- Every entry of `butcherRadauII_zeros_two` lies in `[0, 1]`. -/
+theorem butcherRadauII_zeros_two_mem_Icc (i : Fin 2) :
+    butcherRadauII_zeros_two i ∈ Set.Icc (0 : ℝ) 1 := by
+  fin_cases i <;> simp [butcherRadauII_zeros_two, Set.mem_Icc]
+  norm_num
+
+/-- Every entry of `butcherLobatto_zeros_two` lies in `[0, 1]`. -/
+theorem butcherLobatto_zeros_two_mem_Icc (i : Fin 2) :
+    butcherLobatto_zeros_two i ∈ Set.Icc (0 : ℝ) 1 := by
+  fin_cases i <;> simp [butcherLobatto_zeros_two, Set.mem_Icc]
+
+/-- Every entry of `butcherLobatto_zeros_three` lies in `[0, 1]`. -/
+theorem butcherLobatto_zeros_three_mem_Icc (i : Fin 3) :
+    butcherLobatto_zeros_three i ∈ Set.Icc (0 : ℝ) 1 := by
+  fin_cases i <;> simp [butcherLobatto_zeros_three, Set.mem_Icc]
+  norm_num
+
 end OpenMath.Chapter3.Section344

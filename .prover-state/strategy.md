@@ -1,341 +1,470 @@
-# Cycle 319 Strategy
+# Cycle 320 strategy
 
-## Headline
+## Target
 
-Ship **Phase C.1 of `thm:344A`** — small-`s` explicit root theorems
-for `butcherRadauI`, `butcherRadauII`, and `butcherLobatto` at `s ∈
-{1, 2, 3}` where applicable. Natural next deliverable after cycle
-318's Phase B.1 orthogonality theorems; mirrors cycle 294's
-empirical-anchor pattern for §342's `(342g)` clause; abscissae-side
-prerequisite for the eventual Phase B.2 polynomial-exactness theorem
-and Phase D RKTableau construction.
+Ship **§344 Phase C.2 (small-`s` abscissae functions)** as the
+single-cycle deliverable. Continue Butcher's §344 cluster after
+cycle 317 (Phase A polynomial defs), cycle 318 (Phase B.1
+orthogonality), and cycle 319 (Phase C.1 small-`s` explicit roots).
 
-**Goal**: ship five root-witness theorems axiom-clean, ~120 LOC,
-sorry count 0 → 0.
+This is option (a) from the cycle 319 task results: package the six
+explicit-root theorems shipped in cycle 319 into named abscissae
+functions `Fin s → ℝ` (mirroring cycle 302's
+`butcherShiftedLegendre_zeros`), with monotonicity / distinctness /
+`∈ [0, 1]` properties. These are the **abscissae-side
+prerequisites** for both:
+* Small-`s` Lagrange quadrature weights (cycle 321 target).
+* Small-`s` Phase B.2 polynomial-exactness (cycle 322+ target).
+* Small-`s` `RKTableau` construction (Radau IA, Radau IIA,
+  Lobatto IIIB) once weights land.
 
-## Why this is the right cycle 319 target
+Hold off on the Lagrange weights themselves this cycle; bundle them
+into cycle 321 once the abscissae arrays are named. Doing both in
+one cycle risks an integration-step blow-up similar to cycle
+274/281 (`butcherShiftedLegendre_norm_sq_*` heartbeats limit).
 
-The cycle 318 task results suggest two paths:
+---
 
-* **Phase B.2 — polynomial-exactness for Radau I** (the natural
-  next conceptual step) — but flags that the `R.natDegree < s`
-  contribution "requires Lagrange-interpolation infrastructure at
-  the (yet-unconstructed) Radau abscissae". So Phase B.2 needs
-  Phase C first.
-* **Phase C — small-`s` Radau/Lobatto abscissae** — listed as the
-  fallback. This is the right call.
+## File and placement
 
-Cycle 317 already shipped the explicit polynomial forms at small
-`s` (`butcherRadauI_one`, `butcherRadauI_two`, `butcherRadauII_one`,
-`butcherRadauII_two`, `butcherLobatto_two`, `butcherLobatto_three`,
-in `Section344.lean` lines 179–270). The roots factor cleanly with
-**rational** values — no `Real.sqrt` needed (in contrast to cycle
-294's `(3 ± √3)/6` for `butcherShiftedLegendre_two_roots`). Each
-root theorem reduces to a `rw` + `simp` + `norm_num` chain.
+`OpenMath/Chapter3/Section344.lean`, immediately after cycle 319's
+`butcherLobatto_three_roots` (line 583) and before
+`end OpenMath.Chapter3.Section344` (line 585). Append a new
+**Deliverable C.2** doc-comment block followed by six abscissae
+defs + their `_isRoot` / `_strictMono` / `_mem_Icc` theorem
+packages.
 
-## Pre-computed root tables
+---
 
-| Polynomial | Closed form (cycle 317) | Factored | Roots |
-|---|---|---|---|
-| `butcherRadauI 1` | `2X` | `2X` | `x = 0` |
-| `butcherRadauI 2` | `6X² − 4X` | `2X(3X − 2)` | `x = 0, 2/3` |
-| `butcherRadauII 1` | `2X − 2` | `2(X − 1)` | `x = 1` |
-| `butcherRadauII 2` | `6X² − 8X + 2` | `2(3X − 1)(X − 1)` | `x = 1/3, 1` |
-| `butcherLobatto 2` | `6X² − 6X` | `6X(X − 1)` | `x = 0, 1` |
-| `butcherLobatto 3` | `20X³ − 30X² + 10X` | `10X(2X − 1)(X − 1)` | `x = 0, 1/2, 1` |
+## Concrete deliverables
 
-All roots are in `[0, 1]`. Radau I has the left endpoint `0`; Radau
-II has the right endpoint `1`; Lobatto has both endpoints. Interior
-abscissae are `2/3` (Radau I, s=2), `1/3` (Radau II, s=2), `1/2`
-(Lobatto, s=3).
+For each of the six small-`s` cases shipped in cycle 319, ship:
 
-## Deliverables (5 P1 theorems + 1 P3 stretch)
-
-Append to `OpenMath/Chapter3/Section344.lean` immediately after
-`butcherLobatto_orthogonal_to_lower_degree` (the last cycle-318
-theorem, around line 469 of the current 469-LOC file).
-
-### P1.1: `butcherRadauI_one_root`
+### 1. Abscissae function
 
 ```lean
-theorem butcherRadauI_one_root :
-    (butcherRadauI 1).eval (0 : ℝ) = 0 := by
-  rw [butcherRadauI_one]
-  simp [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_X]
+noncomputable def butcherRadauI_zeros_one    : Fin 1 → ℝ
+noncomputable def butcherRadauI_zeros_two    : Fin 2 → ℝ
+noncomputable def butcherRadauII_zeros_one   : Fin 1 → ℝ
+noncomputable def butcherRadauII_zeros_two   : Fin 2 → ℝ
+noncomputable def butcherLobatto_zeros_two   : Fin 2 → ℝ
+noncomputable def butcherLobatto_zeros_three : Fin 3 → ℝ
 ```
 
-The single root of `butcherRadauI 1 = 2X` is the left endpoint
-`x = 0`. Consistent with cycle 317's `butcherRadauI_eval_zero` (a
-direct corollary, but worth shipping as a named theorem for
-abscissae-table use downstream).
+Tables (taken verbatim from cycle 319 root theorems):
 
-### P1.2: `butcherRadauI_two_roots`
+| Function                        | Body                              |
+|---------------------------------|-----------------------------------|
+| `butcherRadauI_zeros_one`       | `0`                               |
+| `butcherRadauI_zeros_two`       | `(0, 2/3)`                        |
+| `butcherRadauII_zeros_one`      | `1`                               |
+| `butcherRadauII_zeros_two`      | `(1/3, 1)`                        |
+| `butcherLobatto_zeros_two`      | `(0, 1)`                          |
+| `butcherLobatto_zeros_three`    | `(0, 1/2, 1)`                     |
+
+Use `noncomputable` for parity with cycle 302's
+`butcherShiftedLegendre_zeros` (even though these defs *are*
+computable; the noncomputable annotation costs nothing and keeps
+the style uniform).
+
+Recommended body shape: pattern-matched on the `Fin` indices.
+Example:
 
 ```lean
-theorem butcherRadauI_two_roots :
-    (butcherRadauI 2).eval (0 : ℝ) = 0 ∧
-    (butcherRadauI 2).eval (2/3 : ℝ) = 0 ∧
-    (0 : ℝ) ≠ 2/3 := by
-  refine ⟨?_, ?_, ?_⟩
-  · rw [butcherRadauI_two]
-    simp [Polynomial.eval_sub, Polynomial.eval_mul,
-          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
-  · rw [butcherRadauI_two]
-    simp only [Polynomial.eval_sub, Polynomial.eval_mul,
-               Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
-    norm_num
-  · norm_num
+noncomputable def butcherRadauI_zeros_two : Fin 2 → ℝ
+  | ⟨0, _⟩ => 0
+  | ⟨1, _⟩ => 2/3
 ```
 
-Roots of `butcherRadauI 2 = 6X² − 4X` are `x = 0` and `x = 2/3`.
+### 2. Root theorems (`_isRoot`)
 
-### P1.3: `butcherRadauII_one_root`
+For each abscissa function, prove every entry is a root of the
+corresponding §344 polynomial. Example shape:
 
 ```lean
-theorem butcherRadauII_one_root :
-    (butcherRadauII 1).eval (1 : ℝ) = 0 := by
-  rw [butcherRadauII_one]
-  simp [Polynomial.eval_sub, Polynomial.eval_mul,
-        Polynomial.eval_C, Polynomial.eval_X]
+theorem butcherRadauI_zeros_two_isRoot (i : Fin 2) :
+    (butcherRadauI 2).eval (butcherRadauI_zeros_two i) = 0 := by
+  fin_cases i
+  · exact butcherRadauI_two_roots.1
+  · exact butcherRadauI_two_roots.2.1
 ```
 
-The single root of `butcherRadauII 1 = 2X − 2` is the right
-endpoint `x = 1`. Consistent with cycle 317's
-`butcherRadauII_eval_one`.
+`fin_cases i` should unfold `butcherRadauI_zeros_two` definitionally
+on each branch (since each branch is `rfl`). Each branch then cites
+the appropriate conjunct from cycle 319's `_roots` theorem.
 
-### P1.4: `butcherRadauII_two_roots`
+For the single-root cases (`_one` variants), no `fin_cases` needed:
 
 ```lean
-theorem butcherRadauII_two_roots :
-    (butcherRadauII 2).eval (1/3 : ℝ) = 0 ∧
-    (butcherRadauII 2).eval (1 : ℝ) = 0 ∧
-    (1/3 : ℝ) ≠ 1 := by
-  refine ⟨?_, ?_, ?_⟩
-  · rw [butcherRadauII_two]
-    simp only [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
-               Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
-    norm_num
-  · rw [butcherRadauII_two]
-    simp [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
-          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
-  · norm_num
+theorem butcherRadauI_zeros_one_isRoot (i : Fin 1) :
+    (butcherRadauI 1).eval (butcherRadauI_zeros_one i) = 0 := by
+  fin_cases i; exact butcherRadauI_one_root
 ```
 
-Roots of `butcherRadauII 2 = 6X² − 8X + 2` are `x = 1/3` (interior)
-and `x = 1` (right endpoint).
+### 3. Strict-monotonicity theorems (`_strictMono`)
 
-### P1.5: `butcherLobatto_two_roots`
+For the multi-root cases (the four `_two` and one `_three`
+variants), prove the abscissa function is strictly monotone — this
+packages the pairwise-distinctness clauses from cycle 319 into the
+form downstream RKTableau construction expects.
 
 ```lean
-theorem butcherLobatto_two_roots :
-    (butcherLobatto 2).eval (0 : ℝ) = 0 ∧
-    (butcherLobatto 2).eval (1 : ℝ) = 0 ∧
-    (0 : ℝ) ≠ 1 := by
-  refine ⟨?_, ?_, ?_⟩
-  · rw [butcherLobatto_two]
-    simp [Polynomial.eval_sub, Polynomial.eval_mul,
-          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
-  · rw [butcherLobatto_two]
-    simp [Polynomial.eval_sub, Polynomial.eval_mul,
-          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
-  · norm_num
+theorem butcherRadauI_zeros_two_strictMono :
+    StrictMono butcherRadauI_zeros_two := by
+  intro i j hij
+  fin_cases i <;> fin_cases j <;> simp_all <;> norm_num
 ```
 
-Roots of `butcherLobatto 2 = 6X² − 6X` are both endpoints `x = 0`
-and `x = 1`.
+For Lobatto's `_three`, after `fin_cases i <;> fin_cases j` there
+are 9 sub-goals: 3 trivially-true `i < j` cases (`0 < 1/2`, `0 < 1`,
+`1/2 < 1`) closed by `norm_num`, plus 6 false-`hij` cases closed by
+`simp_all` (since `hij : (0 : Fin 3) < 0` etc. is decidable false).
 
-### P3 stretch: `butcherLobatto_three_roots`
+The `_one` variants don't need `_strictMono` (single-element
+domain) — skip them.
+
+### 4. Containment theorems (`_mem_Icc`)
+
+Each abscissa lies in `[0, 1]`:
 
 ```lean
-theorem butcherLobatto_three_roots :
-    (butcherLobatto 3).eval (0 : ℝ) = 0 ∧
-    (butcherLobatto 3).eval (1/2 : ℝ) = 0 ∧
-    (butcherLobatto 3).eval (1 : ℝ) = 0 ∧
-    (0 : ℝ) ≠ 1/2 ∧ (0 : ℝ) ≠ 1 ∧ (1/2 : ℝ) ≠ 1 := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
-  · rw [butcherLobatto_three]
-    simp [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
-          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
-  · rw [butcherLobatto_three]
-    simp only [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
-               Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
-    norm_num
-  · rw [butcherLobatto_three]
-    simp [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
-          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
-  · norm_num
-  · norm_num
-  · norm_num
+theorem butcherRadauI_zeros_two_mem_Icc (i : Fin 2) :
+    butcherRadauI_zeros_two i ∈ Set.Icc (0 : ℝ) 1 := by
+  fin_cases i <;> simp [Set.mem_Icc] <;> norm_num
 ```
 
-Roots of `butcherLobatto 3 = 20X³ − 30X² + 10X` are `x = 0`,
-`x = 1/2` (interior), and `x = 1`. Three pairwise-distinct roots.
+Needed for downstream `RKTableau` construction (the abscissae have
+to live in the unit interval per Butcher §321 conventions).
 
-## LOC budget
+---
 
-* Per theorem (P1.1–P1.5): ~12–25 LOC including docstring (P1.1
-  and P1.3 are simplest at ~10 LOC; P1.2/P1.4/P1.5 with multi-root
-  conjunctions ~22 LOC).
-* P3 stretch: ~35 LOC.
-* Target total (P1.1–P1.5): **~110 LOC**.
-* With P3 stretch: **~145 LOC**.
-* Abort threshold: **200 LOC** (well clear of budget unless
-  something pathological surfaces).
+## Total LOC estimate
 
-## Pre-flight risk register
+~150 LOC total:
+* 6 abscissa defs × ~5 LOC each ≈ 30 LOC.
+* 6 `_isRoot` theorems × ~6 LOC each ≈ 36 LOC.
+* 5 `_strictMono` theorems × ~7 LOC each ≈ 35 LOC.
+  (Wait — there are 5 multi-element abscissae: the four `_two`
+  variants plus `_three`. The two `_one` variants don't need it.)
+* 6 `_mem_Icc` theorems × ~5 LOC each ≈ 30 LOC.
+* Docstrings and inter-block comments ≈ 20 LOC.
 
-Mechanical and low-risk, but flag these:
+Well within the ~200 LOC abort threshold. If the worker is ahead
+of budget, optionally add P3 (see §"P3 stretch" below).
 
-* **R1 (simp set collapse)**: cycle 317's small-`s` polynomial
-  forms close via `simp [Polynomial.eval_*] + ring`. Cycle 319
-  root proofs close via `simp [Polynomial.eval_*] + norm_num`
-  (the goal is `0 = 0` after evaluation, not a polynomial
-  identity). **Mitigation**: cycle 294's
-  `butcherShiftedLegendre_one_root` at
-  `Section342.lean:3699–3707` uses exactly this pattern; works
-  cleanly there.
-* **R2 (rational-root `norm_num`)**: evaluating at `2/3`, `1/3`,
-  `1/2` leaves residuals like `6 * (2/3)^2 - 4 * (2/3) = 0`.
-  `norm_num` handles these; if it chokes, fall back to
-  `simp; ring_nf; norm_num` or explicit `show (0 : ℝ) = 0; ring`.
-* **R3 (distinctness clauses)**: `(0 : ℝ) ≠ 2/3` etc. close
-  trivially by `norm_num`. No `linarith` chain needed.
-* **R4 (cycle 317 name verification)**: the small-`s` forms are
-  named `butcherRadauI_one`, `butcherRadauI_two`,
-  `butcherRadauII_one`, `butcherRadauII_two`, `butcherLobatto_two`,
-  `butcherLobatto_three`. Verified by `grep` at `Section344.lean`
-  lines 179, 193, 207, 221, 237, 252.
-* **R5 (`simp` vs `simp only`)**: for the `eval = 0` case after
-  rewrite, plain `simp` should close `(0 : ℝ) = 0` directly.
-  For the non-zero rational arguments (`2/3`, `1/3`, `1/2`), use
-  `simp only [...]` followed by `norm_num` to prevent `simp`
-  from over-reducing the rational arithmetic and leaving a stuck
-  goal. Both patterns appear in the theorems above.
+---
+
+## Step-by-step plan
+
+1. **Open the cycle 320 work** — open `Section344.lean` and locate
+   line 583 (immediately after `butcherLobatto_three_roots`).
+
+2. **Write the section header** — add a Deliverable C.2 doc-comment
+   block (~10 LOC) describing the six abscissa functions and their
+   use cases.
+
+3. **Ship the six abscissa defs** — each as a `noncomputable def`
+   with pattern-matched cases per the table above. No proof
+   obligations; each branch closes by `rfl`.
+
+4. **Ship the six `_isRoot` theorems** — each cites the
+   corresponding cycle 319 `_roots` (or `_root` for single-element)
+   theorem's appropriate conjunct via `fin_cases i` + `exact ...`.
+
+5. **Ship the five `_strictMono` theorems** — `intro i j hij;
+   fin_cases i <;> fin_cases j <;> simp_all <;> norm_num` should
+   close all five. If `simp_all` leaves residue on some `_three`
+   branches, fall back to explicit case unfolding (see Risk R3).
+
+6. **Ship the six `_mem_Icc` theorems** — `fin_cases i +
+   simp [Set.mem_Icc] + norm_num`. Mechanical.
+
+7. **Build verify** — `lake env lean
+   OpenMath/Chapter3/Section344.lean`. If clean, run `lake env
+   lean OpenMath/Chapter3.lean` to confirm the aggregator builds.
+
+8. **Axiom verify** — use `lean_verify` on at least one theorem
+   per family (suggested:
+   `butcherRadauI_zeros_two_isRoot`,
+   `butcherRadauII_zeros_two_strictMono`,
+   `butcherLobatto_zeros_three_strictMono`,
+   `butcherLobatto_zeros_three_mem_Icc`) to confirm
+   `[propext, Classical.choice, Quot.sound]` only.
+
+9. **Update `plan.md`** — append a cycle 320 line to `thm:344A`'s
+   row describing Phase C.2 (small-`s` abscissae functions) shipped
+   axiom-clean.
+
+10. **Update `extraction/formalization_data/lean_status.json`** —
+    keep `thm:344A` as `partial` (Phase B.2 and general-`s` C.2 are
+    still open); bump the `cycle` field to 320 and append a one-line
+    note to the `notes` field about Phase C.2 shipping.
+
+11. **Write `.prover-state/task_results/cycle_320.md`** documenting
+    deliverables, faithfulness check, dead ends, and suggested
+    cycle 321 entry point.
+
+12. **Pre-commit faithfulness check** — see §"Faithfulness check"
+    below.
+
+13. **Commit** — single commit with message
+    "Cycle 320 — §344 Phase C.2: small-`s` abscissae functions
+    shipped axiom-clean."
+
+---
+
+## Faithfulness check
+
+For each new `def` (six abscissae functions):
+
+* **Definition smuggling check**: each abscissa function packages
+  cycle 319's explicit-root values into `Fin s → ℝ` arrays. The
+  textbook (Butcher §344 p. 244) does not name these arrays
+  explicitly at small-`s`; they are derived from `thm:344A`'s
+  abscissae conditions (`c_1 < c_2 < ... < c_s` with `c_i ∈ [0, 1]`
+  and the §344 endpoint constraints). Each entry is the unique
+  root of the corresponding §344 polynomial at the given position
+  (matching `c_i`'s ordering). No equivalence lemma needed; the
+  `_isRoot` theorems are the explicit bridge.
+
+For each new theorem (six `_isRoot`, five `_strictMono`, six
+`_mem_Icc`):
+
+* **Tautology check**: none of the conclusions appear verbatim as
+  hypotheses (no hypotheses on any of these theorems).
+* **Identity check**: each `_isRoot` proof is `fin_cases i +
+  exact <cycle 319 root>` — real work via abscissa unfolding plus
+  cycle 319 citation. `_strictMono` and `_mem_Icc` delegate to
+  cycle 319 distinctness clauses and `norm_num` arithmetic.
+* **Hypothesis strength**: all 17 new theorems are universal
+  numerical facts (no hypotheses); minimal-strength signatures.
+* **Absent theorem check**: nothing promised but missing.
+
+---
+
+## Risk assessment and mitigations
+
+### R1: `noncomputable def` pattern-matching issues
+
+The pattern-matching shape `| ⟨0, _⟩ => 0` may fire warnings about
+incomplete patterns or definitional reduction. Mitigations in
+order of preference:
+
+(a) The shape above. Should work — Lean accepts pattern-matching
+    on `Fin n` via raw `⟨val, isLt⟩` deconstruction.
+
+(b) Use `Fin.cases` recursor:
+    `Fin.cases 0 (fun _ => 2/3 (Fin.elim0 ·))` — less readable
+    but always works.
+
+(c) If patterns are flagged incomplete, append a catch-all
+    `| _ => 0` after the explicit cases (defensive; only fires
+    on impossible indices since `Fin n` indices are exhausted by
+    the explicit cases).
+
+Recommended: try (a) first; if Lean complains, switch to (c).
+
+### R2: `fin_cases i` does not unfold the abscissa function
+
+If `fin_cases i` leaves the goal in the form
+`(butcherRadauI 2).eval (butcherRadauI_zeros_two ⟨0, _⟩) = 0`
+without unfolding `butcherRadauI_zeros_two`, prepend a `show`
+tactic to force the unfold:
+
+```lean
+fin_cases i
+· show (butcherRadauI 2).eval (0 : ℝ) = 0
+  exact butcherRadauI_two_roots.1
+```
+
+Alternative: use `simp only [butcherRadauI_zeros_two]` after
+`fin_cases` to force definitional unfolding. The cycle 263
+`feedback_indexed_inductive_cases_disjoint.md` (memory) confirms
+`fin_cases` does unfold patterns on `Fin n` defs cleanly when each
+branch reduces by `rfl`.
+
+### R3: `_strictMono` arithmetic residue on Lobatto `_three`
+
+For Lobatto's `_three`, `fin_cases i <;> fin_cases j` produces 9
+sub-goals. The 3 true ones (`hij : 0 < 1`, `0 < 2`, `1 < 2` on
+`Fin 3` mapping to `0 < 1/2`, `0 < 1`, `1/2 < 1` on `ℝ`) close by
+`norm_num`. The 6 false ones (e.g. `hij : 1 < 0`, `hij : 0 < 0`,
+etc.) should close by `simp_all` (`Fin.lt_def` collapse plus
+`Nat`-arithmetic).
+
+If `simp_all` leaves stubborn `Fin.lt_def` residue, the recovery
+is explicit case unfolding via a `rcases` pattern. Less elegant
+but always works:
+
+```lean
+intro i j hij
+rcases i with ⟨i, hi⟩
+rcases j with ⟨j, hj⟩
+interval_cases i <;> interval_cases j <;> simp_all <;> norm_num
+```
+
+`interval_cases` on `Nat`-valued `i, j` bounded by `Fin n`'s `isLt`
+field should enumerate `i ∈ {0, 1, 2}` and `j ∈ {0, 1, 2}` cleanly.
+
+### R4: Build heartbeats
+
+Cycle 274–281's `butcherShiftedLegendre_norm_sq_*` blow-up risk
+applies to integration-heavy proofs, NOT to abscissae arithmetic.
+This cycle ships only `Polynomial.eval` + arithmetic; no
+`intervalIntegral` invocations. The heartbeat risk is **low**.
+
+### R5: Aristotle suitability
+
+These deliverables are too small and mechanical to benefit from
+Aristotle. Ship manually; do NOT submit to Aristotle.
+
+---
+
+## P3 stretch — small-`s` Lagrange quadrature weight stubs
+
+If steps 1–13 close in well under the cycle budget (perhaps 60% of
+LOC and time spent), optionally add P3:
+
+```lean
+noncomputable def butcherRadauI_quadratureWeights_one : Fin 1 → ℝ :=
+  fun _ => 1
+
+noncomputable def butcherRadauI_quadratureWeights_two : Fin 2 → ℝ
+  | ⟨0, _⟩ => 1/4
+  | ⟨1, _⟩ => 3/4
+
+-- ... and four more analogously
+```
+
+Don't try to prove the integral identity `b_j = ∫₀¹ L_j(x) dx`
+this cycle — that's a cycle 321 deliverable. Just define the
+closed-form weights with numerical values and ship trivial
+`_apply` `rfl` lemmas. This pre-commits to the numerical values
+so cycle 321 has a clear target.
+
+Closed-form values to use (verify by paper integration before
+writing):
+
+| Family       | Stages | Weights                      |
+|--------------|--------|------------------------------|
+| Radau I      | s=1    | `(1)`                        |
+| Radau I      | s=2    | `(1/4, 3/4)`                 |
+| Radau II     | s=1    | `(1)`                        |
+| Radau II     | s=2    | `(3/4, 1/4)`                 |
+| Lobatto      | s=2    | `(1/2, 1/2)` (trapezoidal)   |
+| Lobatto      | s=3    | `(1/6, 2/3, 1/6)` (Simpson)  |
+
+If P3 lands, cycle 321 ships the integral identities directly
+linking these closed forms to `∫₀¹ L_j(x) dx`. Without P3, cycle
+321 ships the weights as integrals first, then the closed-form
+lemmas separately.
+
+**Skip P3 if any of steps 1–13 take longer than estimated.** A
+single-cycle deliverable that ships clean is worth more than a
+two-cycle deliverable that risks a half-shipped state.
+
+---
 
 ## What NOT to try
 
-* **Do NOT attempt Phase B.2** (polynomial-exactness for Radau I).
-  Per cycle 318 task results, needs Lagrange-interpolation
-  infrastructure at Radau abscissae — multi-cycle.
-* **Do NOT attempt general-`s` root-counting** for Radau/Lobatto.
-  The §342 analog (`butcherShiftedLegendre_n_distinct_real_zeros`,
-  cycle 301) required Aristotle integration with sign-change-
-  contradiction infrastructure + cycle 292's basis-span lemma.
-  Radau/Lobatto is **harder** because the endpoint zeros (0
-  and/or 1) must factor out before the sign-change argument
-  applies to the residual quotient. Multi-cycle.
-* **Do NOT attempt `thm:342C` clauses (342j)/(342k)/(342l)**.
-  Blocked on `thm:314A` (elementary-differential independence) per
-  plan.md.
-* **Do NOT try to compile `OpenMath/Chapter4/Section441.lean`**.
-  43+ consecutive GPFS timeouts since cycle 182 (see
-  `cycle_182_gpfs_slowness.md`). Skip entirely.
-* **Do NOT use `Real.sqrt`**. All cycle 319 roots are rational
-  (0, 1/3, 1/2, 2/3, 1). Adding `Real.sqrt` would be pointless
-  complication.
-* **Do NOT introduce `axiom`, `constant`, or sorries**. Standard
-  CLAUDE.md rule + cycles 138/149/200 rollback precedent: if a
-  deliverable doesn't close cleanly, ship smaller scope rather
-  than leaving sorries.
-* **Do NOT raise `maxHeartbeats`**. Proofs are short evaluations;
-  if a single `simp` blows past, decompose into named pieces.
-* **Do NOT poll Aristotle**. No active jobs relevant to cycle
-  319's deliverable.
-* **Do NOT modify `scripts/autonomous_loop.py`**. Standing rule
-  per CLAUDE.md and `tautology_scanner_false_positives.md`.
+* **Do NOT attempt small-`s` Lagrange weights via integral
+  computation in cycle 320.** The integration step has cycle
+  274/281 precedent of blowing past heartbeats. Save for cycle
+  321.
 
-## Faithfulness check (mandatory pre-commit)
+* **Do NOT attempt general-`s` Phase C.2** (`thm:344A` abscissae
+  construction via sign-change argument). Per plan.md, this is
+  multi-cycle and requires endpoint-zero factoring (`x` for
+  Radau I, `(x − 1)` for Radau II, `x(x − 1)` for Lobatto) before
+  the cycle 301 `butcherShiftedLegendre_n_distinct_real_zeros`
+  recipe applies. Out of scope.
 
-For each new theorem, apply the CLAUDE.md checklist:
+* **Do NOT attempt Phase B.2** (polynomial-exactness `2s − 2` /
+  `2s − 3`) in cycle 320. Requires Lagrange-interpolation
+  infrastructure at the §344 abscissae plus the
+  polynomial-division step. Cycle 322+ work, after weights land.
 
-* **Tautology check**: each root theorem has a *non-trivial*
-  conclusion (`eval ... = 0`); the proof works by `rw` to expose
-  the explicit polynomial form, `simp` to evaluate, `norm_num`
-  to close arithmetic. No identity-on-hypothesis patterns.
-* **Identity check**: no proof is `exact h`; all proofs do real
-  work via `rw [butcherRadauI_one]` etc.
-* **Hypothesis strength**: none of the new theorems take
-  hypotheses; the small-`s` roots are universal numerical facts.
-  Distinctness clauses `(0 : ℝ) ≠ 2/3` are independent numerical
-  facts.
-* **Definition smuggling**: no new `def`/`structure`/`class`
-  introduced — only `theorem`s appending to existing definitions.
-* **Textbook match**: Butcher §344 (p. 244) implicitly identifies
-  these zeros when constructing the Radau/Lobatto methods, but
-  does not enumerate them as a separate "small-`s` table". The
-  Lean formalization makes the small-`s` cases explicit as
-  scaffolding for the eventual general theorem (analogous to
-  cycle 294's empirical anchors for the cycle 301 general-`n`
-  (342g) theorem).
+* **Do NOT define abscissae for `s ≥ 3` Radau** or `s ≥ 4`
+  Lobatto. Cycle 319 only provides explicit roots up to those
+  sizes; going beyond requires cycle 301's sign-change machinery
+  ported to the §344 polynomials, which is multi-cycle work.
 
-## Cycle 319 worker checklist
+* **Do NOT raise `maxHeartbeats`.** Per CLAUDE.md, decompose
+  instead. Nothing this cycle should need > 200000 heartbeats.
 
-1. **Read cycle 317's small-`s` forms** at
-   `OpenMath/Chapter3/Section344.lean:179–270` to confirm names
-   and exact polynomial expressions. The pattern
-   `butcherRadauI_one : butcherRadauI 1 = C 2 * X` etc. is the
-   load-bearing rewrite for cycle 319's proofs.
-2. **Append five (or six with stretch) new theorems** at the end
-   of `Section344.lean` after
-   `butcherLobatto_orthogonal_to_lower_degree`. Order:
-   `butcherRadauI_one_root` → `butcherRadauI_two_roots` →
-   `butcherRadauII_one_root` → `butcherRadauII_two_roots` →
-   `butcherLobatto_two_roots` → (stretch)
-   `butcherLobatto_three_roots`.
-3. **Verify each compiles** via
-   `lake env lean OpenMath/Chapter3/Section344.lean` after each
-   addition (cheap; the file already compiled in cycle 318).
-4. **Verify axiom-clean** via
-   `lean_verify OpenMath.Chapter3.Section344.butcherRadauI_one_root`
-   etc. — expected `[propext, Classical.choice, Quot.sound]`.
-5. **Build aggregator** via
-   `lake env lean OpenMath/Chapter3.lean` — should be a fast
-   rebuild.
-6. **Pre-commit faithfulness check** (CLAUDE.md mandatory):
-   apply the checklist to each new theorem. No structural issues
-   anticipated.
-7. **Write `task_results/cycle_319.md`** documenting the five (or
-   six) shipped theorems, axiom status, and the cycle 320 entry
-   point.
-8. **Commit + push** with descriptive message:
-   `Cycle 319 — §344 Phase C.1: small-s root theorems for Radau I/II + Lobatto.`
+* **Do NOT introduce `axiom` / `constant`.** Per CLAUDE.md.
 
-## Cycle 320 entry point (planning hint, do NOT execute)
+* **Do NOT introduce sorries.** Cycle 320 must close axiom-clean
+  or skip individual deliverables (e.g. ship only Radau I and
+  Radau II, defer Lobatto to cycle 321) rather than scaffolding
+  sorries. The cycle 138 → 139 and cycle 149 → 150 rollback
+  precedents apply.
 
-With Phase C.1 (small-`s` abscissae) shipped, cycle 320 has three
-options:
+* **Do NOT submit anything to Aristotle this cycle.** These
+  deliverables are too small and mechanical to benefit from
+  prover assistance.
 
-* **(a) Small-`s` Lagrange weights**: ship
-  `butcherRadauI`/`butcherRadauII`/`butcherLobatto` small-`s`
-  Lagrange-basis weights, mirroring cycle 303's
-  `butcherShiftedLegendre_quadratureWeights` definition restricted
-  to the small-`s` abscissae from cycle 319. Stepping stone to
-  Phase D RKTableau construction.
-* **(b) General-`s` Phase C**: attempt the §344 analog of cycle
-  301's `butcherShiftedLegendre_n_distinct_real_zeros`.
-  **Higher risk**: endpoint-zero factoring requires careful
-  bookkeeping. Multi-cycle.
-* **(c) Pivot to fresh entity**: e.g., `thm:302C` (Rooted Tree
-  Enumeration Formulas) or one of the open §380 entities.
+* **Do NOT touch `OpenMath/Chapter4/Section441.lean`.** It has
+  been GPFS-blocked for 43+ consecutive cycles since cycle 182.
+  Skip per `.prover-state/issues/cycle_182_gpfs_slowness.md`.
 
-Recommend (a) for cycle 320: it's a clean follow-up that unblocks
-small-`s` Phase B.2 (`R.natDegree < s` Lagrange collapse) and
-provides RKTableau-side non-vacuity witnesses at `s ∈ {1, 2}` for
-Radau I/II and `s ∈ {2, 3}` for Lobatto. Each small-`s` weight
-set is ~30 LOC.
+* **Do NOT respond to phantom "stuck on" framings** in subsequent
+  consultant prompts. Multiple prior cycles (008, 014, 015, 040,
+  174, 180, 196, 248, 263) document loop-maintainer-side
+  prompt-builder false positives propagating stale `attempts.md`
+  rows. If a future cycle's "What I'm stuck on" field is empty
+  or cites cycle 320 deliverables that are at HEAD, treat it as
+  a no-op and pivot directly to cycle 321 planning. See
+  `.prover-state/issues/phantom_commit_verdict_pattern.md` and
+  `.prover-state/issues/consultant_advice_cycle_263.md` §I.
+
+* **Do NOT modify `scripts/autonomous_loop.py`** or the
+  prompt-builder. Tautology-scanner / consultant-phase false
+  positives are loop-maintainer territory per
+  `.prover-state/issues/tautology_scanner_false_positives.md`.
+
+---
+
+## Cycle 321 entry point (recommended)
+
+If cycle 320 ships P1 (abscissae) without P3 (weight stubs):
+
+* **Cycle 321 target**: small-`s` Lagrange quadrature weights via
+  integral definitions, mirroring cycle 303's
+  `butcherShiftedLegendre_quadratureWeights` construction. For
+  each of the six abscissae functions, define
+  `_quadratureWeights : Fin s → ℝ` as
+  `∫₀¹ (Lagrange.basis Finset.univ <abscissae> j).eval x`, then
+  prove the closed-form numerical values via paper-verified
+  integration. ~150 LOC estimate; will hit the cycle 274/281
+  heartbeats territory, so plan carefully and split per-stage if
+  needed.
+
+If cycle 320 ships P1 + P3 (abscissae + weight stubs):
+
+* **Cycle 321 target**: prove the integral identities linking
+  the cycle 320 closed-form stubs to `∫₀¹ L_j(x) dx`. ~80 LOC
+  per stub. After this, cycle 322 begins Phase B.2
+  polynomial-exactness or pivots to RKTableau construction.
+
+Either way, cycle 322+'s natural pivot is the small-`s`
+`RKTableau` construction: Radau IA (Radau II abscissae +
+collocation A-matrix) and Lobatto IIIB (Lobatto abscissae +
+collocation A-matrix). Small-`s` cases are tractable individually
+(Radau IA `s=1` is backward Euler; Lobatto IIIB `s=2` is the
+trapezoidal rule); general-`s` requires the cycle 308–312 lift
+recipe ported to §344.
+
+---
 
 ## Summary
 
-* **Target**: Phase C.1 of `thm:344A` — small-`s` root theorems
-  for Radau I/II and Lobatto.
-* **Deliverables**: 5 P1 + 1 P3-stretch axiom-clean theorems in
-  `OpenMath/Chapter3/Section344.lean`.
-* **LOC budget**: ~110 LOC (P1), ~145 LOC with stretch, abort at
-  200 LOC.
-* **Risk**: low. Mechanical `rw` + `simp` + `norm_num`; cycle 294
-  precedent at §342 confirms the pattern.
-* **Faithfulness**: clean. No new definitions, no hypothesis
-  divergence, no definition smuggling. Stepping stones for cycle
-  320+ Phase B.2 / Phase D work.
-* **Sorry count**: 0 → 0 (axiom-clean ship or skip per the
-  138/149/200 rollback precedent).
+* **Target**: §344 Phase C.2 (small-`s` abscissae functions, six
+  defs + 17 theorems).
+* **LOC**: ~150.
+* **Risk**: low (mechanical `fin_cases` + `norm_num`).
+* **Sorry count**: 0 → 0.
+* **Axiom-clean expected** (`[propext, Classical.choice, Quot.sound]`).
+* **No Aristotle this cycle.**
+* **No Section441 attempts.**
+* **No sorries, no axioms, no maxHeartbeats bumps.**
