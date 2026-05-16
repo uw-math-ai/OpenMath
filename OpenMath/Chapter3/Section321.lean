@@ -253,6 +253,108 @@ theorem satisfiesE_of_satisfiesB_satisfiesC {s : ℕ}
   push_cast
   field_simp
 
+/-! ### Butcher §342 Theorem 342C, clause (342o) — `B(2s) ∧ D(s) ⇒ E(s, s)`
+
+Clause (342o) of the seven-way `thm:342C` equivalence (Butcher §342,
+3rd ed., p. 238):
+
+>     `B(2s) ∧ D(s) ⇒ E(s, s)`            (342o)
+
+This is the partner of (342m) above: same conclusion `E(s, s)`,
+same `B(2s)` half of the hypothesis, but routed through the adjoint
+condition `D(s)` rather than the collocation condition `C(s)`. Like
+(342m), the proof is purely algebraic in the §321 B/C/D/E predicates
+and requires no elementary-differential infrastructure.
+
+Proof recipe:
+
+1. Sum-swap `∑ᵢ ∑ⱼ` → `∑ⱼ ∑ᵢ` via `Finset.sum_comm`.
+2. Factor `c_j ^ (l - 1)` out of the inner `i`-sum (per column `j`).
+3. Apply `D(s)` at exponent `k` per column `j` to reduce
+   `∑ᵢ bᵢ cᵢ^{k-1} aᵢⱼ = (bⱼ / k)(1 - cⱼ^k)`.
+4. Distribute `(1/k)` and split via `1 - cⱼ^k` to expose two `B(2s)`
+   shapes: `bⱼ cⱼ^{l-1}` and `bⱼ cⱼ^{(k+l)-1}`.
+5. Apply `B(2s)` at exponents `l` (legal: `1 ≤ l ≤ s ≤ 2s`) and
+   `k + l` (legal: `1 ≤ k + l ≤ 2s`).
+6. Close via `(1/k)(1/l - 1/(k+l)) = 1/(l(k+l))` with
+   `field_simp + ring`.
+
+No `0 < s` hypothesis is required: at `s = 0`, the universally
+quantified `∀ k, 1 ≤ k → k ≤ 0` is vacuous. -/
+theorem satisfiesE_of_satisfiesB_satisfiesD {s : ℕ}
+    (M : RKTableau s) (hB : M.SatisfiesB (2 * s))
+    (hD : M.SatisfiesD s) :
+    M.SatisfiesE s s := by
+  intro k h1 hk l hl1 hl
+  have hk_pos : 0 < (k : ℝ) := by exact_mod_cast h1
+  have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
+  have hl_pos : 0 < (l : ℝ) := by exact_mod_cast hl1
+  have hl_ne : (l : ℝ) ≠ 0 := ne_of_gt hl_pos
+  -- Step 1: D(s) at exponent k, per column j.
+  have hDj : ∀ j : Fin s,
+      (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j)
+        = (M.b j / (k : ℝ)) * (1 - M.c j ^ k) :=
+    fun j => hD j k h1 hk
+  -- Step 2: outer rewrite — sum-swap, factor c_j^(l-1) out per
+  -- column, apply D(s), expand the (1 - c_j^k) split, distribute
+  -- (1/k), and re-pack via `Finset.sum_sub_distrib`.
+  have h_outer :
+      (∑ i : Fin s, ∑ j : Fin s,
+        M.b i * M.c i ^ (k - 1) * M.A i j * M.c j ^ (l - 1))
+      = (1 / (k : ℝ)) *
+        ((∑ j : Fin s, M.b j * M.c j ^ (l - 1))
+          - ∑ j : Fin s, M.b j * M.c j ^ ((k + l) - 1)) := by
+    rw [Finset.sum_comm]
+    rw [show (∑ j : Fin s, ∑ i : Fin s,
+              M.b i * M.c i ^ (k - 1) * M.A i j * M.c j ^ (l - 1))
+            = ∑ j : Fin s, M.c j ^ (l - 1) *
+              (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j) by
+        apply Finset.sum_congr rfl
+        intro j _
+        rw [Finset.mul_sum]
+        apply Finset.sum_congr rfl
+        intro i _
+        ring]
+    rw [show (∑ j : Fin s, M.c j ^ (l - 1) *
+              (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j))
+            = ∑ j : Fin s, M.c j ^ (l - 1) *
+              ((M.b j / (k : ℝ)) * (1 - M.c j ^ k)) by
+        apply Finset.sum_congr rfl
+        intro j _
+        rw [hDj j]]
+    rw [show (∑ j : Fin s, M.c j ^ (l - 1) *
+              ((M.b j / (k : ℝ)) * (1 - M.c j ^ k)))
+            = (1 / (k : ℝ)) * ∑ j : Fin s,
+              (M.b j * M.c j ^ (l - 1)
+                - M.b j * M.c j ^ ((k + l) - 1)) by
+        rw [Finset.mul_sum]
+        apply Finset.sum_congr rfl
+        intro j _
+        have hexp : (l - 1) + k = (k + l) - 1 := by omega
+        rw [show M.c j ^ ((k + l) - 1)
+              = M.c j ^ ((l - 1) + k) by rw [hexp]]
+        rw [pow_add]
+        field_simp]
+    rw [Finset.sum_sub_distrib]
+  rw [h_outer]
+  -- Step 3: B(2s) at exponents l and k + l.
+  have hl_hi : l ≤ 2 * s := by omega
+  have hkl_lo : 1 ≤ k + l := by omega
+  have hkl_hi : k + l ≤ 2 * s := by omega
+  have hB_l : (∑ j : Fin s, M.b j * M.c j ^ (l - 1))
+                = 1 / ((l : ℕ) : ℝ) :=
+    hB l hl1 hl_hi
+  have hB_kl :
+      (∑ j : Fin s, M.b j * M.c j ^ ((k + l) - 1))
+        = 1 / ((k + l : ℕ) : ℝ) :=
+    hB (k + l) hkl_lo hkl_hi
+  rw [hB_l, hB_kl]
+  -- Step 4: arithmetic closure (1/k)(1/l - 1/(k+l)) = 1/(l(k+l)).
+  push_cast
+  have hkl_real_ne : (k : ℝ) + (l : ℝ) ≠ 0 := by positivity
+  field_simp
+  ring
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section321
@@ -356,5 +458,25 @@ example : gaussLegendre1Stage.SatisfiesE 1 1 :=
       intro i k h1 hk
       interval_cases k
       simp [gaussLegendre1Stage])
+
+/-- *Non-vacuity for the abstract (342o) clause via `gaussLegendre1Stage`.*
+The implicit-midpoint tableau satisfies `B(2)` and `D(1)` (existing
+witnesses above), so the abstract bridge
+`RKTableau.satisfiesE_of_satisfiesB_satisfiesD` yields `E(1, 1)`.
+This is the *abstract-route* counterpart to the hand-built
+`gaussLegendre1Stage.SatisfiesE 1 1` example above and confirms the
+new theorem (342o) is non-vacuous at the smallest stage count. -/
+example : gaussLegendre1Stage.SatisfiesE 1 1 :=
+  gaussLegendre1Stage.satisfiesE_of_satisfiesB_satisfiesD
+    (hB := by
+      intro k h1 hk
+      interval_cases k
+      · simp [gaussLegendre1Stage]
+      · simp [gaussLegendre1Stage])
+    (hD := by
+      intro j k h1 hk
+      interval_cases k
+      simp [gaussLegendre1Stage]
+      norm_num)
 
 end OpenMath.Chapter3.Section321
