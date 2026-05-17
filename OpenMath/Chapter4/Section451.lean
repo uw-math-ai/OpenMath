@@ -304,4 +304,38 @@ theorem bdf2LMM_isStable : bdf2LMM.IsStable := by
     _ = |((3 * Y 1 - Y 0) / 2)|
         + |((3 * (Y 0 - Y 1)) / 2)| := by ring
 
+/-! ## Consistency for BDF2 (cycle 349)
+
+Ships `bdf2LMM.IsConsistent` as a **Phase D′.2.0 precursor** for the
+cycle 348 scoping doc
+`.prover-state/issues/eq422a_eta_phase_D_prime_step_2_scoping.md` §5.
+
+`IsConsistent` (Butcher §404, p. 339, def:404B) is the conjunction of
+(404a) preconsistency and (404b) the order-1 consistency equation
+`Σ_{i:Fin k} ((i:ℕ)+1) · α i.succ = Σ_{i:Fin (k+1)} β i`.
+
+For BDF2 (`α₁ = 4/3, α₂ = -1/3, β₀ = 2/3, β₁ = β₂ = 0`):
+* (404a): `α₁ + α₂ = 4/3 - 1/3 = 1` ✓
+* (404b): LHS `= 1·(4/3) + 2·(-1/3) = 2/3`, RHS `= 2/3 + 0 + 0 = 2/3` ✓
+
+We prove both conjuncts inline rather than reusing
+`Section441.bdf2LMM_isPreconsistent` because Section441 imports
+Section451 (cycle 346's stability ship), so the reverse import would
+be circular. -/
+
+/-- **BDF2 is consistent** (Butcher §404, p. 339).
+
+Phase D′.2.0 precursor (cycle 349) — closes the `[MISSING]` entry in
+the cycle 348 scoping doc §5 alongside `bdf2LMM_isStable` (cycle 346)
+and `Section441.bdf2LMM_isPreconsistent` (cycle 175). -/
+theorem bdf2LMM_isConsistent : bdf2LMM.IsConsistent := by
+  refine ⟨?_, ?_⟩
+  · -- (404a): Σ α i.succ = 1, i.e. α 1 + α 2 = 1
+    simp [LinearMultistepMethod.IsPreconsistent, bdf2LMM, Fin.sum_univ_two]
+    norm_num
+  · -- (404b): Σ ((i:ℕ)+1) · α i.succ = Σ β i
+    unfold LinearMultistepMethod.SatisfiesEq404b
+    simp [bdf2LMM, Fin.sum_univ_two, Fin.sum_univ_three]
+    norm_num
+
 end OpenMath.Chapter4.Section451

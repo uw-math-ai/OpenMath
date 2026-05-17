@@ -997,4 +997,55 @@ theorem βPoly_deriv_eval_one_nonneg_of_β_nonneg
   rw [← coef_β_eq_βPoly_deriv_at_one]
   exact coef_β_nonneg_of_β_nonneg M hβ
 
+/-! ### Phase D′.2.0 precursor (cycle 349) — `sum_β > 0` for stable + consistent LMMs
+
+Composes cycle 344's `coef_α_pos_of_stable_preconsistent` with cycle
+345's `coef_α_eq_sum_β_of_isConsistent` to derive strict positivity of
+the **unweighted** β-sum `Σᵢ M.β i` from `M.IsStable + M.IsConsistent`
+and `0 < k`.
+
+**Route B precursor** from the cycle 348 scoping doc
+`.prover-state/issues/eq422a_eta_phase_D_prime_step_2_scoping.md`
+§5 Phase D′.2.0. Important caveat: this is the **unweighted**
+β-sum `sum_β = Σᵢ βᵢ`, **NOT** the §422 weighted coefficient
+`coef_β(M) := Σᵢ i · M.β i` that
+`Eq422a_at_vertex_eta_eq_of_stable_preconsistent` requires non-negative.
+The two quantities differ — this precursor does **NOT** close
+Phase D′ Step 2 on its own. Bridging `sum_β > 0` to
+`coef_β ≥ 0` (or to the weaker non-vanishing
+`coef_α + coef_β ≠ 0`) is Phase D′.2.1 work. -/
+
+/-- *Phase D′.2.0 precursor (cycle 349):* under stability + consistency
+plus `0 < k`, the **unweighted** β-sum `Σ_{i:Fin (k+1)} M.β i` is
+strictly positive.
+
+Proof: rewrite via cycle 345's `coef_α_eq_sum_β_of_isConsistent` to
+convert the β-sum into the α-side `coef_α`, then discharge via cycle
+344's `coef_α_pos_of_stable_preconsistent`.
+
+**Caveat (see cycle 348 scoping doc §5):** the §422 weighted
+coefficient `coef_β(M) = Σᵢ i · M.β i` is **NOT** the same as this
+`sum_β = Σᵢ M.β i`. This lemma is the unweighted β-sum positivity;
+the weighted-coefficient non-negativity required by cycle 345's
+`Eq422a_at_vertex_eta_eq_of_stable_preconsistent` remains the Phase
+D′.2.1 target. -/
+theorem sum_β_pos_of_stable_consistent
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hk : 0 < k) (hStable : M.IsStable) (hConsistent : M.IsConsistent) :
+    0 < ∑ i : Fin (k + 1), M.β i := by
+  rw [← coef_α_eq_sum_β_of_isConsistent M hConsistent]
+  exact coef_α_pos_of_stable_preconsistent M hk hStable hConsistent.1
+
+/-- *Phase D′.2.0 BDF2 witness (cycle 349):* end-to-end exercise of
+`sum_β_pos_of_stable_consistent` on the canonical BDF2 example,
+discharging stability via `bdf2LMM_isStable` (cycle 346) and
+consistency via `bdf2LMM_isConsistent` (cycle 349, Section451).
+
+Numerical sanity: BDF2's β-sum is `2/3 + 0 + 0 = 2/3 > 0`. -/
+example : (0 : ℝ) < ∑ i : Fin 3, OpenMath.Chapter4.Section451.bdf2LMM.β i :=
+  sum_β_pos_of_stable_consistent OpenMath.Chapter4.Section451.bdf2LMM
+    (by norm_num : (0 : ℕ) < 2)
+    OpenMath.Chapter4.Section451.bdf2LMM_isStable
+    OpenMath.Chapter4.Section451.bdf2LMM_isConsistent
+
 end OpenMath.Chapter4.Section422
