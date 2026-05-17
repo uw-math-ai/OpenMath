@@ -917,3 +917,264 @@ def-only sealing once Phase E ships the bridge.
 * **Markdown-only**: 0 LOC of Lean shipped this cycle, 0 sorries
   opened. Cycle 357 ships 1 Lean example (BDF3 η witness, separate
   from this doc) plus this doc.
+
+### Cycle 363 audit — `linearResidualAt` coefficient validation
+
+**TL;DR — cycle 360's coefficient `i·(-1)^r(t)` is WRONG at `r(t) ≥ 2`
+(specifically wrong at even `r(t)`). The mathematically correct
+coefficient — the actual coefficient of `η(t)` in `η⁻ⁱ(t)` — is
+`-i` (constant in `r(t)`).** This is a faithful (sign-error-preserving)
+transcription of Butcher's textbook claim (§422 p. 338, ch04.txt:1163);
+empirical Φ-computation at the order-2 tree `cherry` falsifies both the
+textbook claim AND the cycle 360 definition. cycle 364+ must redefine
+`linearResidualAt` before Phase D.3.b parametricity Step 2 is reachable.
+
+The P1 corollary `sum_i_alpha_ne_zero_of_stable_preconsistent` shipped
+this cycle is UNAFFECTED — its non-vanishing claim about
+`Σᵢ i·αᵢ` is the absolute value of the η(t) coefficient in (422a) and
+holds independently of the sign issue.
+
+#### Audit methodology
+
+The cycle 360 definition pins:
+
+```
+linearResidualAt i η_q t := Φ_{η_q^(-i)}(t) − i·(-1)^r(t)·Φ_{η_q}(t)
+```
+
+For `linearResidualAt` to faithfully encode "η⁻ⁱ(t) with the η(t) part
+removed", the subtracted coefficient `i·(-1)^r(t)` must equal the
+actual coefficient of `Φ_{η_q}(t)` in `Φ_{η_q^(-i)}(t)`. Compute both
+sides empirically at `(i, t) = (1, cherry)` and `(2, cherry)`, for two
+distinct methods with the same `η(vertex)` but different
+`η(cherry)` — if the cycle 360 `linearResidualAt` value differs
+between the two methods at fixed `η(vertex)`, the residual is **not**
+strict-subtree-dependent and the coefficient is wrong.
+
+#### Empirical computation at `t = cherry`, `i = 1`
+
+Use cycle 360 closed form `linearResidualAt_one_mk_eq`:
+```
+linearResidualAt 1 ⟦M⟧ cherry
+  = -(∑ⱼ M.b j · M.derivativeWeightWithSrc M.inverse j cherry)
+    - (-1)^cherry.order · M.elementaryWeight cherry
+  = -(∑ⱼ M.b j · M.derivativeWeightWithSrc M.inverse j cherry)
+    - M.elementaryWeight cherry  (since cherry.order = 2)
+```
+
+Inner sum unfolding via `derivativeWeightWithSrcProd` (`Section381.lean`
+line 2688) at `[vertex]`:
+```
+M.derivativeWeightWithSrc M.inverse j cherry
+  = M.inverse.elementaryWeight vertex + ∑ₖ M.A j k · 1   (vertex contrib = 1)
+  = -M.elementaryWeight vertex + (row-sum of M.A at j).
+```
+
+So:
+```
+∑ⱼ M.b j · M.derivativeWeightWithSrc M.inverse j cherry
+  = -M.elementaryWeight vertex · (∑ⱼ M.b j) + ∑ⱼ M.b j · (row-sum of M.A at j)
+  = -(M.elementaryWeight vertex)² + M.elementaryWeight cherry.
+```
+
+Combining:
+```
+linearResidualAt 1 ⟦M⟧ cherry
+  = -[-(M.elementaryWeight vertex)² + M.elementaryWeight cherry] - M.elementaryWeight cherry
+  = (M.elementaryWeight vertex)² - 2·M.elementaryWeight cherry.
+```
+
+**This depends on `M.elementaryWeight cherry`, which is NOT a strict
+subtree of cherry.** The cycle 360 coefficient choice fails the
+strict-subtree dependence test.
+
+#### Numerical witnesses
+
+| Method | η(vertex) | η(cherry) | cycle 360 `linearResidualAt 1` | corrected `linearResidualAt' 1` |
+|---|---|---|---|---|
+| `explicitEuler` (s=1, b=[1], A=[[0]]) | 1 | 0 | `1² − 2·0 = 1` | `1² = 1` |
+| Heun (s=2, b=[1/2,1/2], A=[[0,0],[1,0]]) | 1 | 1/2 | `1² − 2·(1/2) = 0` | `1² = 1` |
+
+The two methods share `η(vertex) = 1`. If `linearResidualAt 1 ⟦M⟧ cherry`
+were strict-subtree-dependent (Butcher's claim), both would yield the
+same value. cycle 360's definition yields `1` vs `0` (different);
+the corrected `linearResidualAt' 1 ⟦M⟧ cherry := Φ_{η_q^(-1)}(t) + i·Φ_{η_q}(t)`
+yields `1` vs `1` (same — strict-subtree-dependent as required).
+
+#### Empirical computation at `t = cherry`, `i = 2`
+
+Cross-validation via `elementaryWeightQ_phi_mul_mk` (cycle 358) applied
+to `⟦M.inverse⟧ · ⟦M.inverse⟧`:
+- For `explicitEuler`: `Φ_{η_q^{-2}}(cherry) = Φ_{⟦M.inverse⟧}(cherry) + (-1)·(-2) = 1 + 2 = 3`.
+- For Heun: `Φ_{η_q^{-2}}(cherry) = 1/2 + 3/2 = 2`.
+
+| Method | η(vertex) | η(cherry) | η⁻²(cherry) | cycle 360 `linearResidualAt 2` | corrected `linearResidualAt' 2` |
+|---|---|---|---|---|---|
+| `explicitEuler` | 1 | 0 | 3 | `3 − 2·1·0 = 3` | `3 + 2·0 = 3` |
+| Heun | 1 | 1/2 | 2 | `2 − 2·1·(1/2) = 1` | `2 + 2·(1/2) = 3` |
+
+Again at `η(vertex) = 1`: cycle 360 gives `3` vs `1` (different);
+corrected gives `3` vs `3` (same). Pattern at `i = 2` matches `i = 1`.
+
+#### Pattern: the actual coefficient is `-i` (constant in `r(t)`)
+
+Cross-checking at other trees confirms a uniform pattern:
+
+| Tree `t` | `r(t)` | Closed form for `η⁻¹(t)` | Coefficient of `η(t)` | Butcher's claim `1·(-1)^r(t)` |
+|---|---|---|---|---|
+| `vertex` | 1 | `−η(vertex)` | **−1** | −1 ✓ |
+| `cherry = mk [vertex]` | 2 | `η(vertex)² − η(cherry)` | **−1** | +1 ✗ |
+| `mk [vertex, vertex]` | 3 | `−η(vertex)³ + 2·η(vertex)·η(cherry) − η(fork)` | **−1** | −1 ✓ |
+
+(Closed form at fork verified numerically against `Heun` and
+`explicitEuler` at fork: η⁻¹(fork) = −1/2 for Heun, −1 for Euler;
+matches the closed form.)
+
+So the actual coefficient of `η(t)` in `η⁻¹(t)` is **always −1**,
+regardless of `r(t)`. The textbook's `(-1)^r(t)` factor is spurious
+(at least at our quotient-faithful encoding of Φ via `M.elementaryWeight`).
+
+By the same logic — verified at `(i, t) = (2, cherry)` above — the
+coefficient of `η(t)` in `η⁻ⁱ(t)` is **`-i`**, not `i·(-1)^r(t)`.
+
+#### Why Butcher's claim and cycle 360 disagree
+
+The textbook derivation (Butcher §422 p. 338) reads:
+
+> "The coefficient of η(t) in η⁻ⁱ(t) is equal to i(−1)^r(t) and there are
+> no other terms in η⁻ⁱ(t) with orders greater than r(t)−1."
+
+This is taken to mean: in the equation (422a) evaluated at tree t, the
+η(t) coefficient is `(-1)^{r(t)-1} · Σᵢ i·αᵢ` (Butcher's display
+equation after the "coefficient" claim).
+
+Under our Φ-quotient encoding (cycle 234's `elementaryWeightQ_phi`,
+which lifts `M.elementaryWeight` to the §383 quotient), the actual
+coefficient is `-i` (= the absolute value, matching the magnitude of
+Butcher's claim but lacking the `(-1)^r(t)` factor). Equation (422a)
+evaluated at t under our encoding gives `(Σᵢ i·αᵢ) · η(t) = C` (no
+`(-1)^{r(t)-1}` factor).
+
+**This does not affect Phase D.3.c's non-vanishing claim:** both
+formulations require `Σᵢ i·αᵢ ≠ 0`, which is exactly P1 of cycle 363
+(`sum_i_alpha_ne_zero_of_stable_preconsistent`).
+
+It DOES affect Phase D.3.b Step 2 (strict-subtree dependence): under
+cycle 360's definition, the residual is NOT strict-subtree-dependent
+at `r(t) ≥ 2`, so the Step 2 claim as stated is **false**. A
+corrected definition is needed before Step 2 can be proved.
+
+#### Recommended cycle 364 plan — redefinition recipe
+
+**Definition fix (1 LOC in `linearResidualAt` body):**
+```
+noncomputable def linearResidualAt (i : ℕ)
+    (η_q : Quotient PhiEquivalent.setoidSigma) (t : RT) : ℝ :=
+  elementaryWeightQ_phi (η_q ^ (-(i : ℤ))) t
+    + (i : ℝ) * elementaryWeightQ_phi η_q t   -- was: − (i:ℝ) * (-1)^t.order * Φ_{η_q}(t)
+```
+
+I.e., drop the `(-1)^t.order` factor and flip the subtraction to
+addition (equivalently, change the subtracted coefficient from
+`i·(-1)^r(t)` to `-i`).
+
+**Cascade to cycle 360/361/362 theorems** (all retain validity as
+factual statements about the new symbol):
+
+* `coeff_eta_t_in_eta_zpow_neg` (cycle 360 sub-deliverable 1):
+  statement becomes `Φ_{η_q^(-i)}(t) = -(i:ℝ)·Φ_{η_q}(t) + linearResidualAt i η_q t`.
+  Proof: `unfold; ring`.
+* `linearResidualAt_vertex_eq_zero` (cycle 360 vertex base case): still
+  holds — at vertex, `Φ_{η_q^(-i)}(τ) = -i·η(τ)` (cycle 341 P3), and
+  `linearResidualAt' i η_q τ = -i·η(τ) + i·η(τ) = 0`. Proof tweak:
+  remove `h_ord` rewrite (`vertex.order = 1` no longer used).
+* `linearResidualAt_one_mk_eq` (cycle 360 closed form at i=1):
+  statement becomes
+  ```
+  linearResidualAt 1 ⟦M⟧ t
+    = -(∑ᵢ M.b i · M.derivativeWeightWithSrc M.inverse i t) + M.elementaryWeight t
+  ```
+  (the `(-1)^t.order` factor disappears; the second term's sign flips).
+  Proof: `unfold; rw [...]; push_cast; ring`.
+* `linearResidualAt_succ_mk_eq` (cycle 361 ℤ-form lift): statement
+  becomes
+  ```
+  linearResidualAt (m+1) ⟦M⟧ t
+    = -(∑ⱼ (M.powRep (m+1)).2.b j · …) + (m+1)·M.elementaryWeight t
+  ```
+  Proof: same recipe, drop `(-1)^t.order`.
+* `derivativeWeightWithSrc_eq_of_strict_subtree_agreement` (cycle 362):
+  **UNAFFECTED** — this theorem concerns `derivativeWeightWithSrc`'s
+  strict-subtree dependence, which is independent of how
+  `linearResidualAt` is signed.
+* All cycle 360/361 non-vacuity `example`s: minor restatement to match
+  new theorem signatures.
+
+**LOC estimate for cycle 364**: ≈ 40–60 LOC of restatement + proof tweaks
+in `Section422.lean` (5 named theorems × ~6 LOC each + ~3 examples).
+Zero new mathematical content; all proofs are mechanical sign updates.
+
+**Phase D.3.b Step 2 viability under the corrected definition**: now
+the cycle 361 closed form reads
+`linearResidualAt (m+1) ⟦M⟧ t = -(∑ⱼ powRep-sum stuff) + (m+1)·M.elementaryWeight t`,
+and Step 2 (strict-subtree dependence) becomes:
+
+> Show that `-(∑ⱼ (M.powRep (m+1)).2.b j · (M.powRep (m+1)).2.derivativeWeightWithSrc (M.powRep (m+1)).2.inverse j t) + (m+1)·M.elementaryWeight t`
+> depends only on `M.elementaryWeight` at strict subtrees of `t`.
+
+This is now **plausibly tractable** (the strict-subtree cancellation
+the cycle 362 worker note flagged as the substantive obstacle was
+specifically the `(m+1)·(-1)^r(t)·M.elementaryWeight t` term — under
+the corrected sign, this term cancels CLEANLY against a `+(m+1)·η(t)`
+contribution implicit in the sum). The cancellation recipe (Path 3.1
+per cycle 362 task results) becomes:
+
+1. Extract the `M.elementaryWeight t` contribution from
+   `(M.powRep (m+1)).2.derivativeWeightWithSrc (M.powRep (m+1)).2.inverse j t`
+   via a structural unfolding analogous to cycle 235's
+   `inverseDerivativeWeight_eq_derivativeWeightWithSrc_inverse` lifted to
+   composite representatives.
+2. Show that summing over `j` with weights `(M.powRep (m+1)).2.b j` gives
+   exactly `-(m+1)·M.elementaryWeight t` plus a remainder depending only
+   on strict subtrees.
+3. Combine with the `+(m+1)·M.elementaryWeight t` term to get the
+   strict-subtree residual.
+
+LOC budget for cycle 365 Step 2: ≈ 150–250 LOC (same as cycle 362's
+estimate, but now the load-bearing identity is well-defined).
+
+#### Cycle 364 entry-point recommendation
+
+**Priority 0**: ship the definition fix as a single focused cycle.
+
+* **Why a dedicated cycle**: the symbol cascade (cycle 360/361 closed
+  forms + 4–5 non-vacuity `example`s) needs single-cycle atomicity to
+  avoid mid-cycle compilation breakage of `Section422.lean`.
+* **Risk**: very low (mechanical sign updates; all proofs are
+  `unfold; push_cast; ring`-class).
+* **Streak preservation**: axiom-clean, sorry count 0, regression-free
+  is preserved.
+
+**Priority 1** (after fix): document the empirical computation IN
+THE CODE as `linearResidualAt_explicitEuler_cherry_eq_one` and
+`linearResidualAt_heun_cherry_eq_one` examples — these are non-vacuity
+sanity checks that catch any future sign regression.
+
+**Priority 2** (cycle 365+): attempt Phase D.3.b Step 2 (strict-subtree
+parametricity) under the corrected definition. The cancellation
+argument is now structurally clean.
+
+#### Audit-doc cross-reference
+
+* New Lean theorem this cycle: `sum_i_alpha_ne_zero_of_stable_preconsistent`
+  in `Section422.lean` after `coef_α_pos_of_stable_preconsistent`
+  (line ~939). UNAFFECTED by the audit finding.
+* Cycle 362 `derivativeWeightWithSrc_eq_of_strict_subtree_agreement`
+  (`Section381.lean:2830`): UNAFFECTED by the audit finding — this
+  is the structural strict-subtree-dependence lemma for
+  `derivativeWeightWithSrc`, downstream of any `linearResidualAt`
+  sign choice.
+* Per-cycle update line for cycle 363: P1 shipped (1 theorem + 1
+  example, axiom-clean); P2 shipped (this audit doc).
+  Phase D.3.b Step 2 deferred to cycle 365+ (post-redefinition).
+  Phase D.3.b redefinition deferred to cycle 364.

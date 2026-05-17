@@ -938,6 +938,35 @@ theorem coef_α_pos_of_stable_preconsistent
   rw [coef_α_eq_ρPoly_deriv_at_one_of_preconsistent M hPre]
   exact M.ρPoly_deriv_eval_one_pos_of_stable_preconsistent hk hStab hPre
 
+/-- *Phase D.3.c (cycle 363) — non-vanishing of `Σᵢ i·αᵢ` under
+stability + preconsistency.* This is the load-bearing α-side
+non-vanishing fact for Phase D.3.d's recursion: at every non-vertex
+tree `t`, the cycle 360/361 closed form for
+`linearResidualAt i ⟦M⟧ t` produces a linear equation in `η(t)`
+whose coefficient is `(-1)^t.order · Σᵢ i·αᵢ` (modulo β-side and
+D-side corrections). Phase D.3.d's construction
+`underlyingOneStepMethod_aux M t := (RHS) / coef_α` requires this
+denominator to be non-zero, which this theorem discharges.
+
+Direct corollary of cycle 344's `coef_α_pos_of_stable_preconsistent`
+(strict positivity) via `ne_of_gt`. -/
+theorem sum_i_alpha_ne_zero_of_stable_preconsistent
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hk : 0 < k) (hStab : M.IsStable) (hPre : M.IsPreconsistent) :
+    (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ) ≠ 0 :=
+  ne_of_gt (coef_α_pos_of_stable_preconsistent M hk hStab hPre)
+
+/-- *Non-vacuity for Phase D.3.c (cycle 363):* `bdf2LMM` is stable +
+preconsistent with `k = 2 > 0`, so its α-coefficient sum is non-zero
+(equals `2/3 ≠ 0` per the existing non-vacuity example below). -/
+example :
+    (∑ i : Fin 2, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section451.bdf2LMM.α i.succ) ≠ 0 :=
+  sum_i_alpha_ne_zero_of_stable_preconsistent
+    OpenMath.Chapter4.Section451.bdf2LMM (by norm_num)
+    OpenMath.Chapter4.Section451.bdf2LMM_isStable
+    OpenMath.Chapter4.Section441.bdf2LMM_isPreconsistent
+
 /-- *Non-vacuity for P1 (cycle 344):* `explicitEulerLMM`'s
 `coef_α = 1` matches the §441 closed form `ρ'(1) = 1` at `k = 1`,
 `α₁ = 1`. -/
