@@ -239,4 +239,69 @@ theorem bdf2LMM_isGStable : bdf2LMM.IsGStable :=
   ⟨bdf2GWitness, bdf2GWitness_isSymm, bdf2GWitness_posDef,
     bdf2_gMatrix_posSemidef⟩
 
+/-! ## Dahlquist (zero-)stability for BDF2 (cycle 346)
+
+We ship `bdf2LMM.IsStable` directly from the homogeneous recurrence in
+`OpenMath/Chapter4/Section404.lean`. BDF2's homogeneous recurrence
+unfolds to `Y (m+2) = (4/3) · Y (m+1) - (1/3) · Y m`, whose
+characteristic polynomial has roots `z = 1` and `z = 1/3` (both real,
+both in the closed unit disc, root `1` simple). Closed-form solutions
+are `Y_n = A + B · (1/3)^n` with
+`A := (3·Y 1 - Y 0)/2` and `B := (3·(Y 0 - Y 1))/2`, derived from
+matching `Y_0`, `Y_1`. Boundedness follows from
+`|Y_n| ≤ |A| + |B|·(1/3)^n ≤ |A| + |B|`. -/
+
+/-- BDF2's homogeneous-recurrence solutions decompose as
+`Y_n = A + B · (1/3)^n` where
+`A := (3 · Y 1 - Y 0) / 2` and `B := (3 · (Y 0 - Y 1)) / 2`.
+
+Proved by strong induction on `n`; base cases at `n = 0, 1` are
+direct arithmetic, and the inductive step at `n + 2` uses the
+homogeneous recurrence `Y (n+2) = (4/3) · Y (n+1) - (1/3) · Y n`
+plus the IH at `n + 1` and `n`. -/
+private theorem bdf2_solution_decomp (Y : ℕ → ℝ)
+    (hY : bdf2LMM.IsHomogeneousSolution Y) :
+    ∀ n, Y n = (3 * Y 1 - Y 0) / 2
+              + (3 * (Y 0 - Y 1)) / 2 * (1 / 3 : ℝ) ^ n := by
+  -- Recurrence in clean form: `Y (m+2) = (4/3)·Y (m+1) + (-1/3)·Y m`.
+  have hrec : ∀ m, Y (m + 2) = (4 / 3 : ℝ) * Y (m + 1) + (-1 / 3) * Y m := by
+    intro m
+    have h := hY m
+    simp [bdf2LMM, Fin.sum_univ_two] at h
+    linarith
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    match n, ih with
+    | 0, _ => simp; ring
+    | 1, _ => simp; ring
+    | n + 2, ih =>
+      rw [hrec n, ih (n + 1) (by omega), ih n (by omega)]
+      ring
+
+/-- **BDF2 is Dahlquist-stable** (Butcher §403, p. 341).
+
+Every solution of BDF2's homogeneous recurrence is bounded: the
+explicit decomposition (`bdf2_solution_decomp`) yields
+`|Y_n| ≤ |A| + |B|`. -/
+theorem bdf2LMM_isStable : bdf2LMM.IsStable := by
+  intro Y hY
+  refine ⟨|((3 * Y 1 - Y 0) / 2)| + |((3 * (Y 0 - Y 1)) / 2)|,
+          fun n => ?_⟩
+  rw [bdf2_solution_decomp Y hY n]
+  have h_one_third_nonneg : (0 : ℝ) ≤ 1 / 3 := by norm_num
+  have h_one_third_le_one : (1 / 3 : ℝ) ≤ 1 := by norm_num
+  calc |((3 * Y 1 - Y 0) / 2) + ((3 * (Y 0 - Y 1)) / 2) * (1 / 3 : ℝ) ^ n|
+      ≤ |((3 * Y 1 - Y 0) / 2)|
+        + |((3 * (Y 0 - Y 1)) / 2) * (1 / 3 : ℝ) ^ n| := abs_add_le _ _
+    _ = |((3 * Y 1 - Y 0) / 2)|
+        + |((3 * (Y 0 - Y 1)) / 2)| * |(1 / 3 : ℝ) ^ n| := by rw [abs_mul]
+    _ ≤ |((3 * Y 1 - Y 0) / 2)|
+        + |((3 * (Y 0 - Y 1)) / 2)| * 1 := by
+          gcongr
+          rw [abs_pow, abs_of_nonneg h_one_third_nonneg]
+          exact pow_le_one₀ h_one_third_nonneg h_one_third_le_one
+    _ = |((3 * Y 1 - Y 0) / 2)|
+        + |((3 * (Y 0 - Y 1)) / 2)| := by ring
+
 end OpenMath.Chapter4.Section451

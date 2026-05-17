@@ -862,4 +862,70 @@ example :
     OpenMath.Chapter4.Section404.explicitEulerLMM
     OpenMath.Chapter4.Section404.explicitEulerLMM_isConsistent
 
+/-! ### Phase D′ scaffolding (cycle 346) — `coef_β` non-negativity helper
+
+Cycle 345's `Eq422a_at_vertex_eta_eq_of_stable_preconsistent` takes the
+β-side non-negativity hypothesis `0 ≤ coef_β(M)` as an explicit
+assumption. The full Phase D′ derivation of this hypothesis from
+`M.IsStable + M.IsConsistent` is multi-cycle (analog of the §441
+`ρPoly_deriv_eval_one_pos_of_stable_preconsistent` α-side bridge but
+for `coef_β`). This cycle ships a single-cycle additive helper:
+methods with all-non-negative β-coefficients (which includes
+`bdf2LMM`, where `β 1 = β 2 = 0` and `β 0 = 2/3 ≥ 0`) admit a direct
+non-negativity proof. -/
+
+/-- *Phase D′ helper (cycle 346):* if every β-coefficient of an LMM
+is non-negative, then so is `coef_β(M) := Σ_{i:Fin (k+1)} i · M.β i`.
+One-line structural lemma. -/
+theorem coef_β_nonneg_of_β_nonneg
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hβ : ∀ i : Fin (k + 1), 0 ≤ M.β i) :
+    0 ≤ ∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i := by
+  apply Finset.sum_nonneg
+  intro i _
+  exact mul_nonneg (Nat.cast_nonneg _) (hβ i)
+
+/-- BDF2's β-coefficients are all non-negative
+(`β 0 = 2/3, β 1 = β 2 = 0`). -/
+theorem bdf2LMM_β_nonneg :
+    ∀ i : Fin (2 + 1), 0 ≤ OpenMath.Chapter4.Section451.bdf2LMM.β i := by
+  intro i
+  fin_cases i
+  all_goals simp [OpenMath.Chapter4.Section451.bdf2LMM]
+  all_goals try norm_num
+
+/-- BDF2's `coef_β` is non-negative (in fact `= 0`, since
+`β 1 = β 2 = 0` carry the only non-zero weights in the sum). -/
+theorem bdf2LMM_coef_β_nonneg :
+    0 ≤ ∑ i : Fin (2 + 1), ((i.val : ℕ) : ℝ) *
+          OpenMath.Chapter4.Section451.bdf2LMM.β i :=
+  coef_β_nonneg_of_β_nonneg OpenMath.Chapter4.Section451.bdf2LMM
+    bdf2LMM_β_nonneg
+
+/-- *Non-vacuity (cycle 346):* closing cycle 345's deferred BDF2
+non-vacuity for `Eq422a_at_vertex_eta_eq_of_stable_preconsistent`.
+The underlying-one-step-method `η ∈ G₁` corresponding to BDF2 pins
+`η(τ) = 1`.
+
+Numerical justification: BDF2 has `coef_α = 1·(4/3) + 2·(-1/3) = 2/3`,
+`coef_β = 0·(2/3) + 1·0 + 2·0 = 0`, `sum_β = 2/3`, so
+`η(τ) = (2/3)/(2/3 + 0) = 1`. The β-side non-negativity discharges
+via `bdf2LMM_coef_β_nonneg`; Dahlquist-stability via cycle 346's
+`bdf2LMM_isStable`; preconsistency via cycle 175's
+`bdf2LMM_isPreconsistent` (Section441). -/
+example (η_q : Quotient PhiEquivalent.setoidSigma)
+    (hEq : Eq422a OpenMath.Chapter4.Section451.bdf2LMM η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex = 1 := by
+  have h := Eq422a_at_vertex_eta_eq_of_stable_preconsistent
+    OpenMath.Chapter4.Section451.bdf2LMM
+    (by norm_num : (0 : ℕ) < 2)
+    OpenMath.Chapter4.Section451.bdf2LMM_isStable
+    OpenMath.Chapter4.Section441.bdf2LMM_isPreconsistent
+    bdf2LMM_coef_β_nonneg
+    hEq
+  rw [h]
+  simp [OpenMath.Chapter4.Section451.bdf2LMM,
+    Fin.sum_univ_two, Fin.sum_univ_three]
+  norm_num
+
 end OpenMath.Chapter4.Section422
