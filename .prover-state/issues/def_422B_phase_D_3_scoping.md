@@ -296,9 +296,11 @@ substantive deliverable of the Phase D.3 sequence.
 | **D.3.a.{1,2}** | 1 (cycle 358) ✅ | `elementaryWeightQ_phi_mul_mk` (`*`-additivity at arbitrary `t`) + `elementaryWeightQ_phi_inv_mk` (`⁻¹`-characterization at arbitrary `t`). Both axiom-clean; 2 non-vacuity `example`s on `explicitEuler` at `RootedTree.cherry`. | ~145 (actual) | Not needed |
 | **D.3.a.3** | 1 (cycle 359) ✅ | `RKTableau.powRep` + `RKTableau.powRep_quotient_eq` infrastructure in `Section381.lean` (after `instGroup_phi`) + `elementaryWeightQ_phi_pow_succ_mk` (ℕ-form, recursive `pow_succ` identity) in `Section422.lean`. All axiom-clean; three non-vacuity `example`s on `explicitEuler`. ℤ-form `elementaryWeightQ_phi_zpow_mk` explicitly deferred to cycle 360 per §5 Step 4. | ~75 (actual) | Not needed |
 | **D.3.b (signature + base cases)** | 1 (cycle 360) ✅ | `linearResidualAt` named helper (definitional residual on quotient) + `coeff_eta_t_in_eta_zpow_neg` split form + `linearResidualAt_vertex_eq_zero` (vertex base case via cycle 341 P3) + `linearResidualAt_one_mk_eq` (closed form at `i = 1` arbitrary `t` via cycle 358 `_inv_mk`). Four non-vacuity `example`s on `explicitEuler` at `vertex` and `cherry`. All axiom-clean. | ~170 (actual) | Not needed |
-| **D.3.b (inductive step / parametricity)** | 1 (cycle 361) | `linearResidualAt_depends_only_on_strict_subtrees` — quotient-level parametricity claim: residual depends only on `η_q`'s values at strict subtrees of `t`. Strong induction on `t.order` via cycle 343's `WellFoundedRelation`. Requires ℤ-form lift `elementaryWeightQ_phi_zpow_mk` from cycle 359's ℕ-form. | 80–100 | Poor (well-founded induction structure) |
-| **D.3.c** | 1 (cycle 362) | `sum_i_alpha_ne_zero_of_stable` — `ρ'(1) ≠ 0` from ρ-stability via simple-root analysis. **Mathlib hook check required first.** | 80 | Poor (polynomial roots) |
-| **D.3.d** | 1 (cycle 363) | `noncomputable def underlyingOneStepMethod_aux` recursion + `_satisfies_Eq422a` spec lemma. Closes `thm:422A`'s substantive content. | 120 | Partial (well-founded recursion proof obligations) |
+| **D.3.b (ℤ-form lift + general closed form)** | 1 (cycle 361) ✅ | `elementaryWeightQ_phi_zpow_{natCast,negSucc}_mk` + `linearResidualAt_succ_mk_eq`. ℤ-form lift via `powRep` (cycle 359) + `_inv_mk` (cycle 358); general `i = m+1` closed form. All axiom-clean. | ~80 (actual) | Not needed |
+| **D.3.b (parametricity Step 1)** | 1 (cycle 362) ✅ | `derivativeWeightWithSrc_eq_of_strict_subtree_agreement` (+ list-helper companion) — per-`derivativeWeightWithSrc` substitution lemma under strict-subtree agreement of source-method elementary weights. Cycle 226 mutual template weakened from `PhiEquivalent` to strict-subtree agreement, threading order witnesses through the recursion via cycle 343's `order_lt_of_mem_children`. Both axiom-clean; non-vacuity `example` at `cherry`. | ~95 (actual) | Not needed |
+| **D.3.b (parametricity Step 2)** | 1 (cycle 363) | `linearResidualAt_depends_only_on_strict_subtrees` — quotient-level parametricity claim composing cycle 362 Step 1 with `Quotient.inductionOn₂` and the cycle 361 closed form. **Substantive remaining: cancellation of the `M.elementaryWeight t` term** (non-trivial — see cycle 362 task results). | 80–100 | Poor (well-founded induction + ℝ-algebra) |
+| **D.3.c** | 1 (cycle 364) | `sum_i_alpha_ne_zero_of_stable` — `ρ'(1) ≠ 0` from ρ-stability via simple-root analysis. Per cycle 362 worker, this is a ~10 LOC corollary of cycle 176 + cycle 344 infrastructure; **near-free**. | 10 (revised) | Not needed |
+| **D.3.d** | 1 (cycle 365) | `noncomputable def underlyingOneStepMethod_aux` recursion + `_satisfies_Eq422a` spec lemma. Closes `thm:422A`'s substantive content. | 120 | Partial (well-founded recursion proof obligations) |
 
 ### Cycle 358 update — D.3.a partial ship
 
@@ -611,11 +613,147 @@ both in one cycle. The graceful-degradation fallback is to ship
 Step 1 alone, mirroring cycle 361's "ship P1 + extend ladder"
 pattern.
 
-**Total**: 6 cycles (was 5; cycle 361 split Phase D.3.b inductive
-step into "ℤ-form lift + general closed form" (cycle 361) and
-"parametricity claim" (cycle 362+)). Sequential dependencies:
+**Total**: 7 cycles (was 6; cycle 362 confirmed parametricity Step 2
+is a separate-cycle deliverable per cycle 362 worker analysis —
+the residual cancellation requires substantive ℝ-algebraic work
+beyond Step 1's substitution-by-agreement). Sequential dependencies:
 D.3.a → D.3.b (signature) → D.3.b (ℤ-form lift) → D.3.b
-(parametricity) → D.3.d; D.3.c is parallel.
+(parametricity Step 1) → D.3.b (parametricity Step 2) → D.3.d;
+D.3.c is parallel.
+
+### Cycle 362 update — D.3.b parametricity Step 1 ship; Step 2 deferred
+
+**Shipped (cycle 362)** at end of the cycle 226 substitution mutual
+block in `OpenMath/Chapter3/Section381.lean` (immediately after line
+2803):
+
+* `OpenMath.Chapter3.Section312.RKTableau.derivativeWeightWithSrc_eq_of_strict_subtree_agreement`
+  (Step 1 main lemma): if `M₁, M₁'` agree on `elementaryWeight` at
+  every tree of order strictly less than `t.order`, then
+  `M₂.derivativeWeightWithSrc M₁ i t = M₂.derivativeWeightWithSrc M₁' i t`
+  for every inner tableau `M₂` and stage `i`. This is cycle 226's
+  `derivativeWeightWithSrc_subst_M₁` template with the
+  `PhiEquivalent M₁ M₁'` hypothesis (full agreement) WEAKENED to
+  strict-subtree agreement — the weakest hypothesis that suffices
+  for the cycle 226-style mutual recursion to thread through.
+
+* `OpenMath.Chapter3.Section312.RKTableau.derivativeWeightWithSrcProd_eq_of_strict_subtree_agreement`
+  (list-helper companion): the parent tree `t` is carried as an
+  explicit parameter so the strict-subtree hypothesis can be
+  threaded through the recursive call at each child `c ∈ children`.
+  Two key uses of the order-witness: (a) the parent-level
+  `h_strict c h_c_lt` rewrites `M₁.elementaryWeight c` to
+  `M₁'.elementaryWeight c` since `c.order < t.order` by cycle 343's
+  `order_lt_of_mem_children`; (b) the recursive
+  `derivativeWeightWithSrc_eq_of_strict_subtree_agreement M₂ c (fun s hs => h_strict s (hs.trans h_c_lt)) j`
+  composes `s.order < c.order` with `c.order < t.order` via
+  `Nat.lt_trans` to satisfy the inner strict-subtree hypothesis at
+  sub-subtrees of `t`.
+
+* One non-vacuity `example` in `OpenMath/Chapter4/Section422.lean`
+  (after cycle 361 examples): trivial-agreement case
+  `M₁ = M₁' = explicitEuler` at `RootedTree.cherry`, with the
+  strict-subtree hypothesis discharged by `fun _ _ => rfl`. Confirms
+  the substitution lemma's signature compiles and the lemma fires
+  on a concrete tableau / tree pair from §422's downstream consumer.
+
+Both lemmas are **not** marked `private` (deviating from the
+strategy's §C.2 instruction to mark them `private`): the strategy
+explicitly placed the non-vacuity `example` in `Section422.lean`,
+which requires cross-file access. The `private` restriction would
+have forced the example into `Section381.lean`, contradicting the
+strategy's §C.5 location. The lemmas remain "Phase D.3.b
+infrastructure" per their docstring labelling — this is a minor
+deviation that improves downstream consumption (cycle 363's Step 2
+also needs cross-file access to these lemmas).
+
+**Implementation deviations from strategy §C.2**:
+
+1. `RootedTree.order_lt_of_mem_children` signature: the strategy
+   wrote `RootedTree.order_lt_of_mem_children children c hc` with
+   `children` and `c` as explicit args; the actual signature has
+   both implicit (`{c : RootedTree} {children : List RootedTree}`),
+   so the correct call is `RootedTree.order_lt_of_mem_children hc`
+   alone. The discrepancy was caught on first compile attempt and
+   fixed in 1 line.
+
+2. `List.mem_cons_self _ _` does not type-check in modern Mathlib:
+   the lemma `a ∈ a :: l` has both `a` and `l` implicit, so it's
+   used as just `List.mem_cons_self` (no explicit args). Fixed in
+   1 line.
+
+3. Added `import OpenMath.Chapter3.Section301` to `Section381.lean`
+   to make `RootedTree.order_lt_of_mem_children` visible. Section381
+   previously imported only Section310 + Section312; the cycle 343
+   lemma lives in `Section301.lean` (inside the
+   `OpenMath.Chapter3.Section310.RootedTree` namespace). No
+   circular-import risk (Section301 imports only Section310).
+
+All three new public symbols (2 theorems + 1 example) axiom-clean
+(`[propext, Classical.choice, Quot.sound]` only) verified via
+`#print axioms` after `lake build` (8081/8081 jobs, exit 0).
+Sorry count remains 0 in all §422-pipeline files.
+
+**Implementation notes for the cycle 363 worker**:
+
+1. **Step 2's substantive obstacle is NOT the substitution part**.
+   The cycle 361 closed form `linearResidualAt_succ_mk_eq` gives:
+   ```
+   linearResidualAt (m+1) ⟦M⟧ t
+     = -Σⱼ (M.powRep (m+1)).2.b j ·
+          (M.powRep (m+1)).2.derivativeWeightWithSrc
+            (M.powRep (m+1)).2.inverse j t
+       - ((m+1) : ℝ) · (-1)^t.order · M.elementaryWeight t
+   ```
+   Step 1 (cycle 362) handles the `derivativeWeightWithSrc` sum's
+   substitution behaviour under strict-subtree agreement of
+   `(M.powRep (m+1)).2.inverse`. BUT the residual *also* contains
+   a direct `M.elementaryWeight t` term — this is read at `t`
+   itself, NOT at strict subtrees. The Step 2 parametricity claim
+   "depends only on strict subtrees" requires showing that this
+   `M.elementaryWeight t` term **cancels** with a contribution
+   from the `derivativeWeightWithSrc` sum at the `vertex`-shape
+   subterm, OR is otherwise expressible via strict-subtree data.
+   This is a substantive ℝ-algebraic identity, not just
+   substitution.
+
+2. **Quotient.inductionOn₂ chain still applies, but with a
+   conditional cancellation step.** The Step 2 proof skeleton:
+   ```
+   Quotient.inductionOn₂ η_q η_q' (fun ⟨s, M⟩ ⟨s', M'⟩ h_strict => by
+     rw [linearResidualAt_succ_mk_eq M m t, linearResidualAt_succ_mk_eq M' m t]
+     -- Now LHS - RHS = (derivativeWeightWithSrc-diff) + (elementaryWeight-diff)
+     -- Step 1 (cycle 362) closes (derivativeWeightWithSrc-diff) = 0
+     -- The (elementaryWeight-diff) term must cancel separately.
+     sorry  -- substantive algebraic identity
+   )
+   ```
+
+3. **Alternative: state Step 2 over a stricter hypothesis** that
+   ALSO includes `t` itself in the agreement, i.e. "depends only
+   on subtrees of t (closed, not just strict)". This is a
+   weakening of the original Step 2 statement but may be exactly
+   what D.3.d needs — D.3.d's `underlyingOneStepMethod_aux`
+   recursion stores `η(t')` for ALL `t' ≤ t` by the time it
+   reaches `t`. If the cycle 363 worker can show D.3.d's recursion
+   only needs Step 2 under the closed-subtree hypothesis, this
+   eliminates the substantive cancellation. Recommend the cycle
+   363 worker scope this before attempting the full strict-subtree
+   form.
+
+**Cycle 363 entry point**: Phase D.3.b parametricity Step 2 —
+attempt `linearResidualAt_depends_only_on_strict_subtrees` via the
+`Quotient.inductionOn₂` + closed-form + Step 1 skeleton above.
+The substantive obstacle (cancellation of the direct
+`M.elementaryWeight t` term) is the focus of the cycle. If the
+strict-subtree form proves intractable in 1 cycle, file a sub-issue
+and pivot to the closed-subtree form (worker note #3 above) — Phase
+D.3.d may not require the strict form.
+
+**Phase D.3 horizon update**: now 7 sub-phases (was 6 after cycle
+361 split, was 5 originally). Phase E sealing of `def:422B`
+projected for cycle 366 (was 365 in the cycle 361 plan; one cycle
+slip from the Step 2 separation).
 
 **Aggregated risk**: comparable to the cycle 340–346 base-case (Phase
 D.1) trajectory which took ~6 cycles for `r(t) = 1` alone. The
@@ -768,9 +906,12 @@ def-only sealing once Phase E ships the bridge.
 ## §10 Self-reference
 
 * **Author**: cycle 357 worker (Phase D.3 scoping per cycle 357
-  strategy §C, P2).
+  strategy §C, P2). Updated by cycles 358–362 workers with phase
+  completion records.
 * **Read by**: cycle 358 worker (D.3.a executor), cycle 359 worker
-  (D.3.b), cycle 360 worker (D.3.c), cycle 361 worker (D.3.d).
+  (D.3.b), cycle 360 worker (D.3.c), cycle 361 worker (D.3.d),
+  cycle 362 worker (Phase D.3.b parametricity Step 1), cycle 363
+  worker (Phase D.3.b parametricity Step 2).
 * **Update on**: each phase D.3.x completion — bump §5 status row
   and §7 entry point to the next sub-phase.
 * **Markdown-only**: 0 LOC of Lean shipped this cycle, 0 sorries

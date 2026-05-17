@@ -2117,4 +2117,22 @@ example :
       = 0 :=
   linearResidualAt_vertex_eq_zero 3 _
 
+/-- *Phase D.3.b Step 1 (cycle 362) — non-vacuity at `cherry`.*
+Trivial-agreement case for the cycle 362
+`derivativeWeightWithSrc_eq_of_strict_subtree_agreement` lemma:
+`M₁ = M₁' = explicitEuler`, so the strict-subtree hypothesis is
+discharged by `fun _ _ => rfl`. Confirms the substitution lemma's
+signature compiles and the lemma fires on a concrete tableau / tree
+pair from §422's downstream consumer. A more substantive witness
+exercising genuinely-distinct tableaux agreeing only at strict
+subtrees of `cherry` is left to cycle 363+. -/
+example :
+    RKTableau.explicitEuler.derivativeWeightWithSrc
+        RKTableau.explicitEuler 0 RootedTree.cherry
+      = RKTableau.explicitEuler.derivativeWeightWithSrc
+          RKTableau.explicitEuler 0 RootedTree.cherry :=
+  RKTableau.derivativeWeightWithSrc_eq_of_strict_subtree_agreement
+    (M₁ := RKTableau.explicitEuler) (M₁' := RKTableau.explicitEuler)
+    RKTableau.explicitEuler RootedTree.cherry (fun _ _ => rfl) 0
+
 end OpenMath.Chapter4.Section422

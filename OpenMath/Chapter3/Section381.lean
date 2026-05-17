@@ -1,3 +1,4 @@
+import OpenMath.Chapter3.Section301
 import OpenMath.Chapter3.Section310
 import OpenMath.Chapter3.Section312
 import Mathlib.Topology.MetricSpace.Lipschitz
@@ -2800,6 +2801,88 @@ mutual
         congr 1
         refine Finset.sum_congr rfl (fun j _ => ?_)
         rw [derivativeWeightWithSrc_subst_M₁ M₂ hPhi₁ t j]
+end
+
+/- ### `derivativeWeightWithSrc` substitution under strict-subtree agreement
+(cycle 362 — Phase D.3.b inductive step Step 1)
+
+`derivativeWeightWithSrc M₂ M₁ i t` only reads `M₁.elementaryWeight` at
+strict subtrees of `t`: the `mk children` unfolding factors through
+`M₁.elementaryWeight c` for `c ∈ children` (with `c.order < t.order`
+by cycle 343's `order_lt_of_mem_children`), and the recursive
+`derivativeWeightWithSrc M₂ M₁ j c` only sees `M₁.elementaryWeight` at
+strict subtrees of `c` — also strict subtrees of `t` by order
+transitivity. Hence agreement at strict subtrees of `t` suffices to
+match the value, weaker than cycle 226's full `PhiEquivalent M₁ M₁'`. -/
+
+mutual
+  /-- *Phase D.3.b inductive step Step 1 (cycle 362).* If two source
+  tableaux `M₁` and `M₁'` agree on `elementaryWeight` at every tree of
+  order strictly less than `t.order`, then `derivativeWeightWithSrc`
+  on `t` is unchanged for every inner tableau `M₂` and stage `i`.
+
+  Cycle 226's `derivativeWeightWithSrc_subst_M₁` is the special case
+  where the strict-subtree hypothesis is replaced by the stronger
+  `PhiEquivalent M₁ M₁'` (agreement at every tree). The weakening
+  here is needed by Phase D.3.b's parametricity claim that
+  `linearResidualAt i η_q t` depends only on `η_q`'s values at strict
+  subtrees of `t`. -/
+  theorem derivativeWeightWithSrc_eq_of_strict_subtree_agreement
+      {s₁ s₁' s₂ : ℕ}
+      {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+      (M₂ : RKTableau s₂) :
+      ∀ (t : RootedTree)
+        (_h_strict : ∀ s : RootedTree, s.order < t.order →
+            M₁.elementaryWeight s = M₁'.elementaryWeight s)
+        (i : Fin s₂),
+        M₂.derivativeWeightWithSrc M₁ i t
+          = M₂.derivativeWeightWithSrc M₁' i t
+    | RootedTree.mk children, h_strict, i => by
+        show M₂.derivativeWeightWithSrcProd M₁ i children
+              = M₂.derivativeWeightWithSrcProd M₁' i children
+        exact derivativeWeightWithSrcProd_eq_of_strict_subtree_agreement
+          M₂ (RootedTree.mk children) h_strict children
+          (fun _ hc => RootedTree.order_lt_of_mem_children hc) i
+
+  /-- List-helper companion to
+  `derivativeWeightWithSrc_eq_of_strict_subtree_agreement`. The parent
+  tree `t` is carried as an explicit parameter so the strict-subtree
+  hypothesis can be threaded through the recursive call at each
+  child `c ∈ children` (whose strict subtrees are also strict subtrees
+  of `t` by order transitivity). -/
+  theorem derivativeWeightWithSrcProd_eq_of_strict_subtree_agreement
+      {s₁ s₁' s₂ : ℕ}
+      {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+      (M₂ : RKTableau s₂) (t : RootedTree)
+      (h_strict : ∀ s : RootedTree, s.order < t.order →
+          M₁.elementaryWeight s = M₁'.elementaryWeight s) :
+      ∀ (children : List RootedTree)
+        (_h_children_lt : ∀ c ∈ children, c.order < t.order)
+        (i : Fin s₂),
+        M₂.derivativeWeightWithSrcProd M₁ i children
+          = M₂.derivativeWeightWithSrcProd M₁' i children
+    | [], _, _ => rfl
+    | c :: cs, h_children, i => by
+        show (M₁.elementaryWeight c
+                + ∑ j : Fin s₂,
+                    M₂.A i j * M₂.derivativeWeightWithSrc M₁ j c)
+              * M₂.derivativeWeightWithSrcProd M₁ i cs
+            = (M₁'.elementaryWeight c
+                + ∑ j : Fin s₂,
+                    M₂.A i j * M₂.derivativeWeightWithSrc M₁' j c)
+              * M₂.derivativeWeightWithSrcProd M₁' i cs
+        have h_c_lt : c.order < t.order :=
+          h_children c List.mem_cons_self
+        have h_cs_lt : ∀ c' ∈ cs, c'.order < t.order :=
+          fun c' hc' => h_children c' (List.mem_cons_of_mem c hc')
+        rw [derivativeWeightWithSrcProd_eq_of_strict_subtree_agreement
+              M₂ t h_strict cs h_cs_lt i]
+        congr 1
+        rw [h_strict c h_c_lt]
+        congr 1
+        refine Finset.sum_congr rfl (fun j _ => ?_)
+        rw [derivativeWeightWithSrc_eq_of_strict_subtree_agreement
+              M₂ c (fun s hs => h_strict s (hs.trans h_c_lt)) j]
 end
 
 end

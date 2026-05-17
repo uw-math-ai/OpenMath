@@ -1,276 +1,483 @@
-# Strategy — cycle 361
+# Cycle 362 — §422 Phase D.3.b parametricity step (Step 1)
 
-## TL;DR
+## §A — Context check (5 min, mandatory before any code)
 
-Ship **Phase D.3.b inductive-step infrastructure** in
-`OpenMath/Chapter4/Section422.lean`:
-1. **P1 (load-bearing)**: ship the ℤ-form lift
-   `elementaryWeightQ_phi_zpow_mk` (cycle 360 explicitly deferred this).
-2. **P2 (substantive)**: ship `linearResidualAt_depends_only_on_strict_subtrees`
-   (the "depends only on strict subtrees" parametricity claim) via
-   strong induction on `t.order` using cycle 343's
-   `WellFoundedRelation RootedTree := measure RootedTree.order`.
-3. **Fallback** (if P2 stalls): extend the cycle 360 closed-form
-   ladder with `linearResidualAt_two_mk_eq` (mechanical port of
-   `_one_mk_eq` at `i = 2`).
+There is **no Aristotle batch to integrate** this cycle.
 
-Target: 80–120 LOC, axiom-clean, sorry count 0. Per the cycle 360
-task results §"Suggested next approach", this is the natural
-single-cycle deliverable. §422 streak extends to 27 axiom-clean
-cycles.
+Repository state at HEAD `f046f5a` (cycle 361 ship):
 
-**No Aristotle this cycle.** The strong-induction structure is
-delicate and poorly suited; cycle 360's worker noted this
-explicitly. Manual closure only.
+* `OpenMath/Chapter4/Section422.lean` — 2120 LOC, **0 sorries**, builds clean.
+* §422 streak: **27 consecutive axiom-clean cycles** (336–361).
+* Last four deliverables on the Phase D.3 ladder:
+  - Cycle 358: D.3.a.{1,2} (`elementaryWeightQ_phi_{mul,inv}_mk`).
+  - Cycle 359: D.3.a.3 (`RKTableau.powRep` + `_pow_succ_mk`).
+  - Cycle 360: D.3.b sig + base cases (`linearResidualAt` + `_vertex_eq_zero` + `_one_mk_eq`).
+  - Cycle 361: D.3.b ℤ-form lift + general `i = m+1` closed form
+    (`_zpow_{natCast,negSucc}_mk` + `_succ_mk_eq`).
 
-## §A — Context
+The "What I'm stuck on" field in the prompt is **empty**; sorry count
+is **0**. This is the same phantom-template firing pattern diagnosed
+in `consultant_advice_cycle_248.md` / `consultant_advice_cycle_263.md`.
+There is no remediation work; cycle 362 pivots directly to the next
+planned deliverable.
 
-* **Cycle 360 shipped** (axiom-clean, 0 sorries): four new public
-  symbols at `OpenMath/Chapter4/Section422.lean:1797–1969`:
-  - `linearResidualAt (i : ℕ) (η_q : Q) (t : RT) : ℝ` (def)
-  - `coeff_eta_t_in_eta_zpow_neg` (split form)
-  - `linearResidualAt_vertex_eq_zero` (base case at τ)
-  - `linearResidualAt_one_mk_eq` (closed form at `i = 1` at any tree)
-* **Cycle 360 deferred** the ℤ-form lift `elementaryWeightQ_phi_zpow_mk`
-  per the cycle 359 task results' §C.4 graceful degradation. The
-  exact signature was left to be pinned by Phase D.3.b's consumption
-  requirements — which is cycle 361's job.
-* **§422 streak**: 26 consecutive axiom-clean cycles (336–360).
-* **Scoping doc**: `.prover-state/issues/def_422B_phase_D_3_scoping.md`
-  §5 ladder: D.3.b (signature + base cases, cycle 360 ✅) → D.3.b
-  (inductive step, **cycle 361 target**) → D.3.c
-  (`sum_i_alpha_ne_zero_of_stable`, cycle 362) → D.3.d
-  (`underlyingOneStepMethod_aux`, cycle 363) → Phase E sealing
-  (cycle 364).
-* **GPFS** for Section441 still degraded (43+ consecutive timeouts).
-  Section422 compiles fine — keep all work there.
+Pre-flight verification (run once at cycle start):
 
-## §B — Cycle 361 deliverables (priority order)
-
-### P1 (load-bearing) — ℤ-form lift `elementaryWeightQ_phi_zpow_mk`
-
-**Target signature**:
-
-```lean
-theorem RKTableau.elementaryWeightQ_phi_zpow_mk
-    {s : ℕ} (M : RKTableau s) (n : ℤ) (t : RootedTree) :
-    elementaryWeightQ_phi (⟦⟨s, M⟩⟧ ^ n) t =
-      -- representative-form closed expression depending on:
-      --   * n's sign (ofNat vs negSucc),
-      --   * cycle 359's `M.powRep` for the positive-power side,
-      --   * cycle 358's `M.inverse` for the negative-power side
-      sorry
+```
+git log -1 --format='%H %s'              # f046f5a … cycle 361 ship
+wc -l OpenMath/Chapter4/Section422.lean  # 2120
+grep -c sorry OpenMath/Chapter4/Section422.lean  # 0
 ```
 
-**Implementation strategy**: case-split on `n` via
-`match n with | Int.ofNat m => … | Int.negSucc m => …`:
+If any disagrees, escalate; otherwise proceed to §B.
 
-* **`n = Int.ofNat m` case**: `⟦M⟧ ^ ↑m = ⟦M.powRep m⟧` (cycle 359's
-  `powRep_quotient_eq`). Then `elementaryWeightQ_phi ⟦M.powRep m⟧ t`
-  reduces to representative form via cycle 226's
-  `elementaryWeightQ_phi_mk`.
-* **`n = Int.negSucc m` case**: `⟦M⟧ ^ (Int.negSucc m) = (⟦M⟧^(m+1))⁻¹`
-  via `zpow_negSucc`. Compose cycle 359's `powRep_quotient_eq` with
-  cycle 358's `elementaryWeightQ_phi_inv_mk` (or compose cycle 222's
-  `inverseQ_phi_mk` with the positive case at `m + 1`).
+## §B — What to work on
 
-**LOC budget**: ~30–50 LOC. Most lines are sign-case bookkeeping.
+**Primary target (P1, ~80–110 LOC, expected axiom-clean):**
 
-**Why P1 first**: cycle 360's `linearResidualAt_one_mk_eq` only
-handles `i = 1` via the special-case bridge `Nat.cast_one + zpow_neg_one`.
-For general `i ≥ 2`, the inductive step (P2) needs to evaluate
-`Φ_{η_q^(-i)}(t)` at arbitrary trees, which requires this lift.
+Phase D.3.b inductive step **Step 1**, per the cycle 361 worker's
+"Suggested next approach" recorded in
+`.prover-state/issues/def_422B_phase_D_3_scoping.md` §"Cycle 362
+entry point" (lines 605–612).
 
-### P2 (substantive) — `linearResidualAt_depends_only_on_strict_subtrees`
-
-**Target signature** (per scoping doc §5 cycle-361 slot):
+Ship a **per-`derivativeWeightWithSrc` substitution lemma** under
+strict-subtree agreement of the source method's elementary weights:
 
 ```lean
-theorem RKTableau.linearResidualAt_depends_only_on_strict_subtrees
-    (i : ℕ) (η_q η_q' : Quotient PhiEquivalent.setoidSigma) (t : RT)
+/-- *Phase D.3.b inductive step Step 1 (cycle 362).* If two source
+tableaux `M₁` and `M₁'` agree on elementary weights at every tree of
+order strictly less than `t.order`, then `derivativeWeightWithSrc`
+on `t` is unchanged (for any inner tableau `M₂` and stage `i`).
+
+This is the cycle 226 `derivativeWeightWithSrc_subst_M₁` template
+(which used the stronger `PhiEquivalent M₁ M₁'` hypothesis, i.e.
+full elementary-weight agreement at every tree) **weakened** to the
+substitution structure that the Phase D.3.b parametricity claim
+needs: `M₁` and `M₁'` only have to agree at strict subtrees of `t`
+because `derivativeWeightWithSrc M₂ M₁ i (mk children)` references
+`M₁.elementaryWeight` exclusively at `c ∈ children` (strict subtrees
+of `t`) and recursively at sub-subtrees of those (also strict
+subtrees of `t` since order strictly decreases). -/
+private theorem derivativeWeightWithSrc_eq_of_strict_subtree_agreement
+    {s₁ s₁' s₂ : ℕ}
+    {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+    (M₂ : RKTableau s₂) :
+    ∀ (t : RootedTree)
+      (_h_strict : ∀ s : RootedTree, s.order < t.order →
+          M₁.elementaryWeight s = M₁'.elementaryWeight s)
+      (i : Fin s₂),
+      M₂.derivativeWeightWithSrc M₁ i t
+        = M₂.derivativeWeightWithSrc M₁' i t
+```
+
+Plus the obvious list-helper companion via a `mutual` block (signature
+in §C.2 below).
+
+**Place** the new mutual block in
+`OpenMath/Chapter3/Section381.lean` **immediately after cycle 226's
+`derivativeWeightWithSrc_subst_M₁` / `derivativeWeightWithSrcProd_subst_M₁`
+block** (after line 2803, before the next `end` / `section` divider).
+Mark both as `private` — they are Phase D.3.b infrastructure, not
+public API.
+
+**Plus one non-vacuity `example`** in
+`OpenMath/Chapter4/Section422.lean` (after cycle 361 examples,
+line ~2118):
+exercise the substitution lemma with `M₁ = M₁' := explicitEuler`
+at `t := RootedTree.cherry` (order 2). The trivial-agreement case
+confirms the signature compiles and the lemma fires. A more
+substantive witness exercising genuinely-distinct tableaux that
+agree only at strict subtrees of `cherry` is left to cycle 363+
+(it requires constructing two RKTableaux with deliberately matched
+strict-subtree weights, which is more bookkeeping than the cycle's
+budget allows).
+
+**Stretch target (P2, ~60–80 LOC, foreseeably multi-cycle):**
+
+If P1 closes within ~75 min budget, attempt the parametricity claim:
+
+```lean
+/-- *Phase D.3.b inductive step Step 2 (cycle 362 stretch).* The
+linear residual `linearResidualAt i η_q t` depends only on `η_q`'s
+values at strict subtrees of `t`. -/
+theorem linearResidualAt_depends_only_on_strict_subtrees
+    (i : ℕ) (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+    (t : RT)
     (h_strict : ∀ s : RT, s.order < t.order →
-      elementaryWeightQ_phi η_q s = elementaryWeightQ_phi η_q' s) :
+        elementaryWeightQ_phi η_q s = elementaryWeightQ_phi η_q' s) :
     linearResidualAt i η_q t = linearResidualAt i η_q' t
 ```
 
-**Proof recipe**:
+P2 is **foreseeably multi-cycle**. Per cycle 361 worker's analysis,
+the residual `linearResidualAt (m+1) ⟦M⟧ t` from the cycle 361
+`_succ_mk_eq` closed form contains both the
+`(M.powRep (m+1)).2.derivativeWeightWithSrc` sum (Step 1 handles
+its substitution behaviour) AND a separate `M.elementaryWeight t`
+term — so the cancellation of the linear-in-η_q(t) part is a
+substantive algebraic identity, not just substitution. If P2 is
+attempted, the path is:
+- `Quotient.inductionOn₂` on `η_q, η_q'` to get representatives `M, M'`.
+- Bridge `elementaryWeightQ_phi ⟦M⟧ s = M.elementaryWeight s` via cycle 226.
+- Apply cycle 361's `_succ_mk_eq` to both sides.
+- Cancel the `M.elementaryWeight t` and `M'.elementaryWeight t` terms
+  by showing they equal via some property of the
+  `(M.powRep (m+1)).2.derivativeWeightWithSrc` sum (the substantive
+  identity — may not be tractable in 60–80 LOC).
+- Apply Step 1 (P1) to each `derivativeWeightWithSrc` term on each side.
 
-1. Apply strong induction on `t.order` via cycle 343's
-   `WellFoundedRelation RootedTree := measure RootedTree.order`. The
-   recipe is:
-   ```lean
-   induction t using WellFoundedRelation.wf.induction with
-   | _ t ih => …
-   ```
-   or equivalently use `WellFounded.induction` on the underlying
-   `wf` field of the cycle 343 instance.
-2. **Vertex base case** (`t = vertex`, `r(t) = 1`, no strict subtrees):
-   `h_strict` is vacuous; both sides reduce to `0` via cycle 360's
-   `linearResidualAt_vertex_eq_zero`.
-3. **Inductive case** (`t = mk children`, `r(t) ≥ 2`):
-   - Pick representatives `⟨s, M⟩ ∈ η_q` and `⟨s', M'⟩ ∈ η_q'` via
-     `Quotient.inductionOn₂`.
-   - Unfold `linearResidualAt` via P1's ℤ-form lift, exposing the
-     residual as a representative-form expression involving
-     `derivativeWeightWithSrc … j t` (and the primed counterpart).
-   - Use the structural fact: `derivativeWeightWithSrc` at
-     `t = mk children` recursively decomposes as a product over
-     `c ∈ children`. Every recursive call hits a `c` with
-     `c.order < t.order` (cycle 343's `order_lt_of_mem_children`).
-   - Apply `h_strict` at each strict subtree to swap `M`'s
-     elementary weights for `M'`'s, then apply the IH at each
-     strict subtree to swap inner residuals.
+If P2 stalls within the stretch budget, **document the analysis in
+the cycle results and defer to cycle 363**. Do not ship a partial
+sorry-bearing P2.
 
-**LOC budget**: ~50–80 LOC. The induction structure is the bulk.
+**Graceful degradation (P3, fallback if P1 stalls):**
 
-**Risk profile**: MEDIUM-HIGH. The structural recursion through
-`derivativeWeightWithSrc` is non-trivial. If P2 stalls past 60–90
-min into the cycle, **fall back to §C below**.
+Pivot to the cycle 363 deliverable
+**`sum_i_alpha_ne_zero_of_stable_preconsistent`** (Phase D.3.c) as
+a small-LOC ship. Per §D.3 below, this is a 1–2 line corollary of
+existing cycle 176 + cycle 344 infrastructure (~10 LOC + 1 BDF2
+witness). Use ONLY IF P1 stalls past ~75 min; otherwise hold for
+deliberate cycle 363 ship.
 
-### P3 (optional stretch) — Phase D.3.c parallel scoping
+## §C — Concrete proof recipe for P1
 
-If P1 + P2 land cleanly with budget remaining, write a short
-scoping appendix to `.prover-state/issues/def_422B_phase_D_3_scoping.md`
-§5 Phase D.3.c (~30 lines) verifying Mathlib's polynomial-root-
-multiplicity API for `sum_i_alpha_ne_zero_of_stable`. **No Lean
-code for D.3.c this cycle** — D.3.c is the cycle 362 deliverable.
+### §C.1 — Mathematical content
 
-## §C — Graceful degradation fallback
+For `t = mk children`,
 
-If P2's strong-induction proof stalls past 60 minutes:
+```
+derivativeWeightWithSrc M₂ M₁ i (mk children)
+  = derivativeWeightWithSrcProd M₂ M₁ i children
+  = ∏_{c ∈ children} (M₁.elementaryWeight c
+                       + Σⱼ M₂.A i j · derivativeWeightWithSrc M₂ M₁ j c)
+```
 
-1. **Ship P1 standalone** (the ℤ-form lift). This unblocks downstream
-   D.3.b/c/d work even without the parametricity claim.
-2. **Ship `linearResidualAt_two_mk_eq`** as a mechanical port of
-   cycle 360's `_one_mk_eq` at `i = 2`. Apply P1 at `n = -2`, use
-   `zpow_neg` + `zpow_two` to expose `(η_q⁻¹)^2`, then compose
-   cycle 358's `_inv_mk` with cycle 359's `_pow_succ_mk`. ~15 LOC.
-3. **Ship `linearResidualAt_two_mk_eq` non-vacuity** on `explicitEuler`
-   at `cherry`. ~3 LOC.
-4. **Update scoping doc** to push the inductive step to cycle 362.
+Each `c ∈ children` has `c.order < (mk children).order = t.order`
+(by cycle 343 `RootedTree.order_lt_of_mem_children`), so
+`M₁.elementaryWeight c` is read at a strict subtree of `t`. The
+recursive `derivativeWeightWithSrc M₂ M₁ j c` references
+`M₁.elementaryWeight` at `c`'s strict subtrees, which are
+sub-subtrees of `t` — also strict subtrees of `t` since `s.order <
+c.order < t.order`. So the entire computation only sees
+`M₁.elementaryWeight` at strict subtrees of `t`; hence agreement at
+strict subtrees implies equality.
 
-The fallback ladder preserves the streak (axiom-clean, no sorries)
-while making concrete forward progress.
+### §C.2 — Mutual induction structure (mirrors cycle 226)
 
-## §D — What NOT to try
+```lean
+mutual
+  private theorem derivativeWeightWithSrc_eq_of_strict_subtree_agreement
+      {s₁ s₁' s₂ : ℕ}
+      {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+      (M₂ : RKTableau s₂) :
+      ∀ (t : RootedTree)
+        (_h_strict : ∀ s : RootedTree, s.order < t.order →
+            M₁.elementaryWeight s = M₁'.elementaryWeight s)
+        (i : Fin s₂),
+        M₂.derivativeWeightWithSrc M₁ i t
+          = M₂.derivativeWeightWithSrc M₁' i t
+    | RootedTree.mk children, h_strict, i => by
+        show M₂.derivativeWeightWithSrcProd M₁ i children
+              = M₂.derivativeWeightWithSrcProd M₁' i children
+        exact derivativeWeightWithSrcProd_eq_of_strict_subtree_agreement
+          M₂ (RootedTree.mk children) h_strict children
+          (fun c hc => RootedTree.order_lt_of_mem_children children c hc) i
 
-* **Do NOT submit P2 to Aristotle.** Cycle 360 task results
-  Discovery #3 noted parametricity-style induction is poorly
-  suited to Aristotle's search. Manual closure only.
-* **Do NOT rewrite `RootedTree.Vertex` infrastructure.** The cycle 343
-  `WellFoundedRelation` + `order_lt_of_mem_children` infrastructure
-  is sufficient. Avoid building new vertex/subtree machinery this
-  cycle.
-* **Do NOT use `induction t with | mk children ih =>`** for the P2
-  proof. Per memory `feedback_rootedtree_nested_induction.md`,
-  direct `induction t` fails on nested inductives. Use strong
-  induction on `t.order` via the cycle 343 `WellFoundedRelation`
-  instance.
-* **Do NOT attempt Phase D.3.c (`sum_i_alpha_ne_zero_of_stable`)
-  in the same cycle as P2.** Per scoping doc §5, D.3.c is a cycle
-  362 deliverable. The polynomial-root-multiplicity Mathlib hooks
-  (`Polynomial.rootMultiplicity`, derivative-of-multiple-root lemma)
-  need separate verification; mixing with D.3.b risks both.
-* **Do NOT raise `maxHeartbeats` above 200000.** If the P2 proof's
-  inductive step is slow, decompose into private mutual helpers per
-  cycle 358's `derivativeWeightWithSrc_subst_M₁` pattern.
-* **Do NOT introduce `sorry`/`axiom`/`constant` declarations.** The
-  cycle 200/201/149/150 rollback precedent applies. Either P2 lands
-  axiom-clean or we fall back to §C without sorries.
-* **Do NOT modify `Section441.lean`** — GPFS-blocked (43+ timeouts).
-  Keep all work in `Section422.lean`.
-* **Do NOT touch `RKTableau.id`'s `b` field signature** or any other
-  upstream §381/§422 infrastructure. Cycle 337's `D_phi`/`D_element`
-  design depends on the `b₀=1` implicit convention; modifying it
-  would cascade-break the 26-cycle §422 chain.
-* **Do NOT skip P1 and attempt P2 directly.** P2 at `i ≥ 2` needs
-  the ℤ-form lift; cycle 360's `_one_mk_eq` special-case bridge
-  (`Nat.cast_one + zpow_neg_one`) does not generalise.
+  private theorem derivativeWeightWithSrcProd_eq_of_strict_subtree_agreement
+      {s₁ s₁' s₂ : ℕ}
+      {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+      (M₂ : RKTableau s₂) (t : RootedTree)
+      (h_strict : ∀ s : RootedTree, s.order < t.order →
+          M₁.elementaryWeight s = M₁'.elementaryWeight s) :
+      ∀ (children : List RootedTree)
+        (_h_children_lt : ∀ c ∈ children, c.order < t.order)
+        (i : Fin s₂),
+        M₂.derivativeWeightWithSrcProd M₁ i children
+          = M₂.derivativeWeightWithSrcProd M₁' i children
+    | [], _, _ => rfl
+    | c :: cs, h_children, i => by
+        show (M₁.elementaryWeight c
+                + ∑ j : Fin s₂,
+                    M₂.A i j * M₂.derivativeWeightWithSrc M₁ j c)
+              * M₂.derivativeWeightWithSrcProd M₁ i cs
+            = (M₁'.elementaryWeight c
+                + ∑ j : Fin s₂,
+                    M₂.A i j * M₂.derivativeWeightWithSrc M₁' j c)
+              * M₂.derivativeWeightWithSrcProd M₁' i cs
+        have h_c_lt : c.order < t.order :=
+          h_children c (List.mem_cons_self _ _)
+        have h_cs_lt : ∀ c' ∈ cs, c'.order < t.order :=
+          fun c' hc' => h_children c' (List.mem_cons_of_mem c hc')
+        rw [derivativeWeightWithSrcProd_eq_of_strict_subtree_agreement
+              M₂ t h_strict cs h_cs_lt i]
+        congr 1
+        rw [h_strict c h_c_lt]
+        congr 1
+        refine Finset.sum_congr rfl (fun j _ => ?_)
+        rw [derivativeWeightWithSrc_eq_of_strict_subtree_agreement
+              M₂ c (fun s hs => h_strict s (hs.trans h_c_lt)) j]
+end
+```
 
-## §E — Mathlib hooks to verify early (≤15 min budget)
+Note the **two distinct uses of `h_strict`**:
 
-Run `lean_local_search` / `lean_hover_info` on these *before*
-writing P1/P2 proofs:
+1. **At `c` itself**: `rw [h_strict c h_c_lt]` swaps
+   `M₁.elementaryWeight c` for `M₁'.elementaryWeight c`, using
+   `h_c_lt : c.order < t.order`.
+2. **At strict subtrees of `c`**: the recursive call needs
+   agreement at `s` with `s.order < c.order`; this follows from
+   `h_strict` via `s.order < c.order < t.order` (i.e. the
+   `(fun s hs => h_strict s (hs.trans h_c_lt))` lambda).
 
-1. `Int.recOn` / `match n with | .ofNat m | .negSucc m` —
-   for P1's sign case-split. `match` is likely cleanest.
-2. `zpow_natCast` (or `zpow_ofNat`), `zpow_negSucc`, `zpow_neg`,
-   `zpow_two` — the integer-power bridges. All confirmed present at
-   HEAD via cycle 339's `D_element_zpow_*` non-vacuity ships.
-3. `WellFoundedRelation.wf` field accessor and `WellFounded.induction`
-   — for P2's strong induction. Cycle 343's instance lives at
-   `OpenMath/Chapter3/Section301.lean:177`.
-4. `RootedTree.order_lt_of_mem_children` (cycle 343) at
-   `Section301.lean` — confirms subtree-strict-descent.
-5. `Quotient.inductionOn` / `Quotient.inductionOn₂` — for P2's
-   representative extraction (used pervasively cycles 226–360).
+This is the cycle 226 pattern (line 2769–2803) extended with the
+strict-subtree restriction. Cycle 226 had simpler `hPhi₁ t` /
+`hPhi₁ s` substitutions because `PhiEquivalent` agrees at EVERY
+tree; cycle 362 carries an order-witness through the recursion.
 
-If any hook is missing or has drifted, file `.prover-state/issues/`
-sub-issue and fall back to §C.
+### §C.3 — Key Mathlib / project hooks (verify early via §E)
+
+* `RootedTree.order_lt_of_mem_children` — cycle 343 lemma,
+  `OpenMath/Chapter3/Section301.lean` (search via §E.1).
+* `List.mem_cons_self`, `List.mem_cons_of_mem` — standard `List` API.
+* `Finset.sum_congr` — standard, used pervasively in §381.
+* `Nat.lt_trans` / `.trans` on `<` for `Nat` — standard.
+* Cycle 226 mutual block at `Section381.lean:2769–2803` — the
+  template to mirror.
+
+### §C.4 — Anticipated risks
+
+* **R1 (medium): mutual-induction termination.** The block recurses
+  on tree + list. Cycle 226 succeeded with the same shape, so Lean
+  should infer termination automatically. If it fails, fallback is
+  explicit `termination_by` + `decreasing_by` citing cycle 343's
+  `WellFoundedRelation` instance (line ~177 of `Section301.lean`).
+
+* **R2 (low): `show` reframing.** The `c :: cs` case needs an
+  explicit `show` because `derivativeWeightWithSrcProd M₁ i (c :: cs)`
+  doesn't definitionally reduce in the goal display. Mirror cycle
+  226 line 2789–2796 verbatim.
+
+* **R3 (low): hypothesis lambda elaboration.** The inner
+  `(fun s hs => h_strict s (hs.trans h_c_lt))` may need a
+  `Nat.lt_trans hs h_c_lt` if `.trans` doesn't elaborate on
+  `Nat`-level `<`. Try `.trans` first; fall back to explicit
+  `Nat.lt_trans` only if needed.
+
+* **R4 (low): `List.mem_cons_self` / `List.mem_cons_of_mem` API
+  drift.** Confirm both via §E.4 before writing the body. If
+  renamed (likely to `List.mem_cons_self'` or similar), adjust.
+
+### §C.5 — Non-vacuity `example` (P1 deliverable)
+
+In `OpenMath/Chapter4/Section422.lean` after cycle 361 examples
+(line ~2118):
+
+```lean
+/-- *Phase D.3.b Step 1 (cycle 362) — non-vacuity at `cherry`.*
+Trivial-agreement case: `M₁ = M₁' = explicitEuler`, so the strict-
+subtree hypothesis is discharged by `intro s _; rfl`. Confirms
+the substitution lemma's signature compiles and the lemma fires
+on a concrete tableau / tree pair. -/
+example :
+    OpenMath.Chapter3.Section312.RKTableau.derivativeWeightWithSrc
+        OpenMath.Chapter3.Section312.RKTableau.explicitEuler
+        OpenMath.Chapter3.Section312.RKTableau.explicitEuler
+        0 RootedTree.cherry
+      = OpenMath.Chapter3.Section312.RKTableau.derivativeWeightWithSrc
+          OpenMath.Chapter3.Section312.RKTableau.explicitEuler
+          OpenMath.Chapter3.Section312.RKTableau.explicitEuler
+          0 RootedTree.cherry :=
+  derivativeWeightWithSrc_eq_of_strict_subtree_agreement
+    OpenMath.Chapter3.Section312.RKTableau.explicitEuler
+    RootedTree.cherry (fun _ _ => rfl) 0
+```
+
+A more substantive non-vacuity witness (genuinely distinct M₁, M₁'
+agreeing only at strict subtrees of cherry) is left to cycle 363+.
+
+## §D — What NOT to attempt
+
+### §D.1 — Things ruled out by cycle 361's analysis
+
+* **Do NOT attempt P2 without P1 in hand.** P2 needs Step 1
+  (per-`derivativeWeightWithSrc` substitution) as a load-bearing
+  ingredient. Skipping straight to P2 has no path.
+
+* **Do NOT attempt P2 by direct strong induction on `t.order`
+  without Step 1.** Cycle 361's task results §"Dead ends" flagged
+  this as foreseeable multi-cycle decomposition — the recursive
+  structure of `derivativeWeightWithSrc M₂ M₁ i (mk children)`
+  exposes `M₂`'s internal A-coefficients alongside
+  `M₁.elementaryWeight` at subtrees, requiring delicate inductive
+  infrastructure that simultaneously constrains both `Φ_η_q` and
+  per-stage internal weights at strict subtrees.
+
+* **Do NOT replace cycle 226's
+  `derivativeWeightWithSrc_subst_M₁`** with the strict-subtree
+  version. Cycle 226 is consumed by cycles 226–235's §384 path
+  (left/right Φ-equivalent substitution lemmas, group homomorphism
+  work) that genuinely needs FULL `PhiEquivalent`. Cycle 362's
+  lemma is a strict generalisation taking a strict-subtree
+  hypothesis — introduce as a **sibling**, not a replacement.
+
+### §D.2 — Pattern-violation traps
+
+* **Do NOT use `norm_num`** to bridge
+  `-(((m+1) : ℕ) : ℤ) = Int.negSucc m`. This is definitional `rfl`
+  (cycle 361 Discovery #1; memory entry
+  `feedback_neg_natCast_int_negsucc_rfl`); `norm_num` leaves a
+  display-ambiguous unsolved goal. (Not relevant to cycle 362 P1
+  itself, but worth keeping in mind if P2 is attempted — it touches
+  ℤ-form lifts.)
+
+* **Do NOT introduce `sorry`/`axiom`/`constant`.** Cycle 200/201's
+  rollback of `thm:381H`'s sorry-first scaffold and cycle 149/150's
+  rollback of `def:530B`'s Path A sorry-first apply: either P1
+  lands axiom-clean or we pivot to §D.3's P3 fallback. The §422
+  streak is 27 consecutive axiom-clean cycles — do not break it
+  with a sorry-bearing partial.
+
+* **Do NOT modify `Section441.lean`.** GPFS-blocked (43+ consecutive
+  timeouts per `cycle_182_gpfs_slowness.md` cycle 239). Keep all
+  work in `Section381.lean` (mutual block) and `Section422.lean`
+  (non-vacuity example only).
+
+* **Do NOT use `induction t` on `RootedTree`.** Per memory
+  `feedback_rootedtree_nested_induction`, `induction t` and
+  `RootedTree.recOn` fail on nested inductives. The cycle 226
+  / cycle 362 pattern uses `mutual` block with constructor pattern
+  matching (`| RootedTree.mk children, _, _ => ...`), which is the
+  correct approach for this datatype.
+
+### §D.3 — Phase D.3.c is near-free (P3 fallback details)
+
+Per cycle 361 worker's "Alternative cycle 362 deliverable" + manual
+infrastructure check:
+
+* Cycle 176 ships
+  `LinearMultistepMethod.ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent`
+  (`Section441.lean:599`): under `M.IsStable ∧ M.IsPreconsistent`,
+  `M.ρPoly.derivative.eval 1 ≠ 0`.
+* Cycle 344 ships `coef_α_eq_ρPoly_deriv_at_one_of_preconsistent`
+  (`Section422.lean:704`): under `M.IsPreconsistent`,
+  `(∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ) = M.ρPoly.derivative.eval 1`.
+
+Phase D.3.c's target is therefore a one-line composition:
+
+```lean
+theorem sum_i_alpha_ne_zero_of_stable_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k) (hk : 0 < k)
+    (hStable : M.IsStable) (hPre : M.IsPreconsistent) :
+    (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ) ≠ 0 := by
+  rw [coef_α_eq_ρPoly_deriv_at_one_of_preconsistent M hPre]
+  exact M.ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent hStable hPre
+```
+
+Plus 1 BDF2 witness via cycle 344's `bdf2LMM` + cycle 354's
+`bdf2LMM_isStable` (~10 LOC total). Use as P3 fallback ONLY if P1
+stalls past ~75 min — otherwise hold for cycle 363's deliberate
+ship to preserve the planned cycle ordering.
+
+Note: the scoping doc strawman uses
+`∑ i : Fin (k+1), (i.val : ℝ) * M.α i` (sum over `Fin (k+1)` starting
+at `i=0`). That equals the `coef_α` form (sum over `Fin k` with
+`M.α i.succ`) via the `i=0` term being `0·M.α 0 = 0`. Prefer the
+cycle 344 idiom for downstream consistency.
+
+## §E — Mathlib hook verification (≤10 min budget)
+
+Run before writing any P1 body:
+
+1. `lean_local_search "order_lt_of_mem_children"` — confirm cycle
+   343's lemma exists at `Section301.lean:~177`. Expected signature
+   `(children : List RootedTree) (c : RootedTree) (hc : c ∈ children) : c.order < (RootedTree.mk children).order`.
+2. `lean_hover_info` on `derivativeWeightWithSrc` at
+   `Section381.lean:2680` — confirm the signature
+   `(M₂ : RKTableau s₂) (M₁ : RKTableau s₁) : Fin s₂ → RootedTree → ℝ`
+   hasn't drifted.
+3. `lean_hover_info` on cycle 226's
+   `derivativeWeightWithSrc_subst_M₁` at `Section381.lean:2769` —
+   confirm the mutual-block shape we're mirroring.
+4. `lean_local_search "List.mem_cons"` — confirm
+   `List.mem_cons_self` and `List.mem_cons_of_mem` exist as named
+   lemmas. (Mathlib has done some renames here recently; fallback
+   names are `List.mem_cons` discharged by `Or.inl rfl` / `Or.inr ·`.)
+
+If any hook has drifted (genuinely missing, not phantom), file a
+sub-issue under `.prover-state/issues/` and pivot to P3.
 
 ## §F — Faithfulness check pre-flight (mandatory before commit)
 
-For P1 + P2:
+For P1's substitution lemma:
 
-* **Tautology check**: P1's conclusion is an explicit closed-form
-  expression; does NOT appear as hypothesis. ✓ P2's conclusion is
-  `linearResidualAt i η_q t = linearResidualAt i η_q' t`; the
-  `h_strict` hypothesis is strictly weaker (only constrains values
-  at strict subtrees). ✓
-* **Identity check**: P1 invokes `powRep_quotient_eq` (cycle 359),
-  `elementaryWeightQ_phi_mk` (cycle 226), and
-  `elementaryWeightQ_phi_inv_mk` (cycle 358). All substantive. P2
-  invokes strong induction + cycle 343 descent + cycle 360 base
-  case + P1. All substantive.
-* **Hypothesis strength check**: P2's `h_strict` quantifies over
-  *strict* subtrees only (matching Butcher's "no other terms in
-  η⁻ⁱ(t) with orders greater than r(t) − 1" verbatim). Stronger
-  hypotheses would not be needed; weaker (e.g. only immediate
-  children) might not suffice for the induction. Match to textbook
-  exact.
-* **Definition smuggling check**: P1's signature directly captures
-  the on-quotient integer-power evaluation; no smuggling. P2's
-  signature is parametricity, not the underlying coefficient claim
-  — but per scoping doc §6.3, quotient-level statements are the
-  project pattern, and the coefficient claim of cycle 360's
-  `coeff_eta_t_in_eta_zpow_neg` already pins the η(t) coefficient
-  as exactly `i·(-1)^r(t)`. P2's role is the "depends only on
-  lower orders" half of the textbook claim. Match exact.
+* **Tautology check**: conclusion is
+  `derivativeWeightWithSrc M₂ M₁ i t = derivativeWeightWithSrc M₂ M₁' i t`;
+  hypothesis is strict-subtree elementary-weight agreement. The
+  conclusion does NOT appear as hypothesis. ✓
+* **Identity check**: proof uses cycle 343's subtree-order descent,
+  cycle 226's mutual-block template (with weakened hypothesis), and
+  standard `List`/`Finset` API. All substantive. Not identity.
+* **Hypothesis strength check**: strict-subtree agreement is the
+  *weakest* hypothesis that suffices — `derivativeWeightWithSrc`
+  only references `M₁.elementaryWeight` at strict subtrees. Matches
+  Butcher's "orders greater than r(t) − 1" verbatim
+  (`extraction/raw_text/ch04.txt:1158`). No textbook deviation.
+* **Definition smuggling check**: the substitution lemma is a
+  *property* of `derivativeWeightWithSrc`, not a re-definition. The
+  cycle 226 hook for the FULL-`PhiEquivalent` version remains
+  intact (used by §384 work).
+* **Absent theorem check**: docstring claims "cycle 226 template
+  weakened"; verify the comparison is accurate before commit.
 
 ## §G — Time budget
 
 | Phase                                  | Budget       |
 |----------------------------------------|--------------|
-| Mathlib hook verification (§E)         | ≤ 15 min     |
-| P1 (ℤ-form lift)                       | 45–60 min    |
-| P2 (parametricity inductive step)      | 60–90 min    |
-| Faithfulness check + axiom verify      | ≤ 15 min     |
-| `lake build` + `#print axioms`         | ≤ 5 min      |
-| Task results + lean_status + plan.md   | 15 min       |
-| **Cycle total**                        | **~3 hours** |
+| §A pre-flight verification             | ≤ 5 min      |
+| §E Mathlib hook verification           | ≤ 10 min     |
+| P1 proof (mutual block + non-vacuity)  | 60–75 min    |
+| P2 attempt (stretch, only if P1 fast)  | 60–90 min    |
+| Faithfulness check + `#print axioms`   | ≤ 10 min     |
+| `lake build` + sorry-count regression  | ≤ 10 min     |
+| Task results + scoping-doc update      | 20 min       |
+| **Cycle total (P1 only)**              | **~2.5 hr** |
+| **Cycle total (P1 + P2)**              | **~4 hr**   |
 
-If §E reveals a Mathlib gap or P1 takes >60 min, abort P2 and ship
-§C fallback (P1 + `linearResidualAt_two_mk_eq` + non-vacuity).
-Either outcome preserves the streak; P2 success is the bonus.
+If §E reveals a missing hook (unlikely), file sub-issue + pivot to
+P3. If P1 mutual block elaboration stalls past 75 min, ship P3
+fallback only.
 
-## §H — Post-cycle housekeeping
+## §H — Post-cycle housekeeping (after ship)
 
-1. **task_results/cycle_361.md** — standard sections per CLAUDE.md.
-2. **lean_status.json** — leave `def:422B` row at `partial` (Phase E
-   sealing still pending).
-3. **plan.md** — append cycle 361 closure note to the `def:422B` row.
-4. **def_422B_phase_D_3_scoping.md** — append "Cycle 361 update"
-   subsection documenting P1 + P2 (or §C fallback) ships, mirroring
-   cycles 358/359/360 update format.
-5. **memory** — if a non-obvious Mathlib hook surprise comes up
-   during §E verification, save a feedback memory.
+1. **Append cycle 362 update** to
+   `.prover-state/issues/def_422B_phase_D_3_scoping.md` §5 (cycle-362
+   row table cell ✅) and §"Cycle 363 entry point" subsection
+   describing the Step 2 attempt outlook.
+2. **Update** `extraction/formalization_data/lean_status.json`'s
+   `def:422B` row `cycle` field to 362 (formalization status remains
+   `partial`).
+3. **Append cycle 362 line** to `plan.md`'s `def:422B` partial-row
+   entry, mirroring cycles 357–361's format.
+4. **Write** `.prover-state/task_results/cycle_362.md` per CLAUDE.md
+   template, including §"Faithfulness check" for the new substitution
+   lemma.
+5. **No new memory entry needed** for P1 alone — cycle 226 mutual
+   template + cycle 343 descent are already canonical. If P2 reveals
+   a novel pattern (e.g. a `Quotient.inductionOn₂` + Step 1 chain
+   that closes cleanly), save as memory.
 
-## §I — Recap
+## §I — Strategic context
 
-* **Primary**: P1 (ℤ-form lift) + P2 (parametricity inductive step).
-* **Fallback**: P1 + `linearResidualAt_two_mk_eq` + non-vacuity.
-* **Both paths**: axiom-clean, 0 sorries, §422 streak extends to 27.
-* **No Aristotle, no scaffolds, no GPFS-blocked files.**
-* **Concrete entry point**: open `OpenMath/Chapter4/Section422.lean`
-  at the end (after cycle 360's `linearResidualAt_one_mk_eq` block,
-  line ~1900) and append P1.
+§422 streak now stands at **27 consecutive axiom-clean cycles
+(336–361)**. Phase D.3.b is in its third cycle (D.3.b sig + base
+cases @ cycle 360; ℤ-form lift + general closed form @ cycle 361;
+parametricity Step 1 @ cycle 362). Phase D.3.c (near-free per §D.3)
+and Phase D.3.d (`underlyingOneStepMethod_aux` recursion + spec)
+remain ahead; Phase E sealing of `def:422B` projected for cycle 365.
+
+**Do not pivot to a fresh entity** despite the long streak. The
+Phase D.3 ladder's rhythm is productive (axiom-clean ships every
+cycle since 336), and the textbook landmark `def:422B` is now
+**~3–4 cycles away** — a discrete payoff in sight that justifies
+continued investment. The cycle 361 worker's "no pivot temptation
+— the ladder rhythm remains productive" applies verbatim to cycle
+362.
