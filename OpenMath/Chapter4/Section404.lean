@@ -162,6 +162,41 @@ theorem implicitEulerLMM_isConsistent :
     implicitEulerLMM.IsConsistent :=
   ⟨implicitEulerLMM_isPreconsistent, implicitEulerLMM_satisfiesEq404b⟩
 
+/-! ### Third witness — trapezoidal rule (Crank–Nicolson) as a 1-step LMM
+
+The trapezoidal rule (also called Crank–Nicolson) is the implicit
+1-step method
+  `y_n − y_{n-1} = (h/2) · (f(x_n, y_n) + f(x_{n-1}, y_{n-1}))`,
+i.e. `α 0 = -1, α 1 = 1, β 0 = 1/2, β 1 = 1/2`. This is the
+canonical order-2 implicit 1-step LMM; it provides the first
+non-trivial value for `coef_β = ∑ i · βᵢ` among shipped LMMs
+(both Euler methods have `coef_β = 0` or `1`; BDF2 has
+`coef_β = 0`; trapezoidal has `coef_β = 1/2`). -/
+
+/-- The trapezoidal rule (Crank–Nicolson) as a 1-step linear
+multistep method:
+`y_n − y_{n-1} = (h/2) · (f(x_n, y_n) + f(x_{n-1}, y_{n-1}))`. -/
+noncomputable def trapezoidalLMM : LinearMultistepMethod 1 where
+  α := fun i => if i = 0 then -1 else 1
+  β := fun i => if i = 0 then 1/2 else 1/2
+  α_zero := by simp
+
+/-- The trapezoidal rule is preconsistent. -/
+theorem trapezoidalLMM_isPreconsistent :
+    trapezoidalLMM.IsPreconsistent := by
+  simp [LinearMultistepMethod.IsPreconsistent, trapezoidalLMM]
+
+/-- The trapezoidal rule satisfies (404b):
+`Σ i·αᵢ = 1·1 = 1 = 1/2 + 1/2 = Σ βᵢ`. -/
+theorem trapezoidalLMM_satisfiesEq404b :
+    trapezoidalLMM.SatisfiesEq404b := by
+  simp [LinearMultistepMethod.SatisfiesEq404b, trapezoidalLMM]
+
+/-- The trapezoidal rule is consistent. -/
+theorem trapezoidalLMM_isConsistent :
+    trapezoidalLMM.IsConsistent :=
+  ⟨trapezoidalLMM_isPreconsistent, trapezoidalLMM_satisfiesEq404b⟩
+
 /-! ## §403 — Stability (def:403A)
 
 Butcher §403, p. 341. The textbook defines stability as boundedness of

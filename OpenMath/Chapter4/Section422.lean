@@ -1324,4 +1324,44 @@ theorem bdf2LMM_coef_β_eq_half_sum_i_sq_alpha :
     OpenMath.Chapter4.Section451.bdf2LMM
     bdf2LMM_hasOrderAtLeast_two
 
+/-- *Phase D′.2.2 trapezoidal precursor (cycle 352):* the
+trapezoidal rule satisfies `HasOrderAtLeast 2`. Verified by
+checking `C trapezoidalLMM j = 0` for `j ∈ {0, 1, 2}`:
+* `C trapezoidalLMM 0 = 1 - 1 = 0` (preconsistency);
+* `C trapezoidalLMM 1 = 0` (consistency);
+* `C trapezoidalLMM 2 = -(1·1²/2) + (0·(1/2) + 1·(1/2)) =
+  -1/2 + 1/2 = 0`. -/
+theorem trapezoidalLMM_hasOrderAtLeast_two :
+    OpenMath.Chapter4.Section404.trapezoidalLMM.HasOrderAtLeast 2 := by
+  intro j hj
+  interval_cases j
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section404.trapezoidalLMM 0 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section404.trapezoidalLMM]
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section404.trapezoidalLMM 1 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section404.trapezoidalLMM, Nat.factorial]
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section404.trapezoidalLMM 2 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section404.trapezoidalLMM, Nat.factorial]
+
+/-- *Phase D′.2.2 trapezoidal sanity witness (cycle 352):*
+end-to-end exercise of `coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two`
+on the trapezoidal rule. Unlike BDF2 (where both sides vanish),
+this gives the first non-trivial witness of cycle 351's identity:
+* LHS `coef_β(trapezoidalLMM) = 0·(1/2) + 1·(1/2) = 1/2`;
+* RHS `(1/2) · Σᵢ (i+1)²·αᵢ = (1/2) · 1²·1 = 1/2`. -/
+theorem trapezoidalLMM_coef_β_eq_half_sum_i_sq_alpha :
+    (∑ i : Fin 2, ((i.val : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section404.trapezoidalLMM.β i)
+      = (1 / 2) *
+        ∑ i : Fin 1, (((i.val + 1 : ℕ) : ℝ))^2 *
+          OpenMath.Chapter4.Section404.trapezoidalLMM.α i.succ :=
+  coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two
+    OpenMath.Chapter4.Section404.trapezoidalLMM
+    trapezoidalLMM_hasOrderAtLeast_two
+
 end OpenMath.Chapter4.Section422
