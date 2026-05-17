@@ -1072,6 +1072,30 @@ example : (0 : ℝ) < ∑ i : Fin 4, OpenMath.Chapter4.Section451.bdf3LMM.β i :
     OpenMath.Chapter4.Section451.bdf3LMM_isStable
     OpenMath.Chapter4.Section451.bdf3LMM_isConsistent
 
+/-- *Phase D′.2.0 implicit Euler non-vacuity (cycle 356):* the cycle
+349 `sum_β_pos_of_stable_consistent` fires on implicit Euler; the
+β-sum equals `1 + 0 = 1 > 0`. -/
+example : (0 : ℝ) < ∑ i : Fin 2,
+    OpenMath.Chapter4.Section404.implicitEulerLMM.β i :=
+  sum_β_pos_of_stable_consistent
+    OpenMath.Chapter4.Section404.implicitEulerLMM
+    (by norm_num : (0 : ℕ) < 1)
+    OpenMath.Chapter4.Section404.implicitEulerLMM_isStable
+    OpenMath.Chapter4.Section404.implicitEulerLMM_isConsistent
+
+/-- *Phase D′.2.0 explicit Euler non-vacuity (cycle 356):* the cycle
+349 `sum_β_pos_of_stable_consistent` fires on explicit Euler; the
+β-sum equals `0 + 1 = 1 > 0`. Completes the five-LMM consumer-witness
+coverage matrix for cycle 349's `sum_β_pos_of_stable_consistent` ship
+(explicit Euler + implicit Euler + trapezoidal + BDF2 + BDF3). -/
+example : (0 : ℝ) < ∑ i : Fin 2,
+    OpenMath.Chapter4.Section404.explicitEulerLMM.β i :=
+  sum_β_pos_of_stable_consistent
+    OpenMath.Chapter4.Section404.explicitEulerLMM
+    (by norm_num : (0 : ℕ) < 1)
+    OpenMath.Chapter4.Section404.explicitEulerLMM_isStable
+    OpenMath.Chapter4.Section404.explicitEulerLMM_isConsistent
+
 /-! ### Phase D′.2.1 (cycle 350) — Route E refinement of cycle 345
 
 Cycle 345 shipped `Eq422a_at_vertex_eta_eq_of_stable_preconsistent`
@@ -1183,6 +1207,29 @@ theorem bdf3LMM_coef_α_plus_coef_β_ne_zero :
     Fin.sum_univ_three, Fin.sum_univ_four]
   norm_num
 
+/-- *Implicit Euler D′.2.1 non-vanishing witness (cycle 356):*
+implicit Euler's denominator `coef_α + coef_β = 1 + 0 = 1 ≠ 0`.
+Numerical witness for the cycle 350 weakened-hypothesis ship at
+the implicit Euler LMM. -/
+theorem implicitEulerLMM_coef_α_plus_coef_β_ne_zero :
+    (∑ i : Fin 1, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section404.implicitEulerLMM.α i.succ)
+      + (∑ i : Fin 2, ((i.val : ℕ) : ℝ) *
+            OpenMath.Chapter4.Section404.implicitEulerLMM.β i) ≠ 0 := by
+  simp [OpenMath.Chapter4.Section404.implicitEulerLMM]
+
+/-- *Explicit Euler D′.2.1 non-vanishing witness (cycle 356):*
+explicit Euler's denominator `coef_α + coef_β = 1 + 1 = 2 ≠ 0`.
+Numerical witness for the cycle 350 weakened-hypothesis ship at
+the explicit Euler LMM. -/
+theorem explicitEulerLMM_coef_α_plus_coef_β_ne_zero :
+    (∑ i : Fin 1, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section404.explicitEulerLMM.α i.succ)
+      + (∑ i : Fin 2, ((i.val : ℕ) : ℝ) *
+            OpenMath.Chapter4.Section404.explicitEulerLMM.β i) ≠ 0 := by
+  simp [OpenMath.Chapter4.Section404.explicitEulerLMM,
+    Fin.sum_univ_two]
+
 /-- *Non-vacuity for the cycle 355 weakened ship (trapezoidal):*
 end-to-end exercise of `Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened`
 on trapezoidal, pinning `η(τ) = 1 / (3/2) = 2/3` for the underlying
@@ -1221,6 +1268,48 @@ example (η_q : Quotient PhiEquivalent.setoidSigma)
   rw [h]
   simp [OpenMath.Chapter4.Section451.bdf2LMM,
     Fin.sum_univ_two, Fin.sum_univ_three]
+  norm_num
+
+/-- *Non-vacuity for the cycle 356 implicit Euler ship:* end-to-end
+exercise of `Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened`
+on implicit Euler, discharging the weakened non-vanishing hypothesis
+via `implicitEulerLMM_coef_α_plus_coef_β_ne_zero`. The
+underlying-one-step-method `η ∈ G₁` corresponding to implicit Euler
+pins `η(τ) = 1` (same numerical conclusion as BDF2 and cycle 346's
+witness). -/
+example (η_q : Quotient PhiEquivalent.setoidSigma)
+    (hEq : Eq422a OpenMath.Chapter4.Section404.implicitEulerLMM η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex = 1 := by
+  have h := Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened
+    OpenMath.Chapter4.Section404.implicitEulerLMM
+    (by norm_num : (0 : ℕ) < 1)
+    OpenMath.Chapter4.Section404.implicitEulerLMM_isStable
+    OpenMath.Chapter4.Section404.implicitEulerLMM_isPreconsistent
+    implicitEulerLMM_coef_α_plus_coef_β_ne_zero
+    hEq
+  rw [h]
+  simp [OpenMath.Chapter4.Section404.implicitEulerLMM]
+
+/-- *Non-vacuity for the cycle 356 explicit Euler ship:* end-to-end
+exercise of `Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened`
+on explicit Euler, pinning `η(τ) = 1 / 2` for the underlying
+one-step method corresponding to the original 1-step LMM. Completes
+the five-LMM consumer matrix (explicit Euler + implicit Euler +
+trapezoidal + BDF2 + BDF3) for the cycle 350 weakened-hypothesis
+ship. -/
+example (η_q : Quotient PhiEquivalent.setoidSigma)
+    (hEq : Eq422a OpenMath.Chapter4.Section404.explicitEulerLMM η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex = 1 / 2 := by
+  have h := Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened
+    OpenMath.Chapter4.Section404.explicitEulerLMM
+    (by norm_num : (0 : ℕ) < 1)
+    OpenMath.Chapter4.Section404.explicitEulerLMM_isStable
+    OpenMath.Chapter4.Section404.explicitEulerLMM_isPreconsistent
+    explicitEulerLMM_coef_α_plus_coef_β_ne_zero
+    hEq
+  rw [h]
+  simp [OpenMath.Chapter4.Section404.explicitEulerLMM,
+    Fin.sum_univ_two]
   norm_num
 
 /-- *Phase D′.2.1 consistent-form corollary (cycle 350, stretch):*
