@@ -1048,4 +1048,159 @@ example : (0 : ℝ) < ∑ i : Fin 3, OpenMath.Chapter4.Section451.bdf2LMM.β i :
     OpenMath.Chapter4.Section451.bdf2LMM_isStable
     OpenMath.Chapter4.Section451.bdf2LMM_isConsistent
 
+/-! ### Phase D′.2.1 (cycle 350) — Route E refinement of cycle 345
+
+Cycle 345 shipped `Eq422a_at_vertex_eta_eq_of_stable_preconsistent`
+with hypothesis `0 ≤ coef_β(M)`. Phase D′.2.1 weakens that to the
+**strictly weaker** non-vanishing form `coef_α(M) + coef_β(M) ≠ 0`.
+See `.prover-state/issues/eq422a_eta_phase_D_prime_step_2_scoping.md`
+§4.5 + §5 for the rationale (the unconditional drop of the
+non-vanishing side-hypothesis from `IsStable + IsConsistent` alone
+is the Phase D′.2.2/2.3 multi-cycle target).
+
+This block ships a sibling theorem (not a refactor of cycle 345),
+plus the algebraic identity that bridges
+`coef_α + coef_β = Σᵢ (i+1) · βᵢ` under consistency, plus the BDF2
+non-vacuity witness.
+-/
+
+/-- *Phase D′.2.1 (cycle 350) — Route E refinement:* under stability
++ preconsistency plus the **weakened** side hypothesis that
+`coef_α(M) + coef_β(M)` is non-zero (strictly weaker than cycle 345's
+`0 ≤ coef_β(M)` combined with `coef_α > 0`), the (422a) reduction at
+the single-vertex tree `τ` pins `η(τ) = sum_β / (coef_α + coef_β)`.
+
+A direct one-line call to cycle 342's `Eq422a_at_vertex_eta_eq` with
+the non-vanishing hypothesis supplied unconditionally. The
+`hk`/`hStab`/`hPre` hypotheses are deliberately retained (unused at
+the body level, marked with underscore) for caller ergonomics: this
+signature is drop-in compatible with cycle 345's
+`Eq422a_at_vertex_eta_eq_of_stable_preconsistent`. Any caller with
+`0 ≤ coef_β` can derive `h_denom_ne` from cycle 344's `coef_α > 0`
+via `linarith`.
+
+The unconditional drop of `h_denom_ne` (i.e. proving `coef_α +
+coef_β ≠ 0` from `IsStable + IsConsistent` alone) remains the Phase
+D′.2.2/2.3 target — see the cycle 348 scoping doc §4 for the
+multi-cycle obstruction (Routes A/B/C/D each blocked). -/
+theorem Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (_hk : 0 < k)
+    (_hStab : M.IsStable) (_hPre : M.IsPreconsistent)
+    (h_denom_ne :
+        (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+          + (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i) ≠ 0)
+    {η_q : Quotient PhiEquivalent.setoidSigma}
+    (hEq : Eq422a M η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex
+      = (∑ i : Fin (k + 1), M.β i)
+          / ((∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+              + (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i)) :=
+  Eq422a_at_vertex_eta_eq hEq h_denom_ne
+
+/-- *Phase D′.2.1 algebraic identity (cycle 350):* under consistency,
+the §422 denominator `coef_α + coef_β` equals the `(i+1)`-weighted
+β-sum `Σᵢ (i+1) · βᵢ`.
+
+Derivation: `coef_α = sum_β` (cycle 345's
+`coef_α_eq_sum_β_of_isConsistent`, from (404b)), so `coef_α + coef_β =
+Σᵢ βᵢ + Σᵢ i · βᵢ = Σᵢ (1 · βᵢ + i · βᵢ) = Σᵢ (i+1) · βᵢ`.
+
+Pure structural algebra; no Butcher-named lemma. Useful for the
+Phase D′.2.1 stretch corollary `Eq422a_at_vertex_eta_eq_of_stable_consistent`
+which translates `h_denom_ne` to the cleaner `Σᵢ (i+1) · βᵢ ≠ 0`. -/
+theorem coef_α_plus_coef_β_eq_succ_weighted_β_of_isConsistent
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hCons : M.IsConsistent) :
+    (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+      + (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i)
+      = ∑ i : Fin (k + 1), ((i.val + 1 : ℕ) : ℝ) * M.β i := by
+  rw [coef_α_eq_sum_β_of_isConsistent M hCons]
+  rw [← Finset.sum_add_distrib]
+  apply Finset.sum_congr rfl
+  intro i _
+  push_cast
+  ring
+
+/-- *Phase D′.2.1 BDF2 non-vanishing witness (cycle 350):* BDF2's
+denominator `coef_α + coef_β = 2/3 + 0 = 2/3 ≠ 0`. Numerical
+witness for the weakened-hypothesis ship. -/
+theorem bdf2LMM_coef_α_plus_coef_β_ne_zero :
+    (∑ i : Fin 2, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section451.bdf2LMM.α i.succ)
+      + (∑ i : Fin 3, ((i.val : ℕ) : ℝ) *
+            OpenMath.Chapter4.Section451.bdf2LMM.β i) ≠ 0 := by
+  simp [OpenMath.Chapter4.Section451.bdf2LMM,
+    Fin.sum_univ_two, Fin.sum_univ_three]
+  norm_num
+
+/-- *Non-vacuity for the cycle 350 weakened ship:* end-to-end
+exercise of `Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened`
+on BDF2, discharging the weakened non-vanishing hypothesis via
+`bdf2LMM_coef_α_plus_coef_β_ne_zero`. The underlying-one-step-method
+`η ∈ G₁` corresponding to BDF2 pins `η(τ) = 1` (same numerical
+conclusion as cycle 346's witness, via the weaker route). -/
+example (η_q : Quotient PhiEquivalent.setoidSigma)
+    (hEq : Eq422a OpenMath.Chapter4.Section451.bdf2LMM η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex = 1 := by
+  have h := Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened
+    OpenMath.Chapter4.Section451.bdf2LMM
+    (by norm_num : (0 : ℕ) < 2)
+    OpenMath.Chapter4.Section451.bdf2LMM_isStable
+    OpenMath.Chapter4.Section441.bdf2LMM_isPreconsistent
+    bdf2LMM_coef_α_plus_coef_β_ne_zero
+    hEq
+  rw [h]
+  simp [OpenMath.Chapter4.Section451.bdf2LMM,
+    Fin.sum_univ_two, Fin.sum_univ_three]
+  norm_num
+
+/-- *Phase D′.2.1 consistent-form corollary (cycle 350, stretch):*
+under stability + consistency plus the side hypothesis that the
+`(i+1)`-weighted β-sum `Σᵢ (i+1) · βᵢ` is non-zero, the (422a)
+reduction at `τ` pins `η(τ) = sum_β / Σᵢ (i+1) · βᵢ`.
+
+This is the cleaner-signature corollary that consumes cycle 350's
+algebraic identity `coef_α_plus_coef_β_eq_succ_weighted_β_of_isConsistent`
+directly. The signature matches Butcher §422's surface notation
+more closely (the textbook denominator is naturally written in the
+`Σᵢ (i+1) · βᵢ` form under consistency). -/
+theorem Eq422a_at_vertex_eta_eq_of_stable_consistent
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hk : 0 < k)
+    (hStab : M.IsStable) (hCons : M.IsConsistent)
+    (h_succ_β_ne :
+        (∑ i : Fin (k + 1), ((i.val + 1 : ℕ) : ℝ) * M.β i) ≠ 0)
+    {η_q : Quotient PhiEquivalent.setoidSigma}
+    (hEq : Eq422a M η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex
+      = (∑ i : Fin (k + 1), M.β i)
+          / (∑ i : Fin (k + 1), ((i.val + 1 : ℕ) : ℝ) * M.β i) := by
+  have h_id := coef_α_plus_coef_β_eq_succ_weighted_β_of_isConsistent M hCons
+  rw [← h_id] at h_succ_β_ne ⊢
+  exact Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened
+    M hk hStab hCons.1 h_succ_β_ne hEq
+
+/-- *Non-vacuity for the cycle 350 consistent-form corollary:*
+end-to-end exercise of `Eq422a_at_vertex_eta_eq_of_stable_consistent`
+on BDF2. The `(i+1)`-weighted β-sum is
+`1·(2/3) + 2·0 + 3·0 = 2/3 ≠ 0`; the `η(τ) = (2/3)/(2/3) = 1`
+conclusion matches the cycle 346 / cycle 350 weakened-form
+witnesses. -/
+example (η_q : Quotient PhiEquivalent.setoidSigma)
+    (hEq : Eq422a OpenMath.Chapter4.Section451.bdf2LMM η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex = 1 := by
+  have h := Eq422a_at_vertex_eta_eq_of_stable_consistent
+    OpenMath.Chapter4.Section451.bdf2LMM
+    (by norm_num : (0 : ℕ) < 2)
+    OpenMath.Chapter4.Section451.bdf2LMM_isStable
+    OpenMath.Chapter4.Section451.bdf2LMM_isConsistent
+    (by
+      simp [OpenMath.Chapter4.Section451.bdf2LMM,
+        Fin.sum_univ_three])
+    hEq
+  rw [h]
+  simp [OpenMath.Chapter4.Section451.bdf2LMM,
+    Fin.sum_univ_three]
+
 end OpenMath.Chapter4.Section422
