@@ -1,421 +1,405 @@
-# Cycle 346 strategy
+# Strategy — cycle 347
 
-## Context summary
+## TL;DR
 
-Cycle 345 closed Phase D consolidation in `OpenMath/Chapter4/Section422.lean`:
-* `Eq422a_at_vertex_eta_eq_of_stable_preconsistent` (load-bearing P1)
-  — discharges the non-vanishing side hypothesis of cycle 342's
-  `Eq422a_at_vertex_eta_eq` under stable + preconsistent `M`, modulo
-  an explicit `hβ_nn : 0 ≤ coef_β(M)`.
-* `coef_α_eq_sum_β_of_isConsistent` — named cast bridge extracted
-  from cycle 342's body.
-* Two non-vacuity `example`s on `explicitEulerLMM`.
+Ship **Phase D′ Step 1**: the algebraic bridge
+`coef_β(M) = βPoly.derivative.eval 1`. This is the β-side analog of
+cycle 344's `coef_α_eq_ρPoly_deriv_at_one_of_preconsistent`, but
+strictly easier (no hypothesis needed — βPoly is `Σ β_i · X^i` so
+its derivative at 1 is the textbook `Σ i · β_i` directly).
 
-All axiom-clean. Section422.lean: 759 → 864 LOC (+105).
+The discovery from §3 below changes the cycle-346 worker's plan
+slightly: **`βPoly` already exists in `OpenMath/Chapter4/Section410.lean`**
+(cycle 73, line 103). The cycle 346 worker's suggested "Phase D′
+Step 1: define σPoly" was based on incomplete §410 inventory — we
+do NOT need a fresh polynomial. Reuse `Section410.βPoly` directly.
 
-**Deferred this cycle (per cycle 345 §"Dead ends" / §"Suggested
-next approach"):** the BDF2 numerical non-vacuity for P1 was
-*not* shipped because `bdf2LMM.IsStable` (Dahlquist-stable) does
-not exist in the codebase. Only `bdf2LMM_isGStable` (Section451)
-and `bdf2LMM_isAStable` (Section454) ship.
+Single-cycle, low-risk, axiom-clean expected. ~60 LOC into
+`OpenMath/Chapter4/Section422.lean` immediately after the cycle 346
+`coef_β_nonneg_of_β_nonneg` block.
 
-**Aristotle results**: none pending. No queued jobs to process.
+## §1 — State at HEAD (cycle 346)
 
-**Streak observation**: cycles 336–345 = 10 consecutive §422 cycles.
-Cycle 335 task results called for breaking the streak; cycle 336
-opened §422 work which then ran 10 cycles, shipping a complete
-Phase 0 + Phase A + Phase B + Phase C + Phase D chain. Phase D.3
-(full inductive solver for `η : RootedTree → ℝ`) is multi-cycle
-HIGH-risk per cycle 343/344's infrastructure work; pursuing it
-now risks the same multi-cycle stall as cycle 200/201 (`thm:381H`
-rollback) or cycle 149/150 (`def:530B` rollback). The cycle 345
-worker's option 2 (`bdf2LMM_isStable`) is **LOW risk, single-cycle**,
-and unblocks the deferred BDF2 non-vacuity — that's this cycle's
-target.
+* `OpenMath/Chapter4/Section422.lean` (931 LOC, 0 sorries,
+  axiom-clean): closed through Phase D consolidation (cycle 345)
+  plus `coef_β_nonneg_of_β_nonneg` + BDF2 witnesses (cycle 346).
+* `OpenMath/Chapter4/Section451.lean` (307 LOC, 0 sorries): cycle
+  346 added `bdf2LMM_isStable` (Dahlquist zero-stability).
+* `OpenMath/Chapter4/Section410.lean` (cycle 73): provides
+  `βPoly` (line 103), `βPoly_natDegree_le` (line 219),
+  `βPoly_explicitEuler = X` (line 179). The derivative-side API
+  has not been built; cycle 347 fills that gap on the β-side.
+* `OpenMath/Chapter4/Section441.lean`: provides the α-side
+  template (`ρPoly_deriv_eval_one_unconditional` at line 375,
+  `ρPoly_deriv_eval_one_pos_of_stable_preconsistent` at line 767).
 
-## Primary deliverable — `bdf2LMM_isStable`
+## §2 — Why Phase D′ Step 1 over other options
 
-Ship `bdf2LMM.IsStable` (Dahlquist-stable) directly from the
-definition in `OpenMath/Chapter4/Section404.lean:202`. Pattern after
-the existing `explicitEulerLMM_isStable` proof (Section404:213) but
-for the 2-step recurrence.
+The cycle 346 task results enumerated four candidates:
 
-### Math
+* **A (recommended)**: Phase D′ β-side machinery (3–4 cycles).
+* **B**: Phase D.3 inductive solver for `η : RootedTree → ℝ`
+  (HIGH risk, multi-cycle).
+* **C**: pivot to a fresh entity.
+* **D**: BDF3 / Adams-Bashforth witnesses.
 
-BDF2's homogeneous recurrence (Section404:189–191 unfolded on
-`bdf2LMM`):
+Cycle 347 commits to **A's Step 1 only** (the algebraic bridge
+identity). Justification:
 
-```
-Y (m + 2) = (4/3) · Y (m + 1) - (1/3) · Y m,    ∀ m : ℕ.
-```
+* Mirrors the cycle 344 α-side ship exactly. Cycle 344 closed in a
+  single cycle (~50 LOC); the β-side is **strictly easier**
+  because `βPoly = Σ β_i · X^i` has a clean derivative expansion
+  with no `X^(k-(i+1))` Nat-subtraction bookkeeping.
+* `Section410.βPoly` already exists — no new definition needed,
+  no faithfulness audit required, no scoping doc warranted.
+* Compounds the §422 investment without overcommitting: Phase D′
+  Step 2 (positivity from stability + consistency) is the
+  multi-cycle work; deferring it preserves cycle 347 as a clean
+  single-cycle deliverable.
+* Option B is documented in `def_422B_path.md` §5 as HIGH-risk
+  multi-cycle work; the cycle 200/201 rollback precedent forbids
+  starting it without a phase decomposition.
+* Option C (fresh entity pivot) would abandon a 12-cycle §422
+  investment for an unproved scope-reduction.
+* Option D (BDF3 witness) is a sideline — useful sanity expansion
+  but doesn't compound toward `thm:422A`/`thm:422C` closure.
 
-Characteristic polynomial roots: `z = 1` and `z = 1/3` (both real,
-both in closed unit disc, with root `1` simple ⇒ Dahlquist-stable
-by Butcher Theorem 142F's criterion, but we prove directly).
-General solution `Y_n = A + B · (1/3)^n` where:
-* `A := (3 · Y 1 - Y 0) / 2`
-* `B := (3 · (Y 0 - Y 1)) / 2`
+## §3 — Discovery: `Section410.βPoly` already exists
 
-Derivation (paper): `Y_0 = A + B`, `Y_1 = A + B/3` ⇒
-`Y_0 - Y_1 = 2B/3` ⇒ `B = (3/2)(Y_0 - Y_1)`,
-`A = Y_0 - B = (3·Y_1 - Y_0)/2`. Sanity check:
-`A + B/3 = (3·Y_1 - Y_0)/2 + (Y_0 - Y_1)/2 = (3·Y_1 - Y_0 + Y_0 - Y_1)/2 = Y_1` ✓.
-
-Boundedness: `|Y_n| ≤ |A| + |B| · (1/3)^n ≤ |A| + |B|` since
-`(1/3)^n ≤ 1`. So `C := |A| + |B|` witnesses
-`∃ C, ∀ n, |Y n| ≤ C`.
-
-### Lean recipe
-
-Place the two new theorems in `OpenMath/Chapter4/Section451.lean`
-immediately after `bdf2LMM_isAStable` (line ~238+). Reason:
-Section451 already has `bdf2LMM` in scope, imports Section404
-(`IsStable`/`IsHomogeneousSolution` definitions), and is downstream
-of Section454; placing the new theorem here lets Section422-side
-consumers (which already import Section451 transitively via cycle
-344's `coef_α` bridge in Section422) use `bdf2LMM_isStable`
-without further import work.
+Quoted from `OpenMath/Chapter4/Section410.lean:99–105`:
 
 ```lean
-namespace OpenMath.Chapter4.Section404
+/-- **Butcher §410 β-polynomial of an LMM.**
 
-/-- BDF2's homogeneous-recurrence solutions decompose as
-`Y_n = A + B · (1/3)^n` where
-`A := (3 · Y 1 - Y 0) / 2` and `B := (3 · (Y 0 - Y 1)) / 2`.
-
-Proved by strong induction on `n`; base cases at `n = 0, 1` are
-direct arithmetic, and the inductive step at `n + 2` uses the
-homogeneous recurrence `Y (n+2) = (4/3) · Y (n+1) - (1/3) · Y n`
-plus the IH at `n + 1` and `n`. -/
-private theorem bdf2_solution_decomp (Y : ℕ → ℝ)
-    (hY : bdf2LMM.IsHomogeneousSolution Y) :
-    ∀ n, Y n = (3 * Y 1 - Y 0) / 2
-              + (3 * (Y 0 - Y 1)) / 2 * (1 / 3 : ℝ) ^ n := by
-  intro n
-  induction n using Nat.strong_induction_on with
-  | _ n ih =>
-    match n, ih with
-    | 0, _ => simp; ring
-    | 1, _ => simp; ring
-    | n + 2, ih =>
-      have hrec : Y (n + 2) = (4 / 3 : ℝ) * Y (n + 1) - (1 / 3) * Y n := by
-        have h := hY n
-        simp only [bdf2LMM, Fin.sum_univ_two,
-                   show (n + 2 - (0 + 1) : ℕ) = n + 1 from by omega,
-                   show (n + 2 - (1 + 1) : ℕ) = n from by omega] at h
-        linarith
-      rw [hrec, ih (n + 1) (by omega), ih n (by omega)]
-      ring
-
-/-- BDF2 is Dahlquist-stable (Butcher §403, p. 341).
-
-Every solution of BDF2's homogeneous recurrence is bounded:
-the explicit decomposition (`bdf2_solution_decomp`) yields
-`|Y_n| ≤ |A| + |B|`. -/
-theorem bdf2LMM_isStable : bdf2LMM.IsStable := by
-  intro Y hY
-  refine ⟨|((3 * Y 1 - Y 0) / 2)| + |((3 * (Y 0 - Y 1)) / 2)|,
-          fun n => ?_⟩
-  rw [bdf2_solution_decomp Y hY n]
-  have h_one_third_nonneg : (0 : ℝ) ≤ 1 / 3 := by norm_num
-  have h_one_third_le_one : (1 / 3 : ℝ) ≤ 1 := by norm_num
-  calc |((3 * Y 1 - Y 0) / 2) + ((3 * (Y 0 - Y 1)) / 2) * (1 / 3 : ℝ)^n|
-      ≤ |((3 * Y 1 - Y 0) / 2)|
-        + |((3 * (Y 0 - Y 1)) / 2) * (1 / 3 : ℝ)^n| := abs_add _ _
-    _ = |((3 * Y 1 - Y 0) / 2)|
-        + |((3 * (Y 0 - Y 1)) / 2)| * |(1 / 3 : ℝ)^n| := by rw [abs_mul]
-    _ ≤ |((3 * Y 1 - Y 0) / 2)|
-        + |((3 * (Y 0 - Y 1)) / 2)| * 1 := by
-        gcongr
-        rw [abs_pow, abs_of_nonneg h_one_third_nonneg]
-        exact pow_le_one₀ h_one_third_nonneg h_one_third_le_one
-    _ = |((3 * Y 1 - Y 0) / 2)|
-        + |((3 * (Y 0 - Y 1)) / 2)| := by ring
-
-end OpenMath.Chapter4.Section404
+`β(z) = Σ_{i=0}^k M.β_i · z^i`. β indexing starts at 0 so the sum
+runs over `Fin (k+1)`. -/
+noncomputable def βPoly {k : ℕ} (M : LinearMultistepMethod k) :
+    Polynomial ℝ :=
+  ∑ i : Fin (k + 1), Polynomial.C (M.β i) * Polynomial.X ^ i.val
 ```
 
-### Pre-flight verification (5 min)
+This is exactly what we need. Cycle 346 worker recommended
+defining a fresh `σPoly` — that was based on incomplete inventory
+of §410. We reuse `βPoly` directly. Net cycle 347 scope: ONE new
+public theorem + 2 sanity witnesses, no new definitions.
 
-Before writing the proof:
+The textbook `coef_β(M) := Σ_{i : Fin (k+1)} i · M.β i` (from
+cycle 340's `Eq422a`) is exactly `βPoly.derivative.eval 1`:
 
-1. **Verify `IsHomogeneousSolution`'s shape on `bdf2LMM`.** Inspect
-   Section404:189–191. The unfold yields
-   `Y (m+2) = ∑ i : Fin 2, bdf2LMM.α i.succ * Y (m+2 - (i.val + 1))`.
-   `Fin.sum_univ_two` gives:
-   * `i = 0`: `bdf2LMM.α 1 * Y (m+2 - 1) = (4/3) · Y (m+1)`
-   * `i = 1`: `bdf2LMM.α 2 * Y (m+2 - 2) = (-1/3) · Y m`
-   So `Y (m+2) = (4/3) · Y (m+1) + (-1/3) · Y m`. The Nat-subtraction
-   `m + 2 - 1 = m + 1` and `m + 2 - 2 = m` need explicit `omega`
-   side-conditions (already in the sketch via the `show` blocks).
-   The `bdf2LMM.α (0:Fin 2).succ = bdf2LMM.α 1 = 4/3` and
-   `bdf2LMM.α (1:Fin 2).succ = bdf2LMM.α 2 = -1/3` unfolds need
-   `simp only [bdf2LMM]` to expose the match. The `+ (-1/3)·Y n`
-   ↔ `- (1/3)·Y n` form-bridge closes by `linarith` (no manual
-   rewriting needed).
-2. **`Nat.strong_induction_on` motive with `match` on `n`**: should
-   propagate `ih` correctly. If Lean complains about motive
-   inference, fall back to:
-   ```lean
-   intro n
-   induction n using Nat.strong_induction_on with
-   | _ n ih =>
-     rcases n with _ | _ | n
-     · simp; ring  -- n = 0
-     · simp; ring  -- n = 1
-     · -- n + 2 case: use ih at (n+1) and n
-       ...
-   ```
-   Either form should work; the `match` is slightly cleaner.
-3. **`pow_le_one₀` name**: Mathlib's name may have drifted. Try
-   `pow_le_one₀ (h0 : 0 ≤ a) (h1 : a ≤ 1) : a^n ≤ 1` first; if it
-   doesn't fire, try `pow_le_one`, `pow_le_one_of_le_one`. Verify
-   with `lean_local_search "pow_le_one"`.
-
-## Secondary deliverable — `coef_β` non-negativity helper + numerical witnesses
-
-After PRIMARY lands, ship the following additive helpers in
-`OpenMath/Chapter4/Section422.lean` immediately after cycle 345's
-deliverables (current EOF ~864):
-
-```lean
-/-- If every β-coefficient of an LMM is non-negative, then so is
-`coef_β(M) := ∑ i, (i.val : ℝ) · M.β i`. Pure structural
-helper; one-line via `Finset.sum_nonneg` + `mul_nonneg`. -/
-theorem coef_β_nonneg_of_β_nonneg
-    {k : ℕ} (M : LinearMultistepMethod k)
-    (hβ : ∀ i : Fin (k + 1), 0 ≤ M.β i) :
-    0 ≤ ∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i := by
-  apply Finset.sum_nonneg
-  intro i _
-  exact mul_nonneg (Nat.cast_nonneg _) (hβ i)
-
-/-- BDF2's β-coefficients are all non-negative. -/
-theorem bdf2LMM_β_nonneg : ∀ i : Fin (2 + 1), 0 ≤ bdf2LMM.β i := by
-  intro i
-  fin_cases i <;> simp [bdf2LMM] <;> norm_num
-
-/-- BDF2's `coef_β` is non-negative (in fact = 0, since
-`β 1 = β 2 = 0`). -/
-theorem bdf2LMM_coef_β_nonneg :
-    0 ≤ ∑ i : Fin (2 + 1), ((i.val : ℕ) : ℝ) * bdf2LMM.β i :=
-  coef_β_nonneg_of_β_nonneg bdf2LMM bdf2LMM_β_nonneg
+```
+βPoly       = Σ i : Fin (k+1), C(β_i) · X^i
+βPoly'      = Σ i : Fin (k+1), i · C(β_i) · X^(i-1)
+βPoly'(1)   = Σ i : Fin (k+1), i · β_i = coef_β(M).
 ```
 
-Naming convention: `coef_β_nonneg_of_β_nonneg` mirrors cycle
-344's `coef_α_pos_of_stable_preconsistent` naming style.
+## §4 — Concrete deliverables for cycle 347
 
-## Stretch — BDF2 P1 non-vacuity (full closure of cycle 345 deferral)
-
-If PRIMARY and SECONDARY both land cleanly with budget remaining,
-ship the BDF2 specialization that cycle 345 deferred. Place in
-Section422.lean just after `bdf2LMM_coef_β_nonneg`:
-
-**Numerical sanity check first** (do NOT skip — verify the closed
-form before writing the example):
-
-For BDF2 (k = 2):
-* `coef_α(M) = ∑ i : Fin 2, ((i.val + 1 : ℕ) : ℝ) · M.α i.succ`
-  = `1 · (4/3) + 2 · (-1/3) = 4/3 - 2/3 = 2/3`. ✓ Matches cycle 344's
-  `bdf2LMM.coef_α = 2/3`.
-* `coef_β(M) = ∑ i : Fin 3, ((i.val : ℕ) : ℝ) · M.β i`
-  = `0 · (2/3) + 1 · 0 + 2 · 0 = 0`.
-* `sum_β(M) = ∑ i : Fin 3, M.β i = 2/3 + 0 + 0 = 2/3`.
-
-Therefore `η(τ) = sum_β / (coef_α + coef_β) = (2/3) / (2/3 + 0) = 1`.
-
-So **BDF2's `η(τ) = 1`**, NOT 1/2 (which is the explicit Euler
-case in cycle 345 because explicit Euler has `coef_α = 1, coef_β = 1,
-sum_β = 1` ⇒ `1/(1+1) = 1/2`).
+### Priority 0 (REQUIRED) — Headline bridge identity
 
 ```lean
-/-- BDF2 specialisation of cycle 345's
-`Eq422a_at_vertex_eta_eq_of_stable_preconsistent`. The
-underlying-one-step-method `η ∈ G₁` corresponding to BDF2 has
-`η(τ) = 1` (verified numerically: coef_α = 2/3, coef_β = 0,
-sum_β = 2/3, so η(τ) = (2/3) / (2/3 + 0) = 1). -/
-example {η_q : Quotient OpenMath.Chapter3.Section312.RKTableau.PhiEquivalent.setoidSigma}
-    (hEq : Eq422a bdf2LMM η_q) :
-    elementaryWeightQ_phi η_q OpenMath.Chapter3.Section310.RootedTree.vertex = 1 := by
-  have h := Eq422a_at_vertex_eta_eq_of_stable_preconsistent
-    bdf2LMM hEq (by norm_num) bdf2LMM_isStable bdf2LMM_isPreconsistent
-    bdf2LMM_coef_β_nonneg
-  rw [h]
-  -- Goal reduces to (sum_β) / (coef_α + coef_β) = 1
-  simp [bdf2LMM, Fin.sum_univ_two, Fin.sum_univ_three]
+/-- *Phase D′ bridge (cycle 347) — P1:* the §422 β-side coefficient
+`coef_β(M) = Σ_{i:Fin (k+1)} i · M.β i` equals `βPoly'(1)`, the
+derivative of the §410 β-polynomial at `1`.
+
+This is the β-side analog of cycle 344's
+`coef_α_eq_ρPoly_deriv_at_one_of_preconsistent`. Unlike the α-side
+bridge, **no preconsistency hypothesis is needed**: `βPoly` is
+`Σ β_i · X^i` (no Nat-subtraction in the exponent), so the
+derivative-at-1 unfolds directly without invoking `Σ α_i = 1`.
+
+Algebraic derivation: `βPoly'(z) = Σ i · C(β_i) · X^(i-1)`, so
+`βPoly'(1) = Σ i · β_i = coef_β(M)`. -/
+theorem coef_β_eq_βPoly_deriv_at_one
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k) :
+    (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i)
+      = (OpenMath.Chapter4.Section410.βPoly M).derivative.eval 1
+```
+
+**Proof recipe**: mirror cycle 178's
+`ρPoly_deriv_eval_one_unconditional` (Section441.lean:375). Specifically:
+
+1. `unfold OpenMath.Chapter4.Section410.βPoly`.
+2. `rw [Polynomial.derivative_sum]`.
+3. `rw [Polynomial.eval_finset_sum]`.
+4. `apply Finset.sum_congr rfl; intro i _`.
+5. Per-summand: `rw [Polynomial.derivative_C_mul_X_pow,
+   Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+   Polynomial.eval_X, one_pow, mul_one]`.
+6. The remaining goal is `i.val · M.β i = M.β i · i.val` or
+   similar — close with `ring` (or `mul_comm`).
+
+The `i.val - 1` exponent issue (when `i.val = 0`) is handled by
+`Polynomial.derivative_C_mul_X_pow` — the lemma's RHS uses
+`Polynomial.C (n : ℝ) * X^(n-1)` for `n ≥ 1` and `0` for `n = 0`;
+either way it evaluates to `n · X^(n-1)` at `1` ⇒ `n` (when
+`n ≥ 1`) or `0` (when `n = 0` — but `0 · β 0 = 0` matches on the
+LHS too).
+
+**Verify before writing**: run `lean_loogle` or `lean_local_search`
+on `Polynomial.derivative_C_mul_X_pow` to confirm signature and
+direction. The α-side cycle 178 proof at line 388-393 uses
+exactly this lemma; reuse the same pattern.
+
+**Estimated LOC**: ~25.
+
+### Priority 1 — BDF2 sanity witness
+
+```lean
+/-- *Non-vacuity for P1 (cycle 347):* `bdf2LMM`'s `coef_β = 0`
+matches `βPoly'(1) = 0` since BDF2 has β₁ = β₂ = 0 and the only
+non-zero β-coefficient (β₀ = 2/3) contributes `0 · 2/3 = 0`. -/
+example :
+    (OpenMath.Chapter4.Section410.βPoly
+        OpenMath.Chapter4.Section451.bdf2LMM).derivative.eval 1 = 0 := by
+  rw [← coef_β_eq_βPoly_deriv_at_one]
+  simp [OpenMath.Chapter4.Section451.bdf2LMM, Fin.sum_univ_three]
+```
+
+Or alternatively (more direct):
+
+```lean
+example :
+    (OpenMath.Chapter4.Section410.βPoly
+        OpenMath.Chapter4.Section451.bdf2LMM).derivative.eval 1 = 0 := by
+  unfold OpenMath.Chapter4.Section410.βPoly
+  simp [OpenMath.Chapter4.Section451.bdf2LMM, Fin.sum_univ_three,
+    Polynomial.derivative_C_mul_X_pow]
   norm_num
 ```
 
-The `RootedTree.vertex` reference may need namespace qualification
-(`OpenMath.Chapter3.Section310.RootedTree.vertex`) per Section422's
-existing examples. If the `simp` fails to reduce, fall back to
-explicit `unfold` of `coef_α` / `coef_β` / `sum_β` (these names
-may not exist as `def`s — check Section422 for whether cycle 344
-introduced them as `def`s or only as inline sums; the cycle 345
-update suggests they appear inline in the theorem statements). If
-they're inline, write the goal verbatim and use `simp [bdf2LMM,
-Fin.sum_univ_two, Fin.sum_univ_three]; norm_num` to close.
+Pick whichever closes cleanly; the first composes via the new
+theorem (a better demo), the second is independent (a useful
+double-check).
 
-## Ship checklist
+**Estimated LOC**: ~5.
 
-1. **Pre-flight** (5 min): `lake env lean OpenMath/Chapter4/Section451.lean`
-   warm smoke test. Then `lean_hover_info` on
-   `bdf2LMM.IsHomogeneousSolution` and on `pow_le_one₀` to confirm
-   shapes. Read Section404:213–225 (`explicitEulerLMM_isStable`
-   template) and Section451:140–151 (`bdf2LMM` definition).
-2. **Write `bdf2_solution_decomp`** as a private theorem in
-   Section451.lean immediately after `bdf2LMM_isAStable`. Build:
-   `lake env lean OpenMath/Chapter4/Section451.lean`.
-3. **Write `bdf2LMM_isStable`** consuming the decomposition. Build.
-4. **Write SECONDARY (β-helpers + BDF2 numerical witness)** in
-   Section422.lean. Build:
-   `lake env lean OpenMath/Chapter4/Section422.lean`.
-5. **STRETCH (if budget allows)**: write the BDF2 P1 non-vacuity
-   example. Build.
-6. **Axiom check**: `#print axioms` on `bdf2LMM_isStable`,
-   `coef_β_nonneg_of_β_nonneg`, `bdf2LMM_β_nonneg`, `bdf2LMM_coef_β_nonneg`.
-   Confirm `[propext, Classical.choice, Quot.sound]` only on each.
-   The `bdf2_solution_decomp` is `private` so its axioms don't
-   matter for the public surface but should also be clean.
-7. **Sorry count**:
-   `grep -c sorry OpenMath/Chapter4/Section{422,451}.lean` → 0/0.
-8. **Tautology scanner**:
-   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter4/Section{422,451}.lean`
-   → no hits.
-9. **lean_status.json**: no entity row changes — `bdf2LMM_isStable`
-   is not a textbook entity but an infrastructure theorem;
-   `def:422B` row gets a one-line cycle 346 note in its `notes`
-   field documenting the BDF2 non-vacuity stretch (if shipped).
-10. **plan.md**: no `[x]`/`[~]`/`[ ]` state changes expected
-    (§422 row stays `[~]` per def:422B's partial status; §451
-    row's `bdf2LMM_isGStable` reference can be amplified with a
-    cycle 346 note mentioning the new `bdf2LMM_isStable` — both
-    are inline notes, not state changes).
-11. **task_results/cycle_346.md** — standard sections.
-12. **Commit + push** with standard `Cycle 346 — bdf2LMM_isStable …`
-    message.
+### Priority 2 — Explicit Euler sanity witness
 
-## What NOT to try
+```lean
+/-- *Non-vacuity for P1 (cycle 347):* `explicitEulerLMM`'s
+`coef_β = 0·β₀ + 1·β₁ = 0 + 1·1 = 1` matches `βPoly'(1)` where
+`βPoly explicitEulerLMM = X` (Section410 cycle 73's
+`βPoly_explicitEuler`), so `βPoly'(1) = 1`. -/
+example :
+    (OpenMath.Chapter4.Section410.βPoly
+        OpenMath.Chapter4.Section404.explicitEulerLMM).derivative.eval 1 = 1 := by
+  rw [OpenMath.Chapter4.Section410.βPoly_explicitEuler]
+  simp
+```
 
-* **Do NOT attempt Phase D.3** (the `underlyingEta_aux`
-  well-founded-recursion inductive solver). Per cycle 345's
-  "Suggested next approach" option 3, this is multi-cycle HIGH-risk
-  work requiring per-tree linear isolation. A sorry-first scaffold
-  would trigger the cycle 200/201 / cycle 149/150 rollback pattern.
-  Out of scope for cycle 346.
+**Estimated LOC**: ~5.
 
-* **Do NOT attempt the general Phase D′ β-side machinery**
-  (analog of cycle 178's `ρPoly_deriv_eval_one_pos_of_stable_preconsistent`
-  but for `coef_β`). Per cycle 345 option 1, this requires defining
-  `βPoly` analogous to `ρPoly` (Section441), bridging `coef_β` to
-  its derivative, and proving non-negativity from
-  `M.IsStable + M.IsConsistent` alone. Multi-cycle. The
-  `coef_β_nonneg_of_β_nonneg` general helper proposed above
-  takes `(∀ i, 0 ≤ M.β i)` as an explicit hypothesis — strictly
-  weaker mathematically but a guaranteed single-cycle additive
-  ship that unblocks BDF2 numerically.
+### Priority 3 (STRETCH) — coef_β positivity for non-negative-β LMMs
 
-* **Do NOT pivot to a fresh entity** from `cycle_336_pivot_options.md`.
-  The cycle 345 deliverable's BDF2 non-vacuity deferral is a
-  natural, small, well-scoped closure target. Pivoting to
-  `thm:302A` (definition-smuggling risk per
-  `cycle_250_strategy_alpha_definition_error.md`), `thm:302B`
-  (multi-cycle PowerSeries infrastructure per cycle 336 §A audit),
-  or `thm:384A` (blocked on `Equivalent → PhiEquivalent`, see
-  cycle 239 update + `thm_381H_deferred.md`) would trade a
-  guaranteed single-cycle ship for unclear scope.
+```lean
+/-- *Phase D′ Step 1 corollary (cycle 347):* combining cycle 347's
+bridge with cycle 346's `coef_β_nonneg_of_β_nonneg`, methods with
+all-non-negative β-coefficients satisfy `0 ≤ βPoly'(1)`. -/
+theorem βPoly_deriv_eval_one_nonneg_of_β_nonneg
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hβ : ∀ i : Fin (k + 1), 0 ≤ M.β i) :
+    0 ≤ (OpenMath.Chapter4.Section410.βPoly M).derivative.eval 1 := by
+  rw [← coef_β_eq_βPoly_deriv_at_one]
+  exact coef_β_nonneg_of_β_nonneg M hβ
+```
 
-* **Do NOT try to derive `bdf2LMM_isStable` from `bdf2LMM_isGStable`
-  or `bdf2LMM_isAStable`**. The bridges `IsGStable ⇒ IsStable` and
-  `IsAStable ⇒ IsStable` are non-trivial theorems (A-stability and
-  G-stability concern the test equation / Lyapunov contraction
-  function, while Dahlquist `IsStable` concerns the *pure
-  homogeneous recurrence* — they coincide on certain method classes
-  but the implication is not automatic in general). Building such
-  a bridge is its own multi-cycle task. The direct decomposition
-  above (~80 LOC including helper) is shorter.
+This is a clean restatement of cycle 346's coef_β helper in the
+polynomial language. Ship if budget allows; it pre-stages Phase
+D′ Step 2 (positivity from stability + consistency) by giving
+a target shape that consumers can already cite.
 
-* **Do NOT touch `Section441.lean`** — 43+ consecutive GPFS-blocked
-  compile timeouts since cycle 182 (most recent: cycle 239's 43rd
-  timeout). Skip per `.prover-state/issues/cycle_182_gpfs_slowness.md`.
-  `bdf2LMM_isStable`'s proof does NOT require Section441
-  infrastructure (it uses direct algebraic decomposition, not the
-  §441 `ρPoly`-root machinery from cycles 175–178).
+**Estimated LOC**: ~5.
 
-* **Do NOT introduce `sorry`/`axiom`/`constant`**. PRIMARY has a
-  fully sketched closed proof; SECONDARY is trivial; STRETCH is a
-  one-liner over both. All axiom-clean closure expected.
+## §5 — Placement
 
-* **Do NOT introduce `maxHeartbeats` overrides above 200000**.
-  The strong induction `match` plus three `ih` calls should fit
-  well within default heartbeats. If something blows up, decompose
-  further (e.g. extract the inductive step's `ring` manipulation
-  into a `private lemma`).
+Insert the new theorem block immediately after the cycle 346
+β-helpers in `OpenMath/Chapter4/Section422.lean`, around line 903.
+Suggested section header:
 
-* **Do NOT modify `scripts/autonomous_loop.py`** or any supervisor
-  prompt-builder logic. Phantom commit verdicts (per
-  `.prover-state/issues/phantom_commit_verdict_pattern.md`) are
-  loop-maintainer territory. Cycle 345 scored 1 per the cycle
-  summary noting "heartbeat-only git diff … phantom-commit-verdict
-  pattern"; cycle 346 should proceed normally and not chase scanner
-  false positives. The supervisor's diff-snapshot can lag behind
-  the commit; trust `git log -1 --stat HEAD` not the supervisor's
-  reported diff.
+```
+/-! ### Phase D′ Step 1 (cycle 347) — `coef_β ↔ βPoly.derivative.eval 1` bridge
 
-## Fallback if PRIMARY stalls
+Reuses Section410's `βPoly` (cycle 73, line 103) for the
+algebraic bridge identity. The β-side analog of cycle 344's
+`coef_α_eq_ρPoly_deriv_at_one_of_preconsistent`. **No hypothesis
+needed** — βPoly's clean `Σ β_i · X^i` shape avoids the
+`X^(k-(i+1))` Nat-subtraction bookkeeping that forced
+preconsistency on the α-side.
 
-If `bdf2_solution_decomp`'s strong induction hits a Lean elaboration
-issue (e.g. `match` pattern incompatibility with strong induction's
-motive, `Nat.strong_induction_on` API drift, or `simp only [bdf2LMM,
-Fin.sum_univ_two, ...]` failing to expose the recurrence cleanly):
+Step 2 (positivity from `IsStable + IsConsistent` alone, analog
+of cycle 178's `ρPoly_deriv_eval_one_pos_of_stable_preconsistent`)
+is multi-cycle work; deferred. -/
+```
 
-1. **Try the `rcases n with _ | _ | n` fallback** (per pre-flight
-   verification #2). This is the standard Mathlib idiom for
-   "split into n=0, n=1, n+2" without `match` on the motive.
-2. **Try splitting the recurrence unfold into a separate `have`**:
-   ```lean
-   have hrec_unfold : ∀ m,
-       Y (m + 2) = (4 / 3 : ℝ) * Y (m + 1) + (-1 / 3) * Y m := by
-     intro m
-     have h := hY m
-     simp only [bdf2LMM, Fin.sum_univ_two] at h
-     -- normalize Nat subtraction
-     have h1 : (m + 2 - (0 + 1) : ℕ) = m + 1 := by omega
-     have h2 : (m + 2 - (1 + 1) : ℕ) = m := by omega
-     rw [h1, h2] at h
-     linarith
-   ```
-   Then use `hrec_unfold n` inside the inductive step.
-3. **If `match n, ih with` causes universe / motive issues**, use:
-   ```lean
-   match n with
-   | 0 => simp; ring
-   | 1 => simp; ring
-   | n + 2 => -- here `ih` is the closure from the outer induction
-     ...
-   ```
-4. **If those also stall**, DROP PRIMARY entirely and ship just
-   SECONDARY (`coef_β_nonneg_of_β_nonneg` + numerical witnesses
-   for `bdf2LMM`, `explicitEulerLMM`, `implicitEulerLMM`). This
-   is a guaranteed clean ~40 LOC ship that doesn't unblock BDF2
-   non-vacuity (STRETCH becomes infeasible without PRIMARY) but
-   adds reusable Phase D′ infrastructure plus three numerical
-   witnesses. The scope falls from "Phase D consolidation +
-   stretch" to "additive helpers" — still strictly additive,
-   axiom-clean, sorry count 0.
+Section422.lean projected to grow 931 → ~975 LOC (≤50 LOC for the
+required + sanity priorities; ≤55 LOC including the stretch).
 
-This ensures cycle 346 ships *something* axiom-clean and
-non-trivial regardless of PRIMARY's outcome.
+## §6 — What worked in the cycle 344 α-side template
 
-## Time budget
+The cycle 344 α-side bridge proof
+(`coef_α_eq_ρPoly_deriv_at_one_of_preconsistent`) is at
+`OpenMath/Chapter4/Section422.lean:703`. Key tactical moves to
+mirror:
 
-* Pre-flight + Lean MCP checks: 10 min.
-* PRIMARY (`bdf2_solution_decomp` + `bdf2LMM_isStable`): 45 min.
-* SECONDARY (β-helpers + BDF2 numerical): 15 min.
-* STRETCH (BDF2 P1 non-vacuity example): 15 min.
-* Axiom check + sorry/tautology scan + housekeeping: 10 min.
-* Commit + push: 5 min.
+* Use `rw [M.ρPoly_deriv_eval_one_unconditional]` to expose the
+  closed form. For β-side, we go the opposite direction (compute
+  the derivative from `Section410.βPoly` directly, no prebuilt
+  closed-form lemma needed).
+* Use a separate `have h_decomp : ...` to canonicalize the LHS
+  via `Finset.sum_congr` + `push_cast` + `ring` before the
+  closing `rw + ring`. For β-side, the canonicalization may be
+  unnecessary because `βPoly'(1)`'s expansion already matches
+  `coef_β`'s shape verbatim.
 
-Total: ~100 min. Within typical cycle budget.
+Reference cycle 178's `ρPoly_deriv_eval_one_unconditional` body
+(Section441.lean:375–394) for the per-summand `Polynomial.derivative_*`
+chain.
 
-If PRIMARY runs over 60 min, switch to fallback (SECONDARY only).
+## §7 — What NOT to try
+
+### Do NOT define a fresh `σPoly`
+
+Cycle 346's task results §"Suggested next approach" Option A
+sketched "Define `σPoly` (the β-side characteristic polynomial,
+analog of `ρPoly` in Section441)". This is unnecessary —
+`Section410.βPoly` already exists with the exact shape
+`Σ β_i · X^i` needed for the bridge. Defining a parallel `σPoly`
+in §422 would be definitional duplication.
+
+### Do NOT attempt Phase D′ Step 2 (positivity from textbook hyps)
+
+The cycle 178 α-side argument (`ρPoly_deriv_eval_one_pos_of_stable_preconsistent`)
+required a 4-cycle chain (cycles 175–178: no-real-root > 1; simple-
+root-at-1; ρ > 0 on (1,∞); ρ'(1) > 0). The β-side analog is
+structurally different — `βPoly` has no obvious "root location"
+forced by stability + consistency, and the textbook
+characterization of `0 ≤ βPoly'(1)` for stable consistent LMMs is
+not as standard. Multi-cycle scoping doc would need to be written
+first; that is Phase D′ Step 2 work for cycle 348+ (if pursued).
+
+For cycle 347, the explicit β-non-negativity hypothesis
+(cycle 346's `coef_β_nonneg_of_β_nonneg`) is the current bridge
+and remains the consumer-facing path. Phase D′ Step 1 just
+restates that bridge in polynomial form.
+
+### Do NOT modify cycle 345's `Eq422a_at_vertex_eta_eq_of_stable_preconsistent`
+
+The signature changes (e.g. dropping `hβ_nn` once positivity is
+proved from stability + consistency) are Phase D′ Step 3/4 work
+in the multi-cycle plan. Cycle 347 ships only the bridge, not the
+hypothesis refactor.
+
+### Do NOT introduce sorries
+
+Cycle 200/201 rollback precedent: sorry-first scaffolds for
+multi-cycle work get rolled back if they cannot close in a single
+cycle. Cycle 347's deliverables are all single-cycle achievable
+per the §4 LOC estimates.
+
+### Do NOT raise `maxHeartbeats` above 200000
+
+If the per-summand `Polynomial.derivative_C_mul_X_pow` rewrite
+stalls, decompose into a private helper
+`derivative_βPoly_summand_eval_one_eq` (one summand isolated) and
+compose. The cycle 178 α-side proof at Section441.lean:375 is
+~20 LOC; the β-side should be comparable or shorter.
+
+### Do NOT pivot to a fresh entity
+
+Cycle 346 closed `bdf2LMM_isStable` and the BDF2 β-helpers; cycle
+347 should compound on that investment. Pivoting now (Option C)
+would leave Phase D′ Step 1 as a half-shipped sketch in
+`def_422B_path.md`.
+
+### Do NOT modify `Section441.lean`
+
+The supervisor's recent observation that Section441 builds in
+~266s in the full chain (cycle 346 task results §Discovery)
+suggests GPFS may have improved — but cycle 347 has no need to
+touch §441. The cycle 347 deliverables live entirely in §422,
+importing from §410 and §451 (both stable, both cycle-warm).
+
+### Do NOT edit `scripts/autonomous_loop.py`
+
+Per CLAUDE.md and the standing `phantom_commit_verdict_pattern.md`
+issue: prompt-builder and scanner bugs are loop-maintainer
+territory. If the supervisor flags any false-positive tautology
+hit on the new theorem's `:= …` closer, apply the cosmetic
+rename workaround (`h_<name>` → `h<name>`) per cycles 014/015/121
+precedent.
+
+## §8 — Pre-flight risks
+
+| Risk | Likelihood | Mitigation |
+|---|---|---|
+| `Polynomial.derivative_C_mul_X_pow` signature drift | Low | Verify via `lean_local_search "derivative_C_mul_X_pow"` early; cycle 178's α-side proof at Section441.lean:389 uses it cleanly, so the name is stable |
+| `i.val - 1` ℕ-subtraction underflow at `i.val = 0` | Low | `Polynomial.derivative_C_mul_X_pow` handles the `n = 0` case as `0`; `simp [Nat.cast_zero]` if needed |
+| `push_cast` / `Nat.cast_sub` complications | Low | β-side has no `(k - (i+1))` exponent — straight `(i.val : ℝ) * M.β i` shape, no cast bridge needed |
+| Section422 warm rebuild time | Low | File is ~932 LOC at HEAD; adding 50 LOC is well within compile budget |
+| BDF2 sanity `simp` over `Fin.sum_univ_three` | Low | Cycle 346 used the same pattern for `bdf2LMM_β_nonneg`; reuse the recipe |
+
+No HIGH-risk items. No GPFS-related risk (file is not Section441).
+No prerequisite Mathlib API gap.
+
+## §9 — Acceptance criteria
+
+* **REQUIRED**: `coef_β_eq_βPoly_deriv_at_one` lands in Section422
+  immediately after cycle 346's `coef_β_nonneg_of_β_nonneg` block.
+* **REQUIRED**: `lake env lean OpenMath/Chapter4/Section422.lean`
+  exits 0.
+* **REQUIRED**: `#print axioms
+  OpenMath.Chapter4.Section422.coef_β_eq_βPoly_deriv_at_one`
+  returns `[propext, Classical.choice, Quot.sound]` only.
+* **REQUIRED**: BDF2 sanity `example` compiles.
+* **REQUIRED**: `grep -c sorry OpenMath/Chapter4/Section422.lean`
+  returns `0`.
+* **REQUIRED**: tautology-scanner regex
+  `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$` returns no hits
+  on the new lines.
+* **DESIRED**: Priority 2 (explicit Euler) and Priority 3 (stretch
+  corollary) both land.
+
+## §10 — Post-ship updates
+
+* Append "Cycle 347 update — Phase D′ Step 1 SHIPPED" to
+  `.prover-state/issues/def_422B_path.md` documenting:
+  - The bridge identity name and signature.
+  - The `Section410.βPoly` reuse discovery (correcting the cycle
+    346 worker's "define σPoly" recommendation).
+  - The decision that Phase D′ Step 2 (positivity from textbook
+    hypotheses alone) remains deferred.
+* Update `task_results/cycle_347.md` with the standard sections.
+* Do NOT update `plan.md` — `def:422B` row stays at `[~]` (no
+  Butcher entity closure this cycle, just internal infrastructure).
+* Do NOT update `lean_status.json` for `def:422B` (still partial).
+
+## §11 — Cycle 348+ outlook
+
+After cycle 347 closes:
+
+* **Cycle 348 candidate A — Phase D′ Step 2 scoping**: write a
+  multi-cycle plan (mirror `lem_441A_phase_C_scoping.md` or
+  `def_422B_path.md`) for deriving `0 ≤ βPoly'(1)` from
+  `IsStable + IsConsistent` alone. The standard textbook proof
+  involves… TBD; this requires reading Butcher §403/§441 for
+  the β-side characterization. Likely 2–3 cycles of substantive
+  work; only commit after the scoping is in.
+* **Cycle 348 candidate B — Phase D.3 inductive solver scoping**:
+  multi-cycle plan for the recursive `η : RootedTree → ℝ`
+  construction (Phases D.2 well-founded recursion ✓, D.3 inductive
+  step open). Per `def_422B_path.md` §6.2 this is HIGH-risk
+  multi-cycle work.
+* **Cycle 348 candidate C — pivot to fresh entity**: at this point
+  §422 will have shipped 12 consecutive cycles of infrastructure
+  (336–347); a planner might reasonably pivot to a fresh Butcher
+  textbook entity. Candidates from `cycle_336_pivot_options.md`:
+  `def:451A` G-stable (still listed as deferred), `thm:535A`
+  underlying one-step method (GLM), `thm:541A` DIMSIM types.
+* **Cycle 348 candidate D — BDF3 / Adams-Bashforth witnesses**:
+  expand the §404 LMM non-vacuity story. Lower-priority unless
+  the planner wants to break the §422 streak with a self-contained
+  small cycle.
+
+Cycle 347 itself: focus on shipping Phase D′ Step 1 cleanly. Do
+NOT pre-scope cycle 348+ in this strategy doc beyond the brief
+outlook above.

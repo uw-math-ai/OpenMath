@@ -2,6 +2,7 @@ import Mathlib
 import OpenMath.Chapter3.Section301
 import OpenMath.Chapter3.Section381
 import OpenMath.Chapter4.Section404
+import OpenMath.Chapter4.Section410
 import OpenMath.Chapter4.Section441
 import OpenMath.Chapter4.Section451
 
@@ -927,5 +928,73 @@ example (η_q : Quotient PhiEquivalent.setoidSigma)
   simp [OpenMath.Chapter4.Section451.bdf2LMM,
     Fin.sum_univ_two, Fin.sum_univ_three]
   norm_num
+
+/-! ### Phase D′ Step 1 (cycle 347) — `coef_β ↔ βPoly.derivative.eval 1` bridge
+
+Reuses Section410's `βPoly` (cycle 73, line 103) for the algebraic
+bridge identity. The β-side analog of cycle 344's
+`coef_α_eq_ρPoly_deriv_at_one_of_preconsistent`. **No hypothesis
+needed** — βPoly's clean `Σ β_i · X^i` shape avoids the
+`X^(k-(i+1))` Nat-subtraction bookkeeping that forced
+preconsistency on the α-side.
+
+Step 2 (positivity from `IsStable + IsConsistent` alone, analog of
+cycle 178's `ρPoly_deriv_eval_one_pos_of_stable_preconsistent`) is
+multi-cycle work; deferred. -/
+
+/-- *Phase D′ bridge (cycle 347) — P1:* the §422 β-side coefficient
+`coef_β(M) = Σ_{i:Fin (k+1)} i · M.β i` equals `βPoly'(1)`, the
+derivative of the §410 β-polynomial at `1`.
+
+This is the β-side analog of cycle 344's
+`coef_α_eq_ρPoly_deriv_at_one_of_preconsistent`. Unlike the α-side
+bridge, **no preconsistency hypothesis is needed**: `βPoly` is
+`Σ β_i · X^i` (no Nat-subtraction in the exponent), so the
+derivative-at-1 unfolds directly without invoking `Σ α_i = 1`.
+
+Algebraic derivation: `βPoly'(z) = Σ i · C(β_i) · X^(i-1)`, so
+`βPoly'(1) = Σ i · β_i = coef_β(M)`. -/
+theorem coef_β_eq_βPoly_deriv_at_one
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k) :
+    (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i)
+      = (OpenMath.Chapter4.Section410.βPoly M).derivative.eval 1 := by
+  unfold OpenMath.Chapter4.Section410.βPoly
+  rw [Polynomial.derivative_sum]
+  rw [Polynomial.eval_finset_sum]
+  apply Finset.sum_congr rfl
+  intro i _
+  rw [Polynomial.derivative_C_mul_X_pow]
+  rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+      Polynomial.eval_X, one_pow, mul_one]
+  ring
+
+/-- *Non-vacuity for P1 (cycle 347):* `bdf2LMM`'s `coef_β = 0`
+matches `βPoly'(1) = 0` since BDF2 has `β 1 = β 2 = 0` and the
+only non-zero β-coefficient (β₀ = 2/3) contributes `0 · 2/3 = 0`. -/
+example :
+    (OpenMath.Chapter4.Section410.βPoly
+        OpenMath.Chapter4.Section451.bdf2LMM).derivative.eval 1 = 0 := by
+  rw [← coef_β_eq_βPoly_deriv_at_one]
+  simp [OpenMath.Chapter4.Section451.bdf2LMM, Fin.sum_univ_three]
+
+/-- *Non-vacuity for P1 (cycle 347):* `explicitEulerLMM`'s
+`coef_β = 0·β₀ + 1·β₁ = 0 + 1·1 = 1` matches `βPoly'(1)` where
+`βPoly explicitEulerLMM = X` (Section410 cycle 73's
+`βPoly_explicitEuler`), so `βPoly'(1) = 1`. -/
+example :
+    (OpenMath.Chapter4.Section410.βPoly
+        OpenMath.Chapter4.Section404.explicitEulerLMM).derivative.eval 1 = 1 := by
+  rw [OpenMath.Chapter4.Section410.βPoly_explicitEuler]
+  simp
+
+/-- *Phase D′ Step 1 corollary (cycle 347):* combining cycle 347's
+bridge with cycle 346's `coef_β_nonneg_of_β_nonneg`, methods with
+all-non-negative β-coefficients satisfy `0 ≤ βPoly'(1)`. -/
+theorem βPoly_deriv_eval_one_nonneg_of_β_nonneg
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hβ : ∀ i : Fin (k + 1), 0 ≤ M.β i) :
+    0 ≤ (OpenMath.Chapter4.Section410.βPoly M).derivative.eval 1 := by
+  rw [← coef_β_eq_βPoly_deriv_at_one]
+  exact coef_β_nonneg_of_β_nonneg M hβ
 
 end OpenMath.Chapter4.Section422

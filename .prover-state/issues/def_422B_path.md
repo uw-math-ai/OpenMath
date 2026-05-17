@@ -1202,3 +1202,71 @@ that need the unconditional form.
    step via per-tree linear isolation. Contingent on Aristotle
    batch + phased scoping per `lem_310B_plan.md` /
    `lem_441A_phase_C_scoping.md` template depth.
+
+## Cycle 347 update — Phase D′ Step 1 SHIPPED
+
+**Status: SHIPPED.** Cycle 347 lands the β-side algebraic
+bridge in `OpenMath/Chapter4/Section422.lean`:
+
+* `coef_β_eq_βPoly_deriv_at_one` (line ~957): for any
+  `M : LinearMultistepMethod k`,
+  `(∑ i : Fin (k+1), (i.val : ℝ) · M.β i) = βPoly M . derivative.eval 1`.
+  **No hypothesis needed.** β-side analog of cycle 344's
+  `coef_α_eq_ρPoly_deriv_at_one_of_preconsistent`.
+* `βPoly_deriv_eval_one_nonneg_of_β_nonneg` (line ~993):
+  stretch corollary combining cycle 347's bridge with cycle
+  346's `coef_β_nonneg_of_β_nonneg`. Restates the cycle 346
+  helper in polynomial language.
+* Two anonymous `example` non-vacuity witnesses: BDF2
+  (`βPoly'(1) = 0`) and explicit Euler (`βPoly'(1) = 1`).
+
+**`Section410.βPoly` reuse discovery.** The cycle 346 worker's
+"Suggested next approach" Option A recommended defining a fresh
+`σPoly` in §422. Cycle 347 found this unnecessary —
+`Section410.βPoly` (cycle 73, line 103) already has the exact
+`Σ β_i · X^i` shape needed for the bridge, with degree bound
+`βPoly_natDegree_le` (line 219) and explicit-Euler witness
+`βPoly_explicitEuler` (line 179) already proved. Cycle 347
+reuses `Section410.βPoly` directly via a new import; net new
+definitions = 0.
+
+**Cycle 344 α-side template carried over cleanly.** The cycle
+178 `ρPoly_deriv_eval_one_unconditional` proof recipe at
+Section441.lean:375 ported with simplification: β-side closes
+in ≈7 tactic lines vs cycle 344's ≈18, because `βPoly`'s
+`Σ β_i · X^i` shape (no `X^(k-(i+1))` Nat-subtraction) needs
+no canonicalization step and no `Σ α_i = 1` invocation.
+
+**Cycle 345's `Eq422a_at_vertex_eta_eq_of_stable_preconsistent`
+signature untouched.** The cycle 347 ship is strictly additive;
+the `hβ_nn : 0 ≤ coef_β(M)` hypothesis remains explicit on the
+cycle 345 base theorem for callers that need the unconditional
+form. Phase D′ Step 2 (positivity from `IsStable + IsConsistent`
+alone) remains **deferred** — see cycle 347 task results
+§"Suggested next approach" for the scoping outlook.
+
+**LOC trajectory:** Section422.lean: 931 (cycle 346) → 1004
+(cycle 347, +73 LOC including docstrings).
+
+**Cycle 348 entry point — four candidates** (see
+`task_results/cycle_347.md` §"Suggested next approach"):
+
+A. **Phase D′ Step 2 scoping** (multi-cycle, MEDIUM-HIGH): write
+   a scoping doc analog of `lem_441A_phase_C_scoping.md` for
+   deriving `0 ≤ βPoly'(1)` from `IsStable + IsConsistent`
+   alone. The β-side textbook characterization is not as
+   standard as the α-side `ρ'(1) > 0` story; may require
+   2–3 cycles of investigation before scaffolding.
+B. **Phase D.3 inductive solver scoping** (multi-cycle, HIGH):
+   per §6.2, with D.2 well-founded recursion shipped (cycle
+   343) draft a 3–5 cycle plan for the recursive
+   `η : RootedTree → ℝ` construction.
+C. **Pivot to a fresh entity** (low-medium): with `def:422B`
+   having absorbed 12 consecutive cycles (336–347), reasonable
+   moment for a planner to break the §422 streak. Candidates
+   from `cycle_336_pivot_options.md`: `def:451A` (G-stability),
+   `thm:535A` (one-step underlying method for GLMs), `thm:541A`
+   (DIMSIM types).
+D. **BDF3 / Adams-Bashforth sanity expansion** (low, sideline):
+   expand the §404 LMM non-vacuity surface. Useful palate-
+   cleanser, no §422 closure compounding.
