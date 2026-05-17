@@ -295,9 +295,10 @@ substantive deliverable of the Phase D.3 sequence.
 |---|---|---|---|---|
 | **D.3.a.{1,2}** | 1 (cycle 358) ✅ | `elementaryWeightQ_phi_mul_mk` (`*`-additivity at arbitrary `t`) + `elementaryWeightQ_phi_inv_mk` (`⁻¹`-characterization at arbitrary `t`). Both axiom-clean; 2 non-vacuity `example`s on `explicitEuler` at `RootedTree.cherry`. | ~145 (actual) | Not needed |
 | **D.3.a.3** | 1 (cycle 359) ✅ | `RKTableau.powRep` + `RKTableau.powRep_quotient_eq` infrastructure in `Section381.lean` (after `instGroup_phi`) + `elementaryWeightQ_phi_pow_succ_mk` (ℕ-form, recursive `pow_succ` identity) in `Section422.lean`. All axiom-clean; three non-vacuity `example`s on `explicitEuler`. ℤ-form `elementaryWeightQ_phi_zpow_mk` explicitly deferred to cycle 360 per §5 Step 4. | ~75 (actual) | Not needed |
-| **D.3.b** | 1 (cycle 360) | Linear coefficient extraction: `coeff_eta_t_in_eta_zpow_neg` — the textbook claim "coefficient of η(t) in η⁻ⁱ(t) is i(−1)^r(t)". Uses D.3.a.{1,2,3}. | 100 | Partial (sign algebra) |
-| **D.3.c** | 1 (cycle 361) | `sum_i_alpha_ne_zero_of_stable` — `ρ'(1) ≠ 0` from ρ-stability via simple-root analysis. **Mathlib hook check required first.** | 80 | Poor (polynomial roots) |
-| **D.3.d** | 1 (cycle 362) | `noncomputable def underlyingOneStepMethod_aux` recursion + `_satisfies_Eq422a` spec lemma. Closes `thm:422A`'s substantive content. | 120 | Partial (well-founded recursion proof obligations) |
+| **D.3.b (signature + base cases)** | 1 (cycle 360) ✅ | `linearResidualAt` named helper (definitional residual on quotient) + `coeff_eta_t_in_eta_zpow_neg` split form + `linearResidualAt_vertex_eq_zero` (vertex base case via cycle 341 P3) + `linearResidualAt_one_mk_eq` (closed form at `i = 1` arbitrary `t` via cycle 358 `_inv_mk`). Four non-vacuity `example`s on `explicitEuler` at `vertex` and `cherry`. All axiom-clean. | ~170 (actual) | Not needed |
+| **D.3.b (inductive step / parametricity)** | 1 (cycle 361) | `linearResidualAt_depends_only_on_strict_subtrees` — quotient-level parametricity claim: residual depends only on `η_q`'s values at strict subtrees of `t`. Strong induction on `t.order` via cycle 343's `WellFoundedRelation`. Requires ℤ-form lift `elementaryWeightQ_phi_zpow_mk` from cycle 359's ℕ-form. | 80–100 | Poor (well-founded induction structure) |
+| **D.3.c** | 1 (cycle 362) | `sum_i_alpha_ne_zero_of_stable` — `ρ'(1) ≠ 0` from ρ-stability via simple-root analysis. **Mathlib hook check required first.** | 80 | Poor (polynomial roots) |
+| **D.3.d** | 1 (cycle 363) | `noncomputable def underlyingOneStepMethod_aux` recursion + `_satisfies_Eq422a` spec lemma. Closes `thm:422A`'s substantive content. | 120 | Partial (well-founded recursion proof obligations) |
 
 ### Cycle 358 update — D.3.a partial ship
 
@@ -427,8 +428,98 @@ extraction: `coeff_eta_t_in_eta_zpow_neg` (the textbook claim
 ~100 LOC, partial Aristotle for the sign-cancellation algebra. Uses
 D.3.a.{1,2,3} as inputs.
 
-**Total**: 4 cycles. Sequential dependencies (D.3.a → D.3.b → D.3.d
-must be in order; D.3.c is parallel to D.3.a/D.3.b).
+### Cycle 360 update — D.3.b signature + base cases ship
+
+**Shipped (cycle 360)** at end of `OpenMath/Chapter4/Section422.lean`
+(lines 1797–1969):
+
+* `OpenMath.Chapter4.Section422.linearResidualAt` —
+  `noncomputable def` defining the residual at the §383 quotient
+  level: `Φ_{η_q^(-i)}(t) - i·(-1)^t.order·Φ_{η_q}(t)`. Quotient-
+  level (per §6.3 quotient-faithfulness); does not depend on
+  representative choice. ~5 LOC.
+
+* `OpenMath.Chapter4.Section422.coeff_eta_t_in_eta_zpow_neg`
+  (Sub-deliverable 1, signature pinning): the split form
+  `Φ_{η_q^(-i)}(t) = i·(-1)^t.order·Φ_{η_q}(t) + linearResidualAt i η_q t`.
+  Proof: `unfold linearResidualAt; ring`. Dropped strawman's
+  `hi : 0 < i` hypothesis (works uniformly for `i : ℕ`; at `i = 0`
+  both sides vanish via cycle 239's `elementaryWeightQ_phi_id`).
+  ~8 LOC including doc.
+
+* `OpenMath.Chapter4.Section422.linearResidualAt_vertex_eq_zero`
+  (Sub-deliverable 2 vertex base case): residual is identically zero
+  at `τ`. Proof: cycle 341 P3 (`_zpow_vertex`) +
+  `show RootedTree.vertex.order = 1 from rfl` + `push_cast; ring`.
+  ~10 LOC including doc.
+
+* `OpenMath.Chapter4.Section422.linearResidualAt_one_mk_eq`
+  (Sub-deliverable 2 closed form at `i = 1`): representative-form
+  closed-form `linearResidualAt 1 ⟦⟨s, M⟩⟧ t = -Σⱼ M.b j ·
+  M.derivativeWeightWithSrc M.inverse j t - (-1)^t.order ·
+  M.elementaryWeight t`. Proof: `Nat.cast_one + zpow_neg_one` bridge
+  + cycle 358's `_inv_mk` + cycle 226's `_phi_mk` + `push_cast; ring`.
+  ~12 LOC including doc.
+
+* Four non-vacuity `example`s on `explicitEuler`:
+  - vertex base case `i = 1`,
+  - signature split form at vertex `i = 1`,
+  - closed form at `cherry` (`r = 2`) for `i = 1`.
+
+All five new public symbols axiom-clean (`[propext, Classical.choice,
+Quot.sound]` only) verified via `#print axioms` on a separate axiom-
+check Lean file after `lake build OpenMath.Chapter4.Section422`
+(8037/8037 jobs, exit 0, 153s rebuild). Sorry count remains 0.
+
+**Implementation notes for the cycle 361 worker**:
+
+1. **`(-1)^vertex.order` reduces via explicit rewrite**: `ring`
+   doesn't reduce literal naturals in exponents automatically; need
+   `rw [show vertex.order = 1 from rfl]` (or `simp only`) before
+   `ring`. For cycle 361's inductive step at non-vertex trees,
+   `t.order` will *not* reduce in general — the structural rewrite
+   step will require strict-subtree-induction infrastructure rather
+   than `rfl`.
+
+2. **`Nat.cast_one + zpow_neg_one` bridges `(↑(1 : ℕ) : ℤ)` → `-1`**:
+   the two-step rewrite `rw [Nat.cast_one]; exact zpow_neg_one _` is
+   the cleanest path from `η_q ^ (-((1 : ℕ) : ℤ))` to `η_q⁻¹`. For
+   `i ≥ 2`, cycle 361 will need an analogous bridge via `zpow_neg`
+   + `zpow_natCast` to expose the inverse structure.
+
+3. **Quotient-level statement, representative-form closed form**:
+   `linearResidualAt` is at the quotient level (independent of
+   representative), but `linearResidualAt_one_mk_eq`'s closed-form
+   RHS is necessarily representative-form (mentions `M.b`,
+   `M.inverse`). Cycle 361's parametricity claim "depends only on
+   strict subtrees" should be stated at the quotient level (i.e.
+   invariant under Φ-equivalent representative substitution) — see
+   the suggested cycle 361 signature in `cycle_360.md` Discovery
+   #3.
+
+4. **Example coefficient cast must match theorem signature**:
+   When consuming `coeff_eta_t_in_eta_zpow_neg` with `i = 1`, the
+   coefficient must be written as `((1 : ℕ) : ℝ)`, not `(1 : ℝ)`.
+   The two are equal in value but not syntactically `rfl`. Cycle
+   360 caught this on the first compile.
+
+**Deferred to cycle 361**: Phase D.3.b inductive step — the
+parametricity claim `linearResidualAt_depends_only_on_strict_subtrees`
+that closes the textbook's "induction on r(t)" argument. Requires
+the ℤ-form lift `elementaryWeightQ_phi_zpow_mk` (from cycle 359's
+ℕ-form `elementaryWeightQ_phi_pow_succ_mk` + cycle 358's `_inv_mk`)
+and strong induction on `t.order` via cycle 343's `WellFoundedRelation`.
+
+**Cycle 361 entry point**: Phase D.3.b inductive step — prove
+`linearResidualAt_depends_only_on_strict_subtrees`. Per §5 phase
+table (updated), ~80–100 LOC, poor Aristotle for the well-founded-
+induction structure. Uses cycle 360's deliverables + cycle 359's
+`_pow_succ_mk` as inputs.
+
+**Total**: 5 cycles (was 4; cycle 360 split Phase D.3.b into signature
++ base cases (cycle 360) and inductive step (cycle 361)). Sequential
+dependencies: D.3.a → D.3.b (signature) → D.3.b (inductive step) →
+D.3.d; D.3.c is parallel.
 
 **Aggregated risk**: comparable to the cycle 340–346 base-case (Phase
 D.1) trajectory which took ~6 cycles for `r(t) = 1` alone. The

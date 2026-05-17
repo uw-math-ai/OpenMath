@@ -1794,4 +1794,162 @@ theorem bdf3LMM_coef_β_eq_half_sum_i_sq_alpha :
   intro j hj
   exact bdf3LMM_hasOrderAtLeast_three j (by omega)
 
+/-! ### Phase D.3.b — linear coefficient extraction (cycle 360)
+
+Per Butcher §422 p. 359 (`extraction/raw_text/ch04.txt:1158`), the
+proof of `thm:422A` (Theorem 422A — every preconsistent, stable
+linear multistep method admits a member of `G₁` satisfying (422a))
+relies on the structural claim:
+
+> The coefficient of η(t) in η⁻ⁱ(t) is equal to i·(-1)^r(t), and
+> there are no other terms in η⁻ⁱ(t) with orders greater than r(t)−1.
+
+Phase D.3.b ships this **definitionally** as a named residual
+`linearResidualAt`, with two substantive base-level theorems:
+
+* `linearResidualAt_vertex_eq_zero` — at the single-vertex tree `τ`
+  (where `r(τ) = 1` and the "other terms" set is empty), the residual
+  is identically zero. Corroborates the textbook coefficient identity
+  at the trivial case via cycle 341 P3 (`elementaryWeightQ_phi_zpow_vertex`).
+* `linearResidualAt_one_mk_eq` — at `i = 1` at arbitrary `t`, the
+  residual reduces to a closed-form expression involving cycle 358's
+  `elementaryWeightQ_phi_inv_mk`, exposing the structural dependence
+  on `M`'s representative data at subtrees of `t` via
+  `derivativeWeightWithSrc`.
+
+The structural content "`linearResidualAt` depends only on strict
+subtrees of `t`" is the inductive step (Butcher's "induction on
+r(t)") and is deferred to cycle 361 — see
+`.prover-state/issues/def_422B_phase_D_3_scoping.md` §4.b and §5
+Phase D.3.b row. Cycle 360 follows the §F graceful-degradation
+template: Sub-deliverable 1 (signature pinning via `linearResidualAt`
++ `coeff_eta_t_in_eta_zpow_neg`) plus Sub-deliverable 2 partial
+(vertex base case + `i = 1` closed form) shipped axiom-clean. -/
+
+/-- *Phase D.3.b (cycle 360) — named helper:* the linear-coefficient
+**residual** in the textbook decomposition of `η⁻ⁱ(t)`. Definitional
+on the §383 quotient (per §6.3 quotient-faithfulness discipline):
+`linearResidualAt i η_q t = Φ_{η_q^(-i)}(t) - i·(-1)^r(t)·Φ_{η_q}(t)`,
+isolating the "other terms" (Butcher's phrase) after extracting the
+linear-in-η(t) part.
+
+`noncomputable` because `elementaryWeightQ_phi` is `noncomputable`
+(via `Quotient.lift` in `Section381.lean:4759`); does not depend on
+representative choice. -/
+noncomputable def linearResidualAt (i : ℕ)
+    (η_q : Quotient PhiEquivalent.setoidSigma) (t : RT) : ℝ :=
+  elementaryWeightQ_phi (η_q ^ (-(i : ℤ))) t
+    - (i : ℝ) * (-1)^t.order * elementaryWeightQ_phi η_q t
+
+/-- *Phase D.3.b (cycle 360) Sub-deliverable 1 — signature-pinning
+split form for the linear coefficient of η(t) in η⁻ⁱ(t).*
+Definitional rearrangement of `linearResidualAt`'s defining
+equation. The structural content of the textbook claim
+("coefficient of η(t) is i·(-1)^r(t)") is shipped at vertex via
+`linearResidualAt_vertex_eq_zero` and at `i = 1` at arbitrary `t`
+via `linearResidualAt_one_mk_eq`; the parametricity claim
+("`linearResidualAt` depends only on strict subtrees of `t`") is
+deferred to cycle 361. -/
+theorem coeff_eta_t_in_eta_zpow_neg (i : ℕ)
+    (η_q : Quotient PhiEquivalent.setoidSigma) (t : RT) :
+    elementaryWeightQ_phi (η_q ^ (-(i : ℤ))) t
+      = (i : ℝ) * (-1)^t.order * elementaryWeightQ_phi η_q t
+        + linearResidualAt i η_q t := by
+  unfold linearResidualAt
+  ring
+
+/-- *Phase D.3.b (cycle 360) Sub-deliverable 2 — base case at vertex.*
+At the single-vertex tree `τ` (`r(τ) = 1`, no strict subtrees), the
+residual is zero. This corroborates Butcher's "there are no other
+terms in η⁻ⁱ(t) with orders greater than r(t)−1" specialised to
+`r(t) = 1`, where the "other terms" set is empty.
+
+Proof: cycle 341 P3 (`elementaryWeightQ_phi_zpow_vertex`) gives
+`Φ_{η_q^n}(τ) = n·Φ_{η_q}(τ)` for all `n : ℤ`. At `n = -(i : ℤ)`,
+this yields `Φ_{η_q^(-i)}(τ) = -(i : ℝ)·Φ_{η_q}(τ)`. With
+`vertex.order = 1` (by `rfl`, cf. `Section310.lean:125`), the
+residual is `-i·Φ - i·(-1)¹·Φ = -i·Φ + i·Φ = 0`. -/
+theorem linearResidualAt_vertex_eq_zero (i : ℕ)
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    linearResidualAt i η_q RootedTree.vertex = 0 := by
+  unfold linearResidualAt
+  rw [elementaryWeightQ_phi_zpow_vertex]
+  have h_ord : RootedTree.vertex.order = 1 := rfl
+  rw [h_ord]
+  push_cast
+  ring
+
+/-- *Phase D.3.b (cycle 360) Sub-deliverable 2 — closed form for the
+residual at `i = 1` at arbitrary `t` (representative form).*
+Specialises `linearResidualAt` at `i = 1` to a closed-form expression
+using cycle 358's `elementaryWeightQ_phi_inv_mk`. The closed form
+exposes the residual's structural dependence on `M.elementaryWeight`
+at subtrees of `t` (via `derivativeWeightWithSrc`'s recursive shape);
+the parametricity claim "depends only on strict subtrees" is the
+content of the cycle 361 inductive step.
+
+At `t = vertex`, this reduces to the vertex base case via
+`derivativeWeightWithSrc_vertex` (each factor is `1`) and
+`vertex.order = 1` — providing an independent witness for
+`linearResidualAt_vertex_eq_zero` at `i = 1`. -/
+theorem linearResidualAt_one_mk_eq
+    {s : ℕ} (M : RKTableau s) (t : RT) :
+    linearResidualAt 1
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) t
+      = - (∑ i : Fin s, M.b i * M.derivativeWeightWithSrc M.inverse i t)
+        - (-1)^t.order * M.elementaryWeight t := by
+  unfold linearResidualAt
+  have h_pow :
+      (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) ^ (-((1 : ℕ) : ℤ))
+        = (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩)⁻¹ := by
+    rw [Nat.cast_one]; exact zpow_neg_one _
+  rw [h_pow, elementaryWeightQ_phi_inv_mk M t, elementaryWeightQ_phi_mk]
+  push_cast
+  ring
+
+/-- *Phase D.3.b (cycle 360) — non-vacuity at vertex with
+`explicitEuler`, `i = 1`.* Exercises the vertex base case on a
+canonical RK method, confirming the residual is zero. -/
+example :
+    linearResidualAt 1
+        (Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩) RootedTree.vertex = 0 :=
+  linearResidualAt_vertex_eq_zero 1 _
+
+/-- *Phase D.3.b (cycle 360) — non-vacuity: split form at
+vertex with `explicitEuler`, `i = 1`.* Exercises the
+`coeff_eta_t_in_eta_zpow_neg` split form at the vertex with the
+canonical `explicitEuler` representative. -/
+example :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) ^ (-((1 : ℕ) : ℤ))) RootedTree.vertex
+      = ((1 : ℕ) : ℝ) * (-1)^(RootedTree.vertex.order)
+          * elementaryWeightQ_phi
+              (Quotient.mk PhiEquivalent.setoidSigma
+                ⟨1, RKTableau.explicitEuler⟩) RootedTree.vertex
+        + linearResidualAt 1
+            (Quotient.mk PhiEquivalent.setoidSigma
+              ⟨1, RKTableau.explicitEuler⟩) RootedTree.vertex :=
+  coeff_eta_t_in_eta_zpow_neg 1
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    RootedTree.vertex
+
+/-- *Phase D.3.b (cycle 360) — non-vacuity: closed form at `i = 1`
+at `cherry` with `explicitEuler`.* Exercises
+`linearResidualAt_one_mk_eq` at the order-2 tree `cherry`,
+providing the first non-vertex witness of the closed-form expression
+for the residual via cycle 358's `elementaryWeightQ_phi_inv_mk`. -/
+example :
+    linearResidualAt 1
+        (Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩) RootedTree.cherry
+      = - (∑ i : Fin 1,
+              RKTableau.explicitEuler.b i *
+                RKTableau.explicitEuler.derivativeWeightWithSrc
+                  RKTableau.explicitEuler.inverse i RootedTree.cherry)
+        - (-1)^(RootedTree.cherry.order)
+            * RKTableau.explicitEuler.elementaryWeight RootedTree.cherry :=
+  linearResidualAt_one_mk_eq RKTableau.explicitEuler RootedTree.cherry
+
 end OpenMath.Chapter4.Section422
