@@ -1364,4 +1364,56 @@ theorem trapezoidalLMM_coef_β_eq_half_sum_i_sq_alpha :
     OpenMath.Chapter4.Section404.trapezoidalLMM
     trapezoidalLMM_hasOrderAtLeast_two
 
+/-- *Phase D′.2.2 BDF3 order-3 witness (cycle 353):* BDF3 satisfies
+`HasOrderAtLeast 3`. Verified by checking `C bdf3LMM j = 0` for
+`j ∈ {0, 1, 2, 3}` (preconsistency + (404b) + two further
+cancellations from the α-side third- and fourth-power moments).
+This is the project's first order-≥-3 LMM witness. -/
+theorem bdf3LMM_hasOrderAtLeast_three :
+    OpenMath.Chapter4.Section451.bdf3LMM.HasOrderAtLeast 3 := by
+  intro j hj
+  interval_cases j
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf3LMM 0 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf3LMM, Fin.sum_univ_three]
+    norm_num
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf3LMM 1 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf3LMM,
+      Fin.sum_univ_three, Fin.sum_univ_four, Nat.factorial]
+    norm_num
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf3LMM 2 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf3LMM,
+      Fin.sum_univ_three, Fin.sum_univ_four, Nat.factorial]
+    norm_num
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf3LMM 3 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf3LMM,
+      Fin.sum_univ_three, Fin.sum_univ_four, Nat.factorial]
+    norm_num
+
+/-- *Phase D′.2.2 BDF3 sanity witness (cycle 353):* end-to-end
+exercise of `coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two`
+on BDF3. Like BDF2 (cycle 351), both sides vanish at BDF3:
+* LHS `coef_β(bdf3LMM) = 0·(6/11) + 1·0 + 2·0 + 3·0 = 0`;
+* RHS `(1/2) · Σᵢ (i+1)²·αᵢ.succ = (1/2) · [1·(18/11) + 4·(−9/11) +
+  9·(2/11)] = (1/2) · 0 = 0`.
+A trivial-identity witness (parity with BDF2); the first non-trivial
+witness was trapezoidal `1/2 = 1/2` (cycle 352). The `HasOrderAtLeast 2`
+hypothesis is derived inline from `HasOrderAtLeast 3` via `omega`. -/
+theorem bdf3LMM_coef_β_eq_half_sum_i_sq_alpha :
+    (∑ i : Fin 4, ((i.val : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section451.bdf3LMM.β i)
+      = (1 / 2) *
+        ∑ i : Fin 3, (((i.val + 1 : ℕ) : ℝ))^2 *
+          OpenMath.Chapter4.Section451.bdf3LMM.α i.succ := by
+  apply coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two
+  intro j hj
+  exact bdf3LMM_hasOrderAtLeast_three j (by omega)
+
 end OpenMath.Chapter4.Section422

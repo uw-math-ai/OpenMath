@@ -150,6 +150,49 @@ noncomputable def bdf2LMM : LinearMultistepMethod 2 where
     | ⟨2, _⟩ => 0
   α_zero := rfl
 
+/-- The 3-step BDF method (BDF3) as a linear multistep method.
+The textbook recurrence is
+`y_n = (18/11) y_{n-1} − (9/11) y_{n-2} + (2/11) y_{n-3}
+   + (6/11) h f(x_n, y_n)`.
+Under the §404 normalisation `α 0 = -1`, the coefficient vectors are
+`α = (-1, 18/11, -9/11, 2/11)`, `β = (6/11, 0, 0, 0)`. BDF3 is order 3
+and stable, providing the order-3 LMM witness for §410/§422
+non-vacuity. -/
+noncomputable def bdf3LMM : LinearMultistepMethod 3 where
+  α := fun i =>
+    match i with
+    | ⟨0, _⟩ => -1
+    | ⟨1, _⟩ => 18 / 11
+    | ⟨2, _⟩ => -9 / 11
+    | ⟨3, _⟩ => 2 / 11
+  β := fun i =>
+    match i with
+    | ⟨0, _⟩ => 6 / 11
+    | ⟨1, _⟩ => 0
+    | ⟨2, _⟩ => 0
+    | ⟨3, _⟩ => 0
+  α_zero := rfl
+
+/-- BDF3 is preconsistent: `Σᵢ αᵢ.succ = 18/11 − 9/11 + 2/11 = 1`. -/
+theorem bdf3LMM_isPreconsistent :
+    bdf3LMM.IsPreconsistent := by
+  simp [LinearMultistepMethod.IsPreconsistent, bdf3LMM,
+    Fin.sum_univ_three]
+  norm_num
+
+/-- BDF3 satisfies (404b):
+`Σᵢ (i+1)·αᵢ.succ = 1·(18/11) + 2·(−9/11) + 3·(2/11) = 6/11 =
+β₀ = Σᵢ βᵢ`. -/
+theorem bdf3LMM_satisfiesEq404b :
+    bdf3LMM.SatisfiesEq404b := by
+  simp [LinearMultistepMethod.SatisfiesEq404b, bdf3LMM,
+    Fin.sum_univ_three, Fin.sum_univ_four]
+  norm_num
+
+/-- BDF3 is consistent (preconsistent + (404b)). -/
+theorem bdf3LMM_isConsistent : bdf3LMM.IsConsistent :=
+  ⟨bdf3LMM_isPreconsistent, bdf3LMM_satisfiesEq404b⟩
+
 /-- The textbook witness `G = ((10/9, -4/9), (-4/9, 2/9))` from
 Butcher §451, p. 363. -/
 noncomputable def bdf2GWitness : Matrix (Fin 2) (Fin 2) ℝ :=

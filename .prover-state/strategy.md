@@ -1,388 +1,354 @@
-# Cycle 352 strategy
+# Cycle 353 Strategy — BDF3 wire-up
 
-## Context
+## §A Context
 
-Cycle 351 shipped **Phase D′.2.2 Route D Step 1** axiom-clean
-(+121 LOC, scored 2): `coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two`
-plus BDF2 precursor + BDF2 sanity witness. The identity reads
+Cycle 352 shipped clean (score=2): trapezoidal-rule wire-up — definition
++ preconsistency / (404b) / consistency in `Section404.lean`, plus
+order-2 verification + the cycle 351 `coef_β`-identity instantiation
+in `Section422.lean`. Sorry count: 0 across the repo. No pending
+Aristotle results. The "What I'm stuck on" field in the prompt is
+empty.
+
+Cycle 352's task results recommend **Option 1 (BDF3 wire-up)** as the
+lowest-risk single-cycle ship, matching cycle 352's cadence and
+supplying the order-3 LMM witness currently absent from the project
+(current witnesses cap at order 2: BDF2, trapezoidal).
+
+**This cycle's deliverable: BDF3 wire-up.** Follow the trapezoidal /
+BDF2 template verbatim, scaled to `k = 3`.
+
+## §B What to ship
+
+Six new public declarations (all axiom-clean target):
+
+| # | Name | File | Source template |
+|---|---|---|---|
+| 1 | `bdf3LMM` | `Section451.lean` | `bdf2LMM` (line 140) |
+| 2 | `bdf3LMM_isPreconsistent` | `Section451.lean` | trapezoidal_isPreconsistent (Section404:185) |
+| 3 | `bdf3LMM_satisfiesEq404b` | `Section451.lean` | trapezoidal_satisfiesEq404b (Section404:191) |
+| 4 | `bdf3LMM_isConsistent` | `Section451.lean` | trapezoidal_isConsistent (Section404:196) |
+| 5 | `bdf3LMM_hasOrderAtLeast_three` | `Section422.lean` | `bdf2LMM_hasOrderAtLeast_two` (Section422:1284) |
+| 6 | `bdf3LMM_coef_β_eq_half_sum_i_sq_alpha` | `Section422.lean` | `bdf2LMM_coef_β_eq_half_sum_i_sq_alpha` (Section422:1317) |
+
+**Placement rationale:** `bdf2LMM` lives in `Section451.lean` (the
+G-stability cluster), so `bdf3LMM` follows suit. The order-3 / coef_β
+witnesses live in `Section422.lean` (the cycle 351/352 site) per the
+trapezoidal precedent.
+
+### Coefficients (verified on paper)
+
+BDF3 in §404 normalisation (`α 0 = -1`):
 
 ```
-∑ᵢ:Fin (k+1) (i.val : ℝ) · M.β i
-  = (1/2) · ∑ᵢ:Fin k ((i.val + 1 : ℕ) : ℝ)^2 · M.α i.succ
+α 0 = -1
+α 1 = 18 / 11
+α 2 = -9 / 11
+α 3 = 2 / 11
+β 0 = 6 / 11
+β 1 = 0
+β 2 = 0
+β 3 = 0
 ```
 
-under `M.HasOrderAtLeast 2`. On BDF2 both sides trivially vanish
-(`0 = 0`), so the sanity witness is structurally valid but
-mathematically uninformative.
+Numerical checks (all on paper, all clean):
 
-**Pivot decision.** §422 has had 16 consecutive cycles
-(336–351). The natural next priority is Phase D′.2.2 Step 2 —
-prove `0 ≤ ∑ᵢ i²·αᵢ` from `IsStable + IsPreconsistent +
-HasOrderAtLeast 2`. The cycle 351 task results acknowledge this
-is **multi-cycle**: it requires either a `ρ''(1)` bound bridge
-or the §441 Möbius-transform machinery, neither of which is
-shipped. Sorry-first scaffolds with no single-cycle close path
-get rolled back per cycle 138/149/200 precedent. Defer.
+* Preconsistency: `Σᵢ₌₁..₃ αᵢ = 18/11 − 9/11 + 2/11 = 1` ✓
+* (404b): `Σᵢ i·αᵢ = 18/11 − 18/11 + 6/11 = 6/11 = Σᵢ βᵢ` ✓
+* `C M 0 = 1 − 1 = 0`, `C M 1 = 6/11 − 6/11 = 0`,
+  `C M 2 = 0` (α-sum `[18/11 − 36/11 + 18/11]/2 = 0`; β-sum 0),
+  `C M 3 = 0` (α-sum `[−18/11 + 72/11 − 54/11]/6 = 0`; β-sum 0).
 
-**Cycle 352 target.** Ship the **trapezoidal rule LMM**
-(Crank–Nicolson, the canonical order-2 implicit 1-step method)
-with structural witnesses, exercising cycle 351's identity at a
-**non-trivial non-zero** value (`coef_β = 1/2`, `(1/2)·Σᵢ
-(i+1)²·αᵢ = 1/2`). This is:
+### Identity instantiation (cycle 351 specialisation)
 
-* a single-cycle clean ship (~70 LOC), axiom-clean target;
-* a substantive non-vacuity for the cycle 351 identity that BDF2
-  could not provide (BDF2 trivially gives `0 = 0`);
-* extends the LMM witness surface (currently `explicitEulerLMM`,
-  `implicitEulerLMM`, `bdf2LMM`) with the third canonical
-  small-`k` implicit method;
-* unblocks future §422 work that needs a non-trivial order-2 case;
-* breaks the §422 streak healthily without abandoning §422
-  infrastructure consumers.
+For BDF3:
+* LHS `coef_β = Σᵢ:Fin 4 i·βᵢ = 0` (only `β 0 ≠ 0`)
+* RHS `(1/2) · Σᵢ:Fin 3 (i+1)²·αᵢ.succ
+     = (1/2) · [1·(18/11) + 4·(−9/11) + 9·(2/11)] = (1/2) · 0 = 0`
 
-## Priorities (in order)
+Both vanish — same trivial-witness shape as BDF2 (`0 = 0`). Worth
+shipping anyway as a parity-with-trapezoidal sanity witness; the
+non-trivial witness `1/2 = 1/2` was already shipped at trapezoidal
+(cycle 352).
 
-### P1 — `trapezoidalLMM` definition + Section404 wire-up
+## §C Step-by-step recipe
 
-**Where**: `OpenMath/Chapter4/Section404.lean`, immediately after
-`implicitEulerLMM_isConsistent` (around line 163, before the
-`§403 — Stability` section comment at line 165). Use the
-`explicitEulerLMM` / `implicitEulerLMM` template at lines 79–108
-and 145–163 verbatim with the trapezoidal coefficients.
+### Step 1 — `bdf3LMM` definition (`Section451.lean`, after line 151)
 
-**Coefficients**: trapezoidal rule is the implicit 1-step method
-`y_n − y_{n-1} = (h/2)·(f(x_n, y_n) + f(x_{n-1}, y_{n-1}))`,
-so `k = 1` and (per the §404 convention `α 0 = -1`):
-
-* `α 0 = -1`, `α 1 = 1`
-* `β 0 = 1/2`, `β 1 = 1/2`
-
-**Three deliverables** (template: lines 81–84, 87–89, 146–148,
-151–153, 156–158, 161–163):
+Insert after `bdf2LMM`'s `α_zero := rfl` line, before
+`bdf2GWitness`:
 
 ```lean
-/-! ### Third witness — trapezoidal rule (Crank–Nicolson) as a 1-step LMM
-
-The trapezoidal rule (also called Crank–Nicolson) is the implicit
-1-step method
-  `y_n − y_{n-1} = (h/2) · (f(x_n, y_n) + f(x_{n-1}, y_{n-1}))`,
-i.e. `α 0 = -1, α 1 = 1, β 0 = 1/2, β 1 = 1/2`. This is the
-canonical order-2 implicit 1-step LMM; it provides the first
-non-trivial value for `coef_β = ∑ i · βᵢ` among shipped LMMs
-(both Euler methods have `coef_β = 0` or `1`; BDF2 has
-`coef_β = 0`; trapezoidal has `coef_β = 1/2`). -/
-
-/-- The trapezoidal rule (Crank–Nicolson) as a 1-step linear
-multistep method:
-`y_n − y_{n-1} = (h/2) · (f(x_n, y_n) + f(x_{n-1}, y_{n-1}))`. -/
-def trapezoidalLMM : LinearMultistepMethod 1 where
-  α := fun i => if i = 0 then -1 else 1
-  β := fun i => if i = 0 then 1/2 else 1/2
-  α_zero := by simp
-
-/-- The trapezoidal rule is preconsistent. -/
-theorem trapezoidalLMM_isPreconsistent :
-    trapezoidalLMM.IsPreconsistent := by
-  simp [LinearMultistepMethod.IsPreconsistent, trapezoidalLMM]
-
-/-- The trapezoidal rule satisfies (404b):
-`Σ i·αᵢ = 1·1 = 1 = 1/2 + 1/2 = Σ βᵢ`. -/
-theorem trapezoidalLMM_satisfiesEq404b :
-    trapezoidalLMM.SatisfiesEq404b := by
-  simp [LinearMultistepMethod.SatisfiesEq404b, trapezoidalLMM]
-
-/-- The trapezoidal rule is consistent. -/
-theorem trapezoidalLMM_isConsistent :
-    trapezoidalLMM.IsConsistent :=
-  ⟨trapezoidalLMM_isPreconsistent, trapezoidalLMM_satisfiesEq404b⟩
-```
-
-If `trapezoidalLMM_satisfiesEq404b`'s `simp` does not close
-directly (the `1/2 + 1/2 = 1` arithmetic), add a trailing
-`norm_num` or `ring` as fallback. The Euler-method analogs at
-lines 146–148, 156–158 close by plain `simp`, but trapezoidal
-has a rational coefficient that may need `norm_num` to collapse.
-
-### P2 — `trapezoidalLMM_hasOrderAtLeast_two` + cycle 351 identity witness
-
-**Where**: `OpenMath/Chapter4/Section422.lean`, immediately
-after `bdf2LMM_coef_β_eq_half_sum_i_sq_alpha` (line 1326), just
-before the `end OpenMath.Chapter4.Section422` (line 1327).
-
-**P2.a — `trapezoidalLMM_hasOrderAtLeast_two`** — port cycle 351's
-`bdf2LMM_hasOrderAtLeast_two` recipe (Section422 lines 1284–1307).
-The template is `intro j hj; interval_cases j; show ... ; simp;
-norm_num` per case, with the Fin sum unfoldings adjusted for
-`k = 1` (use `Fin.sum_univ_one` and `Fin.sum_univ_two` instead of
-`Fin.sum_univ_two` and `Fin.sum_univ_three`).
-
-```lean
-/-- *Phase D′.2.2 trapezoidal precursor (cycle 352):* the
-trapezoidal rule satisfies `HasOrderAtLeast 2`. Verified by
-checking `C trapezoidalLMM j = 0` for `j ∈ {0, 1, 2}`:
-* `C trapezoidalLMM 0 = 1 - 1 = 0` (preconsistency);
-* `C trapezoidalLMM 1 = 0` (consistency);
-* `C trapezoidalLMM 2 = -(1·1²/2) + (0·(1/2) + 1·(1/2)) =
-  -1/2 + 1/2 = 0`. -/
-theorem trapezoidalLMM_hasOrderAtLeast_two :
-    OpenMath.Chapter4.Section404.trapezoidalLMM.HasOrderAtLeast 2 := by
-  intro j hj
-  interval_cases j
-  · show OpenMath.Chapter4.Section410.C
-        OpenMath.Chapter4.Section404.trapezoidalLMM 0 = 0
-    simp [OpenMath.Chapter4.Section410.C,
-      OpenMath.Chapter4.Section404.trapezoidalLMM,
-      Fin.sum_univ_one, Fin.sum_univ_two]
-    norm_num
-  · show OpenMath.Chapter4.Section410.C
-        OpenMath.Chapter4.Section404.trapezoidalLMM 1 = 0
-    simp [OpenMath.Chapter4.Section410.C,
-      OpenMath.Chapter4.Section404.trapezoidalLMM,
-      Fin.sum_univ_one, Fin.sum_univ_two, Nat.factorial]
-    norm_num
-  · show OpenMath.Chapter4.Section410.C
-        OpenMath.Chapter4.Section404.trapezoidalLMM 2 = 0
-    simp [OpenMath.Chapter4.Section410.C,
-      OpenMath.Chapter4.Section404.trapezoidalLMM,
-      Fin.sum_univ_one, Fin.sum_univ_two, Nat.factorial]
-    norm_num
-```
-
-Match the cycle 351 qualified-name convention (use full
-`OpenMath.Chapter4.Section404.trapezoidalLMM`, parallel to the
-existing `OpenMath.Chapter4.Section451.bdf2LMM` references at
-lines 1285, 1289–1290, etc.).
-
-**P2.b — `trapezoidalLMM_coef_β_eq_half_sum_i_sq_alpha`** —
-one-liner instantiation of cycle 351's
-`coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two` at
-`trapezoidalLMM`. Both sides reduce to `1/2`:
-
-* LHS `coef_β(trapezoidalLMM) = 0·(1/2) + 1·(1/2) = 1/2`;
-* RHS `(1/2) · Σᵢ (i+1)²·αᵢ = (1/2) · (1²·1) = 1/2`.
-
-```lean
-/-- *Phase D′.2.2 trapezoidal sanity witness (cycle 352):*
-end-to-end exercise of `coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two`
-on the trapezoidal rule. Unlike BDF2 (where both sides vanish),
-this gives the first non-trivial witness of cycle 351's identity:
-* LHS `coef_β(trapezoidalLMM) = 0·(1/2) + 1·(1/2) = 1/2`;
-* RHS `(1/2) · Σᵢ (i+1)²·αᵢ = (1/2) · 1²·1 = 1/2`. -/
-theorem trapezoidalLMM_coef_β_eq_half_sum_i_sq_alpha :
-    (∑ i : Fin 2, ((i.val : ℕ) : ℝ) *
-        OpenMath.Chapter4.Section404.trapezoidalLMM.β i)
-      = (1 / 2) *
-        ∑ i : Fin 1, (((i.val + 1 : ℕ) : ℝ))^2 *
-          OpenMath.Chapter4.Section404.trapezoidalLMM.α i.succ :=
-  coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two
-    OpenMath.Chapter4.Section404.trapezoidalLMM
-    trapezoidalLMM_hasOrderAtLeast_two
-```
-
-### P3 — (Optional stretch) BDF3 wire-up if time permits
-
-If P1 + P2 land in under 90 minutes, ship **`bdf3LMM`** in
-`Section451.lean` near `bdf2LMM` (line 140):
-
-```lean
+/-- The 3-step BDF method (BDF3) as a linear multistep method.
+The textbook recurrence is
+`y_n = (18/11) y_{n-1} − (9/11) y_{n-2} + (2/11) y_{n-3}
+   + (6/11) h f(x_n, y_n)`.
+Under the §404 normalisation `α 0 = -1`, the coefficient vectors are
+`α = (-1, 18/11, -9/11, 2/11)`, `β = (6/11, 0, 0, 0)`. BDF3 is order 3
+and stable, providing the order-3 LMM witness for §410/§422
+non-vacuity. -/
 noncomputable def bdf3LMM : LinearMultistepMethod 3 where
-  α := ![-1, 18/11, -9/11, 2/11]
-  β := ![6/11, 0, 0, 0]
+  α := fun i =>
+    match i with
+    | ⟨0, _⟩ => -1
+    | ⟨1, _⟩ => 18 / 11
+    | ⟨2, _⟩ => -9 / 11
+    | ⟨3, _⟩ => 2 / 11
+  β := fun i =>
+    match i with
+    | ⟨0, _⟩ => 6 / 11
+    | ⟨1, _⟩ => 0
+    | ⟨2, _⟩ => 0
+    | ⟨3, _⟩ => 0
   α_zero := rfl
 ```
 
-Plus `bdf3LMM_isPreconsistent` (`Σᵢ αᵢ.succ = 18/11 - 9/11 +
-2/11 = 1`). Defer `bdf3LMM_isConsistent` / `HasOrderAtLeast 3`
-unless time permits. **Do NOT attempt `bdf3LMM_isStable`** —
-BDF3 stability proof requires complex-root analysis of the
-characteristic polynomial, which is multi-cycle.
+The `noncomputable` keyword is required (`Real` division on `18/11`
+etc. uses `Real.instDivInvMonoid`); cycle 352's `trapezoidalLMM`
+needed the same treatment.
 
-If P1 + P2 take a full cycle, skip P3 entirely.
+### Step 2 — Preconsistency / (404b) / consistency
 
-## Approach details
+Insert immediately after `bdf3LMM`, before `bdf2GWitness`:
 
-### Step order
+```lean
+/-- BDF3 is preconsistent: `Σᵢ αᵢ = 18/11 − 9/11 + 2/11 = 1`. -/
+theorem bdf3LMM_isPreconsistent :
+    bdf3LMM.IsPreconsistent := by
+  simp [LinearMultistepMethod.IsPreconsistent, bdf3LMM,
+    Fin.sum_univ_three]
+  norm_num
 
-1. **P1**: edit `Section404.lean`. Compile via
-   `lake env lean OpenMath/Chapter4/Section404.lean`.
-2. **P2**: edit `Section422.lean`. Compile via
-   `lake env lean OpenMath/Chapter4/Section422.lean`.
-   Section422 is ~1320 LOC; warm rebuild typically <60s.
-3. (Optional) **P3**: edit `Section451.lean`.
-4. **Verification**: `#print axioms` on the three new public
-   theorems (`trapezoidalLMM_isConsistent`,
-   `trapezoidalLMM_hasOrderAtLeast_two`,
-   `trapezoidalLMM_coef_β_eq_half_sum_i_sq_alpha`) — confirm
-   `[propext, Classical.choice, Quot.sound]` only.
-5. **Aggregator check**: `lake env lean OpenMath/Chapter4.lean`.
-6. Update `lean_status.json` (no row change needed — none of
-   these are textbook entities; they're auxiliary witnesses
-   for existing infrastructure). The `def:422B` row stays at
-   `partial`.
-7. Update `plan.md` `def:422B` summary line with cycle 352
-   one-sentence summary.
-8. Write `.prover-state/task_results/cycle_352.md`.
+/-- BDF3 satisfies (404b):
+`Σᵢ i·αᵢ = 1·(18/11) + 2·(−9/11) + 3·(2/11) = 6/11 = β₀ = Σᵢ βᵢ`. -/
+theorem bdf3LMM_satisfiesEq404b :
+    bdf3LMM.SatisfiesEq404b := by
+  simp [LinearMultistepMethod.SatisfiesEq404b, bdf3LMM,
+    Fin.sum_univ_three, Fin.sum_univ_four]
+  norm_num
 
-### Fallback recipes if simp doesn't close
+/-- BDF3 is consistent (preconsistent + (404b)). -/
+theorem bdf3LMM_isConsistent : bdf3LMM.IsConsistent :=
+  ⟨bdf3LMM_isPreconsistent, bdf3LMM_satisfiesEq404b⟩
+```
 
-* If `simp [trapezoidalLMM]` doesn't unfold the if-then-else
-  cleanly: replace with `unfold trapezoidalLMM; simp` or use
-  `show` to expose the Fin sum directly, then case-split
-  manually.
-* If `Fin.sum_univ_one`-style lemmas don't exist under that
-  name in current Mathlib: try `Finset.sum_univ_one`,
-  `Fin.sum_univ_succ` × N times, or unfold the sum directly
-  via `show ∑ i ∈ Finset.univ, _ = _; rfl`. The cycle 351
-  `bdf2LMM_hasOrderAtLeast_two` uses `Fin.sum_univ_two` and
-  `Fin.sum_univ_three` successfully, so the `Fin.sum_univ_*`
-  family is in scope.
-* If the `i.succ` notation confuses `simp`: replace with
-  explicit `(⟨0, by omega⟩ : Fin 2).succ` or use `Fin.mk_one`.
-* If `Nat.factorial` doesn't reduce: add `Nat.factorial_zero,
-  Nat.factorial_succ` to the simp set explicitly.
+**Risk:** `bdf2LMM_isPreconsistent` uses a slightly different
+incantation than `trapezoidalLMM_isPreconsistent`. The trapezoidal
+case (Section404:185) closes by `simp` alone because the `α`/`β`
+fields are `if-then-else` — `simp` unfolds the conditional. BDF
+methods use `match` on `Fin`, which `simp` handles by needing the
+`Fin.sum_univ_n` hint. **Add `Fin.sum_univ_three` (3-summand
+α-sum) and `Fin.sum_univ_four` (4-summand β-sum)** to the simp
+sets, then `norm_num` to close the rational arithmetic
+`18/11 − 9/11 + 2/11 = 1` and `1·(18/11) + 2·(−9/11) + 3·(2/11) = 6/11`.
 
-### Faithfulness check (mandatory pre-commit)
+If the first attempt fails, inspect `Section451.lean:331+` for
+`bdf2LMM_isConsistent`'s concrete recipe (already shipped axiom-clean
+for k=2; this is the closest precedent and will likely show whether
+`Fin.sum_univ_succ` / `Finset.sum_succ_above_eq` are needed instead).
 
-For each new `def`/`theorem`:
+### Step 3 — `bdf3LMM_hasOrderAtLeast_three` (`Section422.lean`, after line 1325)
 
-**`trapezoidalLMM`**:
-* Textbook anchor: Butcher §404 / numerous standard references.
-  The trapezoidal rule is a textbook-standard implicit method,
-  not a specific Butcher entity ID. The definition matches the
-  standard:
-  `y_n − y_{n-1} = (h/2)·(f(x_n, y_n) + f(x_{n-1}, y_{n-1}))`.
-* Per the §404 normalisation convention `α 0 = -1`, this
-  rearranges to `α 0·y_n + α 1·y_{n-1} = -h·(β 0·f_n + β 1·f_{n-1})`
-  with `α 0 = -1, α 1 = 1, β 0 = β 1 = 1/2`. **Faithful.**
-* Non-vacuity: shipped via `trapezoidalLMM_isPreconsistent` and
-  `trapezoidalLMM_isConsistent`.
+Append after `bdf2LMM_coef_β_eq_half_sum_i_sq_alpha` (which is the
+last existing Phase D′.2.2 BDF2 witness), keeping cycle 352's
+trapezoidal block immediately following. Use the trapezoidal /
+BDF2 four-arm template scaled to `j ∈ {0, 1, 2, 3}`:
 
-**`trapezoidalLMM_isPreconsistent`** / **`_satisfiesEq404b`** /
-**`_isConsistent`**: numerical witnesses of definitional content.
-Same shape as the cycle 040-era `explicitEulerLMM_*` and
-`implicitEulerLMM_*` witnesses (Section404 lines 87–89, 146–163).
-**Faithful.**
+```lean
+/-- *Phase D′.2.2 BDF3 order-3 witness (cycle 353):* BDF3 satisfies
+`HasOrderAtLeast 3`. Verified by checking `C bdf3LMM j = 0` for
+`j ∈ {0, 1, 2, 3}` (preconsistency + (404b) + two further
+cancellations from the α-side third- and fourth-power moments).
+This is the project's first order-≥-3 LMM witness. -/
+theorem bdf3LMM_hasOrderAtLeast_three :
+    OpenMath.Chapter4.Section451.bdf3LMM.HasOrderAtLeast 3 := by
+  intro j hj
+  interval_cases j
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf3LMM 0 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf3LMM, Fin.sum_univ_three]
+    norm_num
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf3LMM 1 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf3LMM,
+      Fin.sum_univ_three, Fin.sum_univ_four, Nat.factorial]
+    norm_num
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf3LMM 2 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf3LMM,
+      Fin.sum_univ_three, Fin.sum_univ_four, Nat.factorial]
+    norm_num
+  · show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf3LMM 3 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf3LMM,
+      Fin.sum_univ_three, Fin.sum_univ_four, Nat.factorial]
+    norm_num
+```
 
-**`trapezoidalLMM_hasOrderAtLeast_two`**: matches the standard
-classical-order claim that trapezoidal rule has order 2.
-Verified case-by-case for `j ∈ {0, 1, 2}`. **Faithful.**
+### Step 4 — Identity instantiation (`Section422.lean`, immediately after Step 3)
 
-**`trapezoidalLMM_coef_β_eq_half_sum_i_sq_alpha`**: one-line
-specialisation of cycle 351's
-`coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two`.
-**Faithful** (the only difference vs cycle 351's bdf2 witness
-is the underlying method).
+```lean
+/-- *Phase D′.2.2 BDF3 sanity witness (cycle 353):* end-to-end
+exercise of `coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two`
+on BDF3. Like BDF2 (cycle 351), both sides vanish at BDF3:
+* LHS `coef_β(bdf3LMM) = 0·(6/11) + 1·0 + 2·0 + 3·0 = 0`;
+* RHS `(1/2) · Σᵢ (i+1)²·αᵢ.succ = (1/2) · [1·(18/11) + 4·(−9/11) +
+  9·(2/11)] = (1/2) · 0 = 0`.
+A trivial-identity witness (parity with BDF2); the first non-trivial
+witness was trapezoidal `1/2 = 1/2` (cycle 352). -/
+theorem bdf3LMM_coef_β_eq_half_sum_i_sq_alpha :
+    (∑ i : Fin 4, ((i.val : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section451.bdf3LMM.β i)
+      = (1 / 2) *
+        ∑ i : Fin 3, (((i.val + 1 : ℕ) : ℝ))^2 *
+          OpenMath.Chapter4.Section451.bdf3LMM.α i.succ := by
+  apply coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two
+  intro j hj
+  exact bdf3LMM_hasOrderAtLeast_three j (by omega)
+```
 
-## What NOT to attempt
+**Note**: `coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two`
+requires `HasOrderAtLeast 2`, not `3`. The recipe above derives
+the order-2 instance inline via `omega` (which handles `j ≤ 2 → j ≤ 3`)
+— **safer than assuming a `.mono` lemma exists**. Do NOT search
+for `HasOrderAtLeast.mono`; the inline route always works.
 
-### Multi-cycle / blocked targets (per cycle 351 strategy footer)
+### Step 5 — Verification
 
-* **DO NOT** attempt **Phase D′.2.2 Step 2** (`0 ≤ ∑ᵢ i²·αᵢ`
-  under `IsStable + IsPreconsistent + HasOrderAtLeast 2`).
-  Requires §441 ρ''(1) infrastructure (Route ρ'') or Möbius-
-  transform sign analysis (Route §441) — neither shipped. Cycle
-  351 task results explicitly flag this as multi-cycle.
-  Scoping doc `eq422a_eta_phase_D_prime_step_2_scoping.md`
-  outlines the path; do not implement without finishing the
-  scoping decomposition first.
+```bash
+lake build OpenMath.Chapter4.Section451
+lake build OpenMath.Chapter4.Section422
+```
 
-* **DO NOT** attempt **`def:442A`** (principal sheet). Multi-
-  cycle Riemann-surface infrastructure not in Mathlib.
+Then `#print axioms` for each of the six new public symbols.
+Expected: `[propext, Classical.choice, Quot.sound]` for all six.
 
-* **DO NOT** attempt **`thm:535A`** (GLM analog of underlying
-  one-step method). Multi-cycle, parallel to `def:422B` work.
+**Critical**: per cycle 352's "Discovery" section, `lake env lean`
+does NOT update `.olean`. **Use `lake build <Module>` between edits
+to `Section451.lean` and consumer-file (`Section422.lean`) builds.**
+Failing to do this caused cycle 352 to waste ~25 min on a stale
+Section404 olean.
 
-* **DO NOT** attempt **`thm:302A`**. Blocked on the cycle 250
-  `alphaWeight` definition-smuggling issue
-  (`cycle_250_strategy_alpha_definition_error.md`).
+## §D What to update
 
-### Specific to cycle 352
+* `extraction/formalization_data/lean_status.json` — **no change**.
+  BDF3 is not a textbook-named entity; the wire-up is a non-vacuity
+  ship for the existing `def:402A` / `def:403A` / `def:404B` / `def:404A`
+  rows (and the §422 Phase D′.2.2 chain on top).
+* `plan.md` — **no change**. Same rationale.
+* `.prover-state/task_results/cycle_353.md` — standard cycle results
+  doc (Worked on / Approach / Result / Faithfulness check / Dead ends /
+  Discovery / Suggested next approach).
 
-* **DO NOT** attempt `trapezoidalLMM_isStable`. Trapezoidal is
-  Dahlquist-stable (characteristic polynomial `ρ(z) = z − 1` has
-  its only root at `z = 1`, simple, on the boundary), but a
-  Lean stability proof requires careful handling of the
-  simple-root-on-boundary case. The cycle 346 `bdf2LMM_isStable`
-  recipe may not port directly (BDF2 has interior roots, not
-  boundary). Save for a later cycle when a downstream consumer
-  needs it.
+## §E Faithfulness checklist
 
-* **DO NOT** ship `bdf3LMM_isStable` (if attempting P3).
-  BDF3 stability requires verifying that two complex roots of
-  `ρ(z) = z³ - (18/11)z² + (9/11)z - 2/11` lie strictly inside
-  the unit disc. Multi-cycle.
+Per CLAUDE.md "Pre-Commit Faithfulness Checklist":
 
-* **DO NOT** add new imports to Section404, Section422, or
-  Section451. Cycle 351's BDF2 witnesses reference
-  `OpenMath.Chapter4.Section451.bdf2LMM` from Section422 with
-  no fresh import — the qualified-name resolution pattern is
-  already established and works because Section422's existing
-  imports transitively bring Section451 into scope. Use the
-  parallel form for `Section404.trapezoidalLMM`.
+1. **`bdf3LMM`** — not a textbook *entity*, but a standard
+   universally-attested 3-step BDF method. Coefficients verified on
+   paper above. **No textbook divergence**.
+2. **`bdf3LMM_isPreconsistent` / `_satisfiesEq404b` / `_isConsistent`** —
+   numerical specialisations of existing predicates (`def:404A`,
+   `def:404B`). Direct arithmetic; no tautology, no identity-only
+   proof. **Same content** as the textbook claim "BDF3 is
+   consistent". Identity check: PASS (`simp` does real `18/11 −
+   9/11 + 2/11 = 1` arithmetic, not a hypothesis re-export).
+3. **`bdf3LMM_hasOrderAtLeast_three`** — numerical specialisation.
+   The textbook claim that "BDF3 has order 3" is standard. Verified
+   by direct computation of `C bdf3LMM j` for `j ∈ {0, 1, 2, 3}`.
+   **Same content**.
+4. **`bdf3LMM_coef_β_eq_half_sum_i_sq_alpha`** — specialisation of
+   cycle 351's identity. Proof is a single
+   `coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two` application
+   (downcast from order ≥ 3 to order ≥ 2 inline); the mathematical
+   work is in the cycle 351 theorem. This is a non-vacuity witness
+   (both sides vanish), exercising the identity at an order-3 method.
+   **Same content**.
 
-* **DO NOT** continue the §344 small-`s` direct-form ladder.
-  Saturated at cycle 335 (six-for-seven audit outcomes; the
-  pattern is fully characterised).
+## §F What NOT to do this cycle
 
-* **DO NOT** raise `maxHeartbeats` above 200000.
-* **DO NOT** introduce sorries. Cycle 352's deliverable bar is
-  "ship axiom-clean or skip the cycle" per cycle 149/150,
-  200/201 rollback precedents.
-* **DO NOT** introduce `axiom`/`constant` declarations.
+1. **Do NOT attempt Option 2 (`trapezoidalLMM_isStable`).** Per
+   cycle 352's task results, this requires handling at-boundary roots
+   of `ρ(z) = z - 1` (simple root at `z = 1` on the unit circle),
+   which is NOT covered by cycle 346's `bdf2LMM_isStable` interior-
+   roots recipe. Substantive separate cycle.
+2. **Do NOT start Phase D′.2.2 Step 2 (`0 ≤ Σᵢ (i+1)²·αᵢ`).** The
+   cycle 348 scoping doc covers Phase D′.2.0 / 2.1 / 2.2; Phase
+   D′.2.2 Step 2 (closing the `coef_β ≥ 0` inequality) needs a
+   dedicated multi-cycle scoping doc *before* any Lean code. Cycle
+   352's task results explicitly defer this.
+3. **Do NOT introduce sorries.** Cycles 149/150 (def:530B Path A)
+   and 200/201 (thm:381H scaffold) both rolled back sorry-first
+   scaffolds. Ship axiom-clean or don't ship.
+4. **Do NOT add `bdf3LMM_isStable`.** That's the natural Phase B
+   next step but it requires the cycle 346 stability infrastructure
+   on a 3-step method — multi-cycle. Separate ship.
+5. **Do NOT bump `bdf3LMM_hasOrderAtLeast_three` to
+   `HasOrderAtLeast 4` "while we're at it"** — BDF3 has exact order
+   3, not 4 (`C M 4 ≠ 0`). Stating order ≥ 4 would be **false** and
+   the proof would fail. The textbook claim is order exactly 3.
+6. **Do NOT include `Fin.sum_univ_two` in the BDF3 simp sets** — BDF3
+   has `Fin 3` (α) and `Fin 4` (β) summations; `Fin.sum_univ_two` is
+   the wrong hint and might cause `simp` to spin.
+7. **Do NOT bypass the `lake build` cache discipline.** Per cycle
+   352's "Discovery": `lake env lean` does not update `.olean`. Run
+   `lake build OpenMath.Chapter4.Section451` after each edit to
+   `Section451.lean`, **before** `lake build OpenMath.Chapter4.Section422`.
+8. **Do NOT freelance to a fresh entity (Chapter 3 §342, §344, etc.)**.
+   Cycle 352 closed a clean §404/§422 small-cycle ship; cycle 353
+   matches that cadence with BDF3 to compound the witness surface
+   (currently order ≤ 2; this brings order 3 online).
 
-### Naming / placement pitfalls
+## §G Failure modes from past cycles (DO NOT repeat)
 
-* `trapezoidalLMM` goes in **`Section404.lean`** (next to
-  `explicitEulerLMM`/`implicitEulerLMM`), NOT in
-  `Section451.lean` (which is reserved for G-stability-flavoured
-  methods like BDF). The trapezoidal rule is a fundamental
-  implicit 1-step LMM, parallel to the Euler methods.
+* **Cycle 352 v1: missing `noncomputable`** on `trapezoidalLMM`
+  caused `error(lean.dependsOnNoncomputable)`. BDF2 already used
+  `noncomputable`; BDF3 follows suit (Step 1 above includes it
+  explicitly).
+* **Cycle 352 v1: trailing `norm_num`** in `_isPreconsistent` /
+  `_satisfiesEq404b` produced `error: No goals to be solved` for
+  `trapezoidalLMM` because `simp` already closed the if-then-else
+  form. BDF3 uses `match` on `Fin`, which `simp` does NOT fully
+  reduce — `norm_num` IS needed for the rational arithmetic.
+  **Do NOT remove `norm_num` from the BDF3 recipe.** (BDF2's
+  `_isConsistent` proof at Section451:331 also keeps `norm_num`.)
+* **Cycle 173 BDF2 closed-form attempt: `Polynomial.ext + simp +
+  ring`** stalled on `Polynomial.C` arithmetic over ℝ. Not relevant
+  this cycle — we are NOT shipping `bdf3LMM.aPoly` closed form.
+* **Cycles 176–179 phantom commit verdicts** on Section441 were
+  false alarms (per `phantom_commit_verdict_pattern.md`). Not
+  relevant this cycle — Section441 is untouched.
 
-* The `trapezoidalLMM_hasOrderAtLeast_two` and
-  `trapezoidalLMM_coef_β_eq_half_sum_i_sq_alpha` theorems go in
-  **`Section422.lean`** (they consume `HasOrderAtLeast` from
-  Section410 and cycle 351's identity from Section422). Same
-  pattern as the bdf2 versions at lines 1284–1326.
+## §H Optional stretch (only if Steps 1–5 close in < 60 minutes)
 
-* Use the qualified-name pattern
-  `OpenMath.Chapter4.Section404.trapezoidalLMM` in Section422.
-  Cycle 351 uses `OpenMath.Chapter4.Section451.bdf2LMM` in the
-  parallel position; do not strip the qualification even if
-  the unqualified form happens to resolve.
+If BDF3 ships smoothly and time remains, add **two thin one-line
+corollary witnesses** for cycle 344's `coef_α_pos_of_stable_preconsistent`
+specialised to BDF3 — but **only if `bdf3LMM_isStable` already
+exists**. Currently `bdf3LMM_isStable` does NOT exist
+(cycle 346 shipped `bdf2LMM_isStable`, not BDF3), so this stretch
+is **not available this cycle**. Stretch effectively disabled —
+ship Steps 1–5 only.
 
-## Estimated LOC budget
+## §I Cycle 354+ outlook
 
-* P1 (Section404): ~30 LOC (3 theorems × ~5 LOC + 1 def + 1 docstring block).
-* P2 (Section422): ~40 LOC (1 ~25-LOC hasOrderAtLeast + 1 ~10-LOC
-  identity witness + docstrings).
-* P3 stretch (Section451): ~15 LOC if shipped.
+Per cycle 352 task results, three forward directions remain
+plausible after BDF3 ships:
 
-Total: **~70 LOC** (P1+P2) or **~85 LOC** (with P3 stretch).
+1. **`bdf3LMM_isStable`** (~50–80 LOC) — port cycle 346's `bdf2LMM_isStable`
+   recipe to k=3. The §403 ρ-polynomial-roots argument generalises
+   cleanly; substantive but tractable single cycle.
+2. **`trapezoidalLMM_isStable`** (~50 LOC) — at-boundary stability,
+   substantive single cycle. Pairs with cycle 346's `bdf2LMM_isStable`.
+3. **Phase D′.2.2 Step 2 scoping** (Markdown only) — write the
+   dedicated `eq422a_eta_phase_D_prime_step_2_step_2_scoping.md`
+   covering the `0 ≤ Σᵢ (i+1)²·αᵢ` route options (`ρ''(1) ≥ 0`,
+   §441 Möbius, etc.).
+4. **`thm:535A` (underlying one-step method, GLM)** — Chapter 5
+   §535 entry point; ~2–3 cycle definition + non-vacuity work,
+   would break the §422 streak (cycles 336–353 = 18 consecutive on
+   `def:422B`-adjacent work).
 
-Well under the cycle 351 budget (+121 LOC). Single-cycle target.
-
-## Cycle 353+ outlook (for the next planner)
-
-After cycle 352 lands, the planner has three candidate paths:
-
-1. **Continue trapezoidal expansion**: ship
-   `trapezoidalLMM_isStable` (substantive — at-boundary
-   stability proof, ~50 LOC). Useful for downstream §451
-   G-stability work.
-
-2. **BDF3 wire-up if P3 was skipped**: ship `bdf3LMM` +
-   `_isPreconsistent` + `_isConsistent` + `_hasOrderAtLeast_3`
-   in 1 cycle (~40 LOC). Provides a third-order witness for
-   future `def:422B` Phase E work.
-
-3. **Phase D′.2.2 Step 2 scoping**: write a dedicated multi-
-   phase scoping doc analogous to
-   `eq422a_eta_phase_D_prime_step_2_scoping.md` for the
-   `ρ''(1)` bridge route. Plan 3–4 single-cycle deliverables
-   that incrementally build §441 second-derivative
-   infrastructure, then bridge to `Σᵢ i²·αᵢ ≥ 0` under stable
-   + preconsistent + order ≥ 2.
-
-Recommend (1) or (2) for cycle 353 — both keep the small-cycle
-ship cadence going while the multi-cycle Phase D′ Step 2 work
-is properly scoped.
+Cycle 354's planner decides based on cycle 353's outcome.
