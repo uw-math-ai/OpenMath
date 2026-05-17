@@ -516,10 +516,106 @@ table (updated), ~80–100 LOC, poor Aristotle for the well-founded-
 induction structure. Uses cycle 360's deliverables + cycle 359's
 `_pow_succ_mk` as inputs.
 
-**Total**: 5 cycles (was 4; cycle 360 split Phase D.3.b into signature
-+ base cases (cycle 360) and inductive step (cycle 361)). Sequential
-dependencies: D.3.a → D.3.b (signature) → D.3.b (inductive step) →
-D.3.d; D.3.c is parallel.
+### Cycle 361 update — ℤ-form lift + general `i = m+1` closed form ship; P2 parametricity claim deferred
+
+**Shipped (cycle 361)** at end of `OpenMath/Chapter4/Section422.lean`
+(after the cycle 360 block):
+
+* `OpenMath.Chapter4.Section422.elementaryWeightQ_phi_zpow_natCast_mk`
+  — ℤ-form lift positive natCast case:
+  `Φ_{⟦M⟧^((m:ℤ))}(t) = (M.powRep m).2.elementaryWeight t`.
+  2-line proof `rw [zpow_natCast, ← RKTableau.powRep_quotient_eq M m]; rfl`.
+
+* `OpenMath.Chapter4.Section422.elementaryWeightQ_phi_zpow_negSucc_mk`
+  — ℤ-form lift negative case (`n = Int.negSucc m = -(m+1)`):
+  `Φ_{⟦M⟧^(Int.negSucc m)}(t) = -Σⱼ (M.powRep (m+1)).2.b j ·
+  (M.powRep (m+1)).2.derivativeWeightWithSrc
+  (M.powRep (m+1)).2.inverse j t`. 2-line proof
+  `rw [zpow_negSucc, ← RKTableau.powRep_quotient_eq M (m + 1)]; exact
+  elementaryWeightQ_phi_inv_mk (M.powRep (m+1)).2 t` (cycle 358's
+  `_inv_mk` consumes the Σ-eta'd `(M.powRep (m+1)).2` representative).
+
+* `OpenMath.Chapter4.Section422.linearResidualAt_succ_mk_eq` —
+  substantive general closed form at arbitrary positive `i = m+1`.
+  **Subsumes** cycle 360's `linearResidualAt_one_mk_eq` `i = 1`
+  special case (which used `Nat.cast_one + zpow_neg_one` bridge) into
+  a uniform `i = m+1` form via the ℤ-form lift. 6-line proof
+  `unfold linearResidualAt` + `have h_pow : ... ^ (-(((m+1):ℕ):ℤ)) =
+  ... ^ (Int.negSucc m) := rfl` + ℤ-form lift + `_phi_mk` +
+  `push_cast; ring`.
+
+* Four non-vacuity `example`s: `_zpow_natCast_mk` at `m = 0` cherry,
+  `_zpow_negSucc_mk` at `m = 0` cherry (= `n = -1`), `_succ_mk_eq`
+  at `m = 1` cherry (= `i = 2`), and vertex sanity at `i = 3`
+  (cross-check via cycle 360's `linearResidualAt_vertex_eq_zero`).
+
+All three new public theorems axiom-clean (`[propext, Classical.choice,
+Quot.sound]` only) verified via `#print axioms` after `lake build
+OpenMath.Chapter4.Section422` (8037/8037 jobs, exit 0, 354s rebuild).
+Sorry count remains 0.
+
+**Implementation notes for the cycle 362 worker**:
+
+1. **`-(((m+1):ℕ):ℤ) = Int.negSucc m` is definitional `rfl`** —
+   the cleanest bridge from `-((natural + 1) : ℤ)` to `Int.negSucc`.
+   No `Nat.cast_ofNat` or `norm_num` needed; the equality holds by
+   the defining clause of `Int.neg`. **Do NOT use `norm_num` for
+   this bridge** — initial cycle 361 attempt left an unsolved-goals
+   error with display ambiguity (`⟦M⟧ ^ 2 = ⟦M⟧ ^ 2` where the
+   integer exponent was actually `-2` but pretty-printed without
+   sign).
+
+2. **`elementaryWeightQ_phi_inv_mk` on Σ-eta'd representatives**:
+   when applying cycle 358's `_inv_mk` to `(M.powRep (m+1)).2`,
+   Σ-eta on `M.powRep (m+1) = ⟨(M.powRep (m+1)).1, (M.powRep
+   (m+1)).2⟩` makes the rewrite definitional. No explicit
+   destructuring needed.
+
+3. **Generalising `_two_mk_eq` to `_succ_mk_eq` was a one-line
+   change** — replacing literal `2` with `m + 1` and `Int.negSucc 1`
+   with `Int.negSucc m`. The proof structure is identical because
+   `_zpow_negSucc_mk` is parametric in `m`. Lesson for future
+   cycles: when shipping a "closed form at literal `k`" lemma,
+   first try the parametric version — often it is strictly more
+   useful at the same proof cost.
+
+**Deferred to cycle 362**: Phase D.3.b inductive step / parametricity
+claim `linearResidualAt_depends_only_on_strict_subtrees`. Per the
+cycle 361 worker's analysis, the recursive structure of
+`derivativeWeightWithSrc M₂ M₁ i (mk children)` exposes `M₂`'s
+internal A-coefficients alongside `M₁.elementaryWeight` at subtrees,
+requiring a more delicate inductive structure that simultaneously
+constrains both `Φ_η_q` AND per-stage internal weights at strict
+subtrees. The cycle 361 strategy §B.2 anticipated MEDIUM-HIGH risk
+on this; the foreseeable multi-cycle decomposition for cycle 362+:
+
+1. Per-`derivativeWeightWithSrc` substitution lemma: "if `M₁` and
+   `M₁'` agree on elementary weights at all strict subtrees of `t`,
+   then `derivativeWeightWithSrc M₂ M₁ i t' = derivativeWeightWithSrc
+   M₂ M₁' i t'` for all `t' ∈ children t`". Structural induction on
+   the tree.
+
+2. `linearResidualAt_depends_only_on_strict_subtrees` via
+   `Quotient.inductionOn₂` + the ℤ-form lift (cycle 361) + the
+   per-`derivativeWeightWithSrc` substitution lemma + IH at strict
+   subtrees.
+
+Step 1 may be a single-cycle deliverable. Step 2 then follows as a
+~1-cycle composition.
+
+**Cycle 362 entry point**: ship the per-`derivativeWeightWithSrc`
+substitution lemma (Step 1 above), with the parametricity claim
+(Step 2) following in cycle 363 if Step 1 lands. Alternatively, if
+the cycle 362 strategist judges Step 2 directly tractable, attempt
+both in one cycle. The graceful-degradation fallback is to ship
+Step 1 alone, mirroring cycle 361's "ship P1 + extend ladder"
+pattern.
+
+**Total**: 6 cycles (was 5; cycle 361 split Phase D.3.b inductive
+step into "ℤ-form lift + general closed form" (cycle 361) and
+"parametricity claim" (cycle 362+)). Sequential dependencies:
+D.3.a → D.3.b (signature) → D.3.b (ℤ-form lift) → D.3.b
+(parametricity) → D.3.d; D.3.c is parallel.
 
 **Aggregated risk**: comparable to the cycle 340–346 base-case (Phase
 D.1) trajectory which took ~6 cycles for `r(t) = 1` alone. The

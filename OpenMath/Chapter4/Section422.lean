@@ -1952,4 +1952,169 @@ example :
             * RKTableau.explicitEuler.elementaryWeight RootedTree.cherry :=
   linearResidualAt_one_mk_eq RKTableau.explicitEuler RootedTree.cherry
 
+/-! ### Phase D.3.b (cycle 361) — ℤ-form lift + closed form at `i = 2`
+
+Cycle 360 shipped the Phase D.3.b *signature + base cases*: the
+`linearResidualAt` named helper, the split form
+`coeff_eta_t_in_eta_zpow_neg`, the vertex base case, and the closed
+form at `i = 1` at arbitrary trees. Cycle 360 explicitly deferred the
+**ℤ-form lift** `elementaryWeightQ_phi_zpow_mk` (the ℤ-power analogue
+of cycle 359's ℕ-form `elementaryWeightQ_phi_pow_succ_mk`) per the
+cycle 359 task results §C.4 graceful degradation.
+
+Cycle 361 ships the ℤ-form lift in two cleanly-named pieces:
+
+* `elementaryWeightQ_phi_zpow_natCast_mk` — positive natCast case:
+  `Φ_{⟦M⟧^((m:ℤ))}(t) = (M.powRep m).2.elementaryWeight t`. Bridge
+  via `zpow_natCast` + cycle 359's `RKTableau.powRep_quotient_eq`.
+* `elementaryWeightQ_phi_zpow_negSucc_mk` — negative `Int.negSucc`
+  case: `Φ_{⟦M⟧^(Int.negSucc m)}(t)` equals the negation of the
+  bottom-block contribution of the `(m+1)`-fold composite
+  representative's inverse. Bridge via `zpow_negSucc` + cycle 358's
+  `elementaryWeightQ_phi_inv_mk` + cycle 359's `powRep_quotient_eq`.
+
+Plus the cycle 360 ladder extension at `i = 2`:
+
+* `linearResidualAt_two_mk_eq` — closed form at `i = 2` at arbitrary
+  trees, exercising the ℤ-form lift at `Int.negSucc 1` (i.e. `-2`).
+
+The full Phase D.3.b *inductive step* / *parametricity claim*
+(`linearResidualAt_depends_only_on_strict_subtrees`) is deferred to a
+later cycle (the strong-induction structure through
+`derivativeWeightWithSrc` is multi-cycle work, per scoping doc §5).
+-/
+
+/-- *Phase D.3.b (cycle 361) — ℤ-form lift: positive natCast case.*
+For `m : ℕ` cast to `ℤ`, the §383 quotient `m`-fold power's elementary
+weight at any tree equals the elementary weight of cycle 359's
+canonical `powRep` representative. Bridge: `zpow_natCast` reduces the
+ℤ-power to the ℕ-power, then cycle 359's `powRep_quotient_eq` (reversed)
+rewrites `⟦M⟧^m` to `⟦M.powRep m⟧`, after which
+`elementaryWeightQ_phi_mk` (cycle 226) is definitional. -/
+theorem elementaryWeightQ_phi_zpow_natCast_mk
+    {s : ℕ} (M : RKTableau s) (m : ℕ) (t : RT) :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) ^ ((m : ℤ))) t
+      = (M.powRep m).2.elementaryWeight t := by
+  rw [zpow_natCast, ← RKTableau.powRep_quotient_eq M m]
+  rfl
+
+/-- *Phase D.3.b (cycle 361) — ℤ-form lift: negative `Int.negSucc` case.*
+For `n = Int.negSucc m = -(m+1)`, the §383 quotient power's elementary
+weight at any tree equals the negation of the bottom-block contribution
+of cycle 359's `(m+1)`-fold composite representative's inverse.
+
+Bridge: `zpow_negSucc` reduces `⟦M⟧ ^ (Int.negSucc m)` to
+`(⟦M⟧ ^ (m+1))⁻¹`. Cycle 359's `powRep_quotient_eq` (reversed) rewrites
+`⟦M⟧^(m+1)` to `⟦M.powRep (m+1)⟧`. Then cycle 358's
+`elementaryWeightQ_phi_inv_mk` applied to the `(M.powRep (m+1)).2`
+representative gives the bottom-block expansion.
+
+`Σ`-eta on `M.powRep (m+1) = ⟨(M.powRep (m+1)).1, (M.powRep (m+1)).2⟩`
+makes the rewrite definitional. -/
+theorem elementaryWeightQ_phi_zpow_negSucc_mk
+    {s : ℕ} (M : RKTableau s) (m : ℕ) (t : RT) :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) ^ (Int.negSucc m)) t
+      = - ∑ j : Fin (M.powRep (m + 1)).1,
+          (M.powRep (m + 1)).2.b j *
+            (M.powRep (m + 1)).2.derivativeWeightWithSrc
+              (M.powRep (m + 1)).2.inverse j t := by
+  rw [zpow_negSucc, ← RKTableau.powRep_quotient_eq M (m + 1)]
+  exact elementaryWeightQ_phi_inv_mk (M.powRep (m + 1)).2 t
+
+/-- *Phase D.3.b (cycle 361) — ℤ-form lift: non-vacuity at `cherry`
+with `explicitEuler`, `m = 0` positive case.* Exercises the positive
+natCast branch on the order-2 tree, confirming the `M.powRep 0`
+identity-representative reduction. At `m = 0`,
+`(explicitEuler.powRep 0).2 = RKTableau.id` and
+`RKTableau.id.elementaryWeight cherry = 0` (by `elementaryWeight_id`,
+cycle 219). -/
+example :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) ^ ((0 : ℕ) : ℤ)) RootedTree.cherry
+      = (RKTableau.explicitEuler.powRep 0).2.elementaryWeight
+          RootedTree.cherry :=
+  elementaryWeightQ_phi_zpow_natCast_mk
+    RKTableau.explicitEuler 0 RootedTree.cherry
+
+/-- *Phase D.3.b (cycle 361) — ℤ-form lift: non-vacuity at `cherry`
+with `explicitEuler`, `m = 0` negative case (`Int.negSucc 0 = -1`).*
+Exercises the negative-power branch at the order-2 tree with `n = -1`,
+matching cycle 360's `linearResidualAt_one_mk_eq` pattern but via the
+ℤ-form lift rather than the special-case `zpow_neg_one` bridge. -/
+example :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) ^ (Int.negSucc 0)) RootedTree.cherry
+      = - ∑ j : Fin (RKTableau.explicitEuler.powRep 1).1,
+          (RKTableau.explicitEuler.powRep 1).2.b j *
+            (RKTableau.explicitEuler.powRep 1).2.derivativeWeightWithSrc
+              (RKTableau.explicitEuler.powRep 1).2.inverse j RootedTree.cherry :=
+  elementaryWeightQ_phi_zpow_negSucc_mk
+    RKTableau.explicitEuler 0 RootedTree.cherry
+
+/-- *Phase D.3.b (cycle 361) — general closed form for the residual at
+`i = m + 1` at arbitrary `t` (representative form).* Generalises cycle
+360's `linearResidualAt_one_mk_eq` (which handled `i = 1` via the
+special-case `zpow_neg_one` bridge) to **arbitrary positive `i`** via
+the ℤ-form lift `elementaryWeightQ_phi_zpow_negSucc_mk` shipped above.
+The closed form exposes the residual's structural dependence on
+`M.powRep (m+1)`'s representative data at subtrees of `t`.
+
+For `m = 0`, this gives the `i = 1` form via the `M.powRep 1` representative
+(which is Σ-eta equivalent to `M` itself); for `m = 1`, the `i = 2` form
+(`M.powRep 2`); etc.
+
+Bridge: `-(((m+1) : ℕ) : ℤ) = Int.negSucc m` by definitional reduction
+of `Int.neg` on `Int.ofNat (Nat.succ _)`. -/
+theorem linearResidualAt_succ_mk_eq
+    {s : ℕ} (M : RKTableau s) (m : ℕ) (t : RT) :
+    linearResidualAt (m + 1)
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) t
+      = - (∑ j : Fin (M.powRep (m + 1)).1,
+              (M.powRep (m + 1)).2.b j *
+                (M.powRep (m + 1)).2.derivativeWeightWithSrc
+                  (M.powRep (m + 1)).2.inverse j t)
+        - ((m : ℝ) + 1) * (-1)^t.order * M.elementaryWeight t := by
+  unfold linearResidualAt
+  have h_pow :
+      (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) ^ (-(((m + 1) : ℕ) : ℤ))
+        = (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) ^ (Int.negSucc m) :=
+    rfl
+  rw [h_pow, elementaryWeightQ_phi_zpow_negSucc_mk M m t,
+      elementaryWeightQ_phi_mk]
+  push_cast
+  ring
+
+/-- *Phase D.3.b (cycle 361) — non-vacuity: closed form at `i = 2` at
+`cherry` with `explicitEuler`.* Exercises `linearResidualAt_succ_mk_eq`
+at `m = 1` on the order-2 tree, the first witness of the closed-form
+expression for the residual at `i = 2` via the ℤ-form lift. -/
+example :
+    linearResidualAt (1 + 1)
+        (Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩) RootedTree.cherry
+      = - (∑ j : Fin (RKTableau.explicitEuler.powRep (1 + 1)).1,
+              (RKTableau.explicitEuler.powRep (1 + 1)).2.b j *
+                (RKTableau.explicitEuler.powRep (1 + 1)).2.derivativeWeightWithSrc
+                  (RKTableau.explicitEuler.powRep (1 + 1)).2.inverse
+                  j RootedTree.cherry)
+        - (((1 : ℕ) : ℝ) + 1) * (-1)^(RootedTree.cherry.order)
+            * RKTableau.explicitEuler.elementaryWeight RootedTree.cherry :=
+  linearResidualAt_succ_mk_eq RKTableau.explicitEuler 1 RootedTree.cherry
+
+/-- *Phase D.3.b (cycle 361) — non-vacuity: closed form at `i = 3` at
+`vertex` with `explicitEuler`.* Exercises `linearResidualAt_succ_mk_eq`
+at `m = 2` on the single-vertex tree; cross-checks that the closed
+form is consistent with `linearResidualAt_vertex_eq_zero`: the residual
+must equal 0 at vertex regardless of `i`. -/
+example :
+    linearResidualAt 3
+        (Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩) RootedTree.vertex
+      = 0 :=
+  linearResidualAt_vertex_eq_zero 3 _
+
 end OpenMath.Chapter4.Section422
