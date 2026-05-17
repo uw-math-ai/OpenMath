@@ -758,4 +758,108 @@ example :
   simp [OpenMath.Chapter4.Section451.bdf2LMM, Fin.sum_univ_two]
   norm_num
 
+/-! ### Phase D consolidation (cycle 345) — discharge the non-vanishing
+hypothesis of `Eq422a_at_vertex_eta_eq` under textbook hypotheses
+
+Cycle 344 shipped `coef_α(M) > 0` for stable preconsistent `M` with
+`0 < k`. This block consumes that positivity to ship a corollary of
+cycle 342's `Eq422a_at_vertex_eta_eq` whose non-vanishing side-goal
+`coef_α + coef_β ≠ 0` is discharged via the §441 stability bridge,
+modulo an explicit β-side non-negativity hypothesis. Closing that
+β-side hypothesis from `M.IsConsistent` alone requires §441 β-side
+machinery not yet built (analogous to cycle 178's α-side
+`ρPoly_deriv_eval_one_pos_of_stable_preconsistent`); that is the
+Phase D′ refinement target for a future cycle.
+
+Also ships `coef_α_eq_sum_β_of_isConsistent`, extracted from cycle
+342's `Eq422a_at_vertex_linear_of_isConsistent` body, so downstream
+consumers (e.g. the future Phase D′ β-side machinery) can cite the
+cast bridge directly.
+-/
+
+/-- *Phase D consolidation (cycle 345):* under the textbook hypotheses
+of stability + preconsistency plus the side hypothesis that the
+β-side coefficient `Σ_{i:Fin (k+1)} i · M.β i` is non-negative, the
+(422a) reduction at the single-vertex tree `τ` determines `η(τ)`
+uniquely as `sum_β / (coef_α + coef_β)`.
+
+This routes the non-vanishing requirement of cycle 342's
+`Eq422a_at_vertex_eta_eq` through cycle 344's `coef_α > 0`. The
+β-side non-negativity hypothesis surfaces a residual textbook
+assumption: eliminating it from `M.IsStable + M.IsPreconsistent`
+alone requires §441 β-side machinery not yet built; defer that to
+a Phase D′ refinement cycle. -/
+theorem Eq422a_at_vertex_eta_eq_of_stable_preconsistent
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hk : 0 < k)
+    (hStab : M.IsStable) (hPre : M.IsPreconsistent)
+    (hβ_nn : 0 ≤ ∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i)
+    {η_q : Quotient PhiEquivalent.setoidSigma}
+    (hEq : Eq422a M η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex
+      = (∑ i : Fin (k + 1), M.β i)
+          / ((∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+              + (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i)) := by
+  apply Eq422a_at_vertex_eta_eq hEq
+  have hα_pos := coef_α_pos_of_stable_preconsistent M hk hStab hPre
+  linarith
+
+/-- *Phase D consolidation (cycle 345) — F-fallback ship:* under
+Butcher's consistency condition, the §422 α-side coefficient
+`coef_α(M) = Σ_{i:Fin k} ((i.val + 1 : ℕ) : ℝ) * M.α i.succ` equals
+the β-sum `Σ_{i:Fin (k+1)} M.β i`.
+
+Extracted from cycle 342's `Eq422a_at_vertex_linear_of_isConsistent`
+body: bridges `SatisfiesEq404b`'s `((i : ℕ) + 1 : ℝ)` cast form to
+the §422 `((i.val + 1 : ℕ) : ℝ)` cast form via `push_cast`+`ring`.
+Useful infrastructure for downstream Phase D′ refinements (e.g. a
+future `coef_β_pos_of_stable_consistent`). -/
+theorem coef_α_eq_sum_β_of_isConsistent
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hCons : M.IsConsistent) :
+    (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+      = ∑ i : Fin (k + 1), M.β i := by
+  have h404b := hCons.2
+  have h_eq : (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+      = ∑ i : Fin k, ((i : ℕ) + 1 : ℝ) * M.α i.succ := by
+    apply Finset.sum_congr rfl
+    intro i _
+    push_cast
+    ring
+  rw [h_eq]
+  exact h404b
+
+/-- *Non-vacuity for the cycle 345 consolidation:* for the explicit
+Euler 1-step LMM, the (422a) reduction at `τ` pins `η(τ) = 1/2`.
+Computation: `coef_α = 1·1 = 1`, `coef_β = 0·0 + 1·1 = 1`,
+`sum_β = 0 + 1 = 1`, so `η(τ) = 1 / (1 + 1) = 1/2`. The β-side
+non-negativity discharges as `0 ≤ 1`. -/
+example (η_q : Quotient PhiEquivalent.setoidSigma)
+    (hEq : Eq422a OpenMath.Chapter4.Section404.explicitEulerLMM η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex = 1 / 2 := by
+  have h := Eq422a_at_vertex_eta_eq_of_stable_preconsistent
+    OpenMath.Chapter4.Section404.explicitEulerLMM
+    Nat.one_pos
+    OpenMath.Chapter4.Section404.explicitEulerLMM_isStable
+    OpenMath.Chapter4.Section404.explicitEulerLMM_isPreconsistent
+    (by
+      simp [OpenMath.Chapter4.Section404.explicitEulerLMM,
+        Fin.sum_univ_two])
+    hEq
+  rw [h]
+  simp [OpenMath.Chapter4.Section404.explicitEulerLMM,
+    Fin.sum_univ_two]
+  norm_num
+
+/-- *Non-vacuity for `coef_α_eq_sum_β_of_isConsistent` (cycle 345):*
+for explicit Euler (which is consistent), both sides equal `1`:
+`coef_α = 1·α₁ = 1·1 = 1`, `sum_β = β₀ + β₁ = 0 + 1 = 1`. -/
+example :
+    (∑ i : Fin 1, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section404.explicitEulerLMM.α i.succ)
+      = ∑ i : Fin 2, OpenMath.Chapter4.Section404.explicitEulerLMM.β i :=
+  coef_α_eq_sum_β_of_isConsistent
+    OpenMath.Chapter4.Section404.explicitEulerLMM
+    OpenMath.Chapter4.Section404.explicitEulerLMM_isConsistent
+
 end OpenMath.Chapter4.Section422

@@ -1130,3 +1130,75 @@ the cycle 343 §"Cycle 344 entry point" plan for scaffolding
 the recursive solver's per-step linear inversion requires
 `coef_α + coef_β ≠ 0`, and having `coef_α > 0` as a separate fact
 simplifies threading. Phase D.3 / E / F remain deferred per §5.
+
+## Cycle 345 update — Phase D consolidation: discharge non-vanishing under textbook hypotheses
+
+**Status: SHIPPED.** Cycle 344's `coef_α > 0` positivity bridge
+consumed by a corollary of cycle 342's `Eq422a_at_vertex_eta_eq`,
+modulo an explicit β-side non-negativity hypothesis. ~105 LOC added
+to `OpenMath/Chapter4/Section422.lean` after cycle 344's positivity
+block. Two new public theorems plus three non-vacuity `example`s:
+
+* `Eq422a_at_vertex_eta_eq_of_stable_preconsistent` — for a stable
+  preconsistent `M` with `0 < k` and `hβ_nn : 0 ≤ coef_β(M)`, the
+  (422a) reduction at `τ` pins `η(τ) = sum_β / (coef_α + coef_β)`
+  *without* requiring the caller to discharge the non-vanishing
+  hypothesis. Proof recipe: `apply Eq422a_at_vertex_eta_eq hEq`
+  leaves `coef_α + coef_β ≠ 0` as side-goal; close via
+  `coef_α_pos_of_stable_preconsistent` (cycle 344) +
+  `hβ_nn` + `linarith`. The β-side non-negativity hypothesis
+  surfaces a residual textbook assumption — eliminating it requires
+  §441 β-side machinery (a `coef_β_pos_of_stable_consistent`
+  analog of cycle 178's α-side
+  `ρPoly_deriv_eval_one_pos_of_stable_preconsistent`) not yet
+  built; deferred to a Phase D′ refinement cycle.
+* `coef_α_eq_sum_β_of_isConsistent` — extracted from cycle 342's
+  `Eq422a_at_vertex_linear_of_isConsistent` body: under
+  `M.IsConsistent`, `Σ_{i:Fin k} ((i.val + 1 : ℕ) : ℝ) * M.α i.succ
+  = Σ_{i:Fin (k+1)} M.β i`. Cast bridge via `push_cast`+`ring` between
+  the §422 form `((i.val + 1 : ℕ) : ℝ)` and the §404 form
+  `((i : ℕ) + 1 : ℝ)`. Useful infrastructure for downstream Phase D′
+  consumers.
+* Three `example`s: `explicitEulerLMM` P1 non-vacuity (`η(τ) = 1/2`
+  via `1/(1+1)`), `coef_α_eq_sum_β_of_isConsistent` non-vacuity on
+  `explicitEulerLMM` (both sides = 1).
+
+**BDF2 deferral.** The planner strategy P2 expected a `bdf2LMM`
+non-vacuity, but `bdf2LMM_isStable` (Dahlquist-stable,
+`LinearMultistepMethod.IsStable`) does **not** exist in the codebase
+— only `bdf2LMM_isGStable` (Section451, cycle ~149) and
+`bdf2LMM_isAStable` (Section454, cycle ~169) ship. Building the
+`IsGStable ⇒ IsStable` or `IsAStable ⇒ IsStable` chain is a
+separate task (additive, ~30 LOC, low risk). Tracked as a cycle 346
+candidate per the cycle 345 task results §"Suggested next approach"
+option 2.
+
+**Axioms (verified via `#print axioms` on each new public theorem):**
+Both `Eq422a_at_vertex_eta_eq_of_stable_preconsistent` and
+`coef_α_eq_sum_β_of_isConsistent` → `[propext, Classical.choice,
+Quot.sound]` only.
+
+**LOC trajectory:** Section422.lean: 759 → ~864 (+~105, including
+docstrings).
+
+**Cycle 342's `Eq422a_at_vertex_eta_eq` signature untouched** —
+the cycle 345 ship is strictly additive; the non-vanishing
+hypothesis remains explicit on the cycle 342 base theorem for callers
+that need the unconditional form.
+
+**Cycle 346 entry point — three candidates** (see
+`task_results/cycle_345.md` §"Suggested next approach"):
+
+1. **Phase D′ refinement** (MEDIUM risk, 1–2 cycles): build `βPoly`
+   analog + `coef_β_pos_of_stable_consistent` bridge to drop the
+   `hβ_nn` hypothesis in cycle 345 P1.
+2. **`bdf2LMM_isStable` ship** (LOW risk, ~30 LOC): build the
+   `IsAStable ⇒ IsStable` (or `IsGStable ⇒ IsStable`) bridge,
+   ship `bdf2LMM_isStable` as a corollary, then add the BDF2
+   non-vacuity for cycle 345 P1 that was deferred.
+3. **Phase D.3 proper** (HIGH risk, multi-cycle, gated): scaffold
+   `underlyingEta_aux` per cycle 343's `WellFoundedRelation`,
+   handling τ via cycle 345's P1 corollary and the inductive
+   step via per-tree linear isolation. Contingent on Aristotle
+   batch + phased scoping per `lem_310B_plan.md` /
+   `lem_441A_phase_C_scoping.md` template depth.
