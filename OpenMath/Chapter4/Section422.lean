@@ -1048,6 +1048,30 @@ example : (0 : ℝ) < ∑ i : Fin 3, OpenMath.Chapter4.Section451.bdf2LMM.β i :
     OpenMath.Chapter4.Section451.bdf2LMM_isStable
     OpenMath.Chapter4.Section451.bdf2LMM_isConsistent
 
+/-- *Trapezoidal D′.2.0 witness (cycle 355):* end-to-end exercise of
+`sum_β_pos_of_stable_consistent` on the trapezoidal (Crank–Nicolson)
+LMM, discharging stability via `trapezoidalLMM_isStable` (cycle 354)
+and consistency via `trapezoidalLMM_isConsistent` (cycle 352).
+
+Numerical sanity: trapezoidal's β-sum is `1/2 + 1/2 = 1 > 0`. -/
+example : (0 : ℝ) < ∑ i : Fin 2, OpenMath.Chapter4.Section404.trapezoidalLMM.β i :=
+  sum_β_pos_of_stable_consistent OpenMath.Chapter4.Section404.trapezoidalLMM
+    (by norm_num : (0 : ℕ) < 1)
+    OpenMath.Chapter4.Section404.trapezoidalLMM_isStable
+    OpenMath.Chapter4.Section404.trapezoidalLMM_isConsistent
+
+/-- *BDF3 D′.2.0 witness (cycle 355):* end-to-end exercise of
+`sum_β_pos_of_stable_consistent` on BDF3, discharging stability via
+`bdf3LMM_isStable` (cycle 354) and consistency via `bdf3LMM_isConsistent`
+(cycle 353).
+
+Numerical sanity: BDF3's β-sum is `6/11 + 0 + 0 + 0 = 6/11 > 0`. -/
+example : (0 : ℝ) < ∑ i : Fin 4, OpenMath.Chapter4.Section451.bdf3LMM.β i :=
+  sum_β_pos_of_stable_consistent OpenMath.Chapter4.Section451.bdf3LMM
+    (by norm_num : (0 : ℕ) < 3)
+    OpenMath.Chapter4.Section451.bdf3LMM_isStable
+    OpenMath.Chapter4.Section451.bdf3LMM_isConsistent
+
 /-! ### Phase D′.2.1 (cycle 350) — Route E refinement of cycle 345
 
 Cycle 345 shipped `Eq422a_at_vertex_eta_eq_of_stable_preconsistent`
@@ -1132,6 +1156,50 @@ theorem bdf2LMM_coef_α_plus_coef_β_ne_zero :
             OpenMath.Chapter4.Section451.bdf2LMM.β i) ≠ 0 := by
   simp [OpenMath.Chapter4.Section451.bdf2LMM,
     Fin.sum_univ_two, Fin.sum_univ_three]
+  norm_num
+
+/-- *Trapezoidal D′.2.1 non-vanishing witness (cycle 355):*
+trapezoidal's denominator `coef_α + coef_β = 1 + 1/2 = 3/2 ≠ 0`.
+Numerical witness for the cycle 350 weakened-hypothesis ship at the
+trapezoidal (Crank–Nicolson) LMM. -/
+theorem trapezoidalLMM_coef_α_plus_coef_β_ne_zero :
+    (∑ i : Fin 1, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section404.trapezoidalLMM.α i.succ)
+      + (∑ i : Fin 2, ((i.val : ℕ) : ℝ) *
+            OpenMath.Chapter4.Section404.trapezoidalLMM.β i) ≠ 0 := by
+  simp [OpenMath.Chapter4.Section404.trapezoidalLMM,
+    Fin.sum_univ_two]
+  norm_num
+
+/-- *BDF3 D′.2.1 non-vanishing witness (cycle 355):* BDF3's denominator
+`coef_α + coef_β = 6/11 + 0 = 6/11 ≠ 0`. Numerical witness for the
+cycle 350 weakened-hypothesis ship at BDF3. -/
+theorem bdf3LMM_coef_α_plus_coef_β_ne_zero :
+    (∑ i : Fin 3, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section451.bdf3LMM.α i.succ)
+      + (∑ i : Fin 4, ((i.val : ℕ) : ℝ) *
+            OpenMath.Chapter4.Section451.bdf3LMM.β i) ≠ 0 := by
+  simp [OpenMath.Chapter4.Section451.bdf3LMM,
+    Fin.sum_univ_three, Fin.sum_univ_four]
+  norm_num
+
+/-- *Non-vacuity for the cycle 355 weakened ship (trapezoidal):*
+end-to-end exercise of `Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened`
+on trapezoidal, pinning `η(τ) = 1 / (3/2) = 2/3` for the underlying
+one-step method corresponding to the Crank–Nicolson LMM. -/
+example (η_q : Quotient PhiEquivalent.setoidSigma)
+    (hEq : Eq422a OpenMath.Chapter4.Section404.trapezoidalLMM η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex = 2 / 3 := by
+  have h := Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened
+    OpenMath.Chapter4.Section404.trapezoidalLMM
+    (by norm_num : (0 : ℕ) < 1)
+    OpenMath.Chapter4.Section404.trapezoidalLMM_isStable
+    OpenMath.Chapter4.Section404.trapezoidalLMM_isPreconsistent
+    trapezoidalLMM_coef_α_plus_coef_β_ne_zero
+    hEq
+  rw [h]
+  simp [OpenMath.Chapter4.Section404.trapezoidalLMM,
+    Fin.sum_univ_two]
   norm_num
 
 /-- *Non-vacuity for the cycle 350 weakened ship:* end-to-end

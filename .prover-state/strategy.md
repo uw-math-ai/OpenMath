@@ -1,360 +1,334 @@
-# Cycle 354 Strategy
+# Cycle 355 Strategy
 
-## §A — State at cycle 354 start
+## Context
 
-* Last commit: `f4158b3` (cycle 353 — BDF3 wire-up: order-3 LMM witness).
-* No pending Aristotle results.
-* Sorry count: 0. No tracked blockers requiring infrastructure work.
-* `Section441.lean` remains GPFS-blocked (43+ consecutive compile
-  timeouts since cycle 182 — do **not** attempt to add to Section441).
-  Section441's `.olean` cache is healthy, so downstream consumers
-  (Section422 in particular) build fine.
+Cycle 354 shipped two stability witnesses axiom-clean:
+* `trapezoidalLMM_isStable` (Section404.lean, ~line 278)
+* `bdf3LMM_isStable` (Section451.lean, ~line 441)
 
-The cycle 353 worker shipped 6 axiom-clean BDF3 declarations
-(`bdf3LMM` + 4 §404/§422 witnesses + the cycle 351 identity at BDF3),
-opening up the project's first **order-3 LMM territory**. The
-worker's `## Suggested next approach` block offered three directions:
+All four §404 LMM witnesses (explicit Euler, implicit Euler, trapezoidal,
+BDF2, BDF3) now have stability + consistency in hand. The §422
+infrastructure from cycles 344–351 (Phase D and Phase D′ Step 1) is also
+in place. **No sorries in the repo.**
 
-1. `bdf3LMM_isStable` — substantive, ports cycle 346's BDF2 closed-form
-   recipe to k = 3 with complex conjugate roots (`(z − 1)(11z² − 7z + 2)`,
-   discriminant `−39`, complex-pair magnitude `√(2/11)`).
-2. `trapezoidalLMM_isStable` — trivial port of `explicitEulerLMM_isStable`
-   (k = 1, α₁ = 1, constant solutions, ~15 LOC).
-3. Phase D′.2.2 Step 2 scoping (Markdown only).
+The natural cycle 355 move is to **exercise cycle 354's stability ships
+at downstream §422 consumers**: four small (~5–10 LOC each)
+non-vacuity / instantiation witnesses that prove cycle 354's work is
+load-bearing. All are mechanical compositions of existing axiom-clean
+infrastructure — no risk of stalling, no Aristotle delegation needed.
 
-§B–§E below commit to a hybrid plan: **P1 ships trapezoidal stability
-as a guaranteed-close warm-up**, **P2 attempts BDF3 stability with a
-strict time-box and fallback ladder**.
+There are no Aristotle results pending.
 
-## §B — P1 (PRIMARY, ~15 LOC, GUARANTEED): `trapezoidalLMM_isStable`
+## Goal
 
-Trapezoidal rule (Crank–Nicolson) is `k = 1`, α₁ = 1 — the homogeneous
-recurrence is `Y(m+1) = Y(m)`, identical in shape to the two Euler
-methods. Port `explicitEulerLMM_isStable`
-(`OpenMath/Chapter4/Section404.lean:248-259`) verbatim with one symbol
-substitution.
+Ship four (or five, stretch) numerical non-vacuity witnesses in
+`OpenMath/Chapter4/Section422.lean` that exercise the cycle 354 stability
+ships. All ~5–10 LOC each, all axiom-clean targets, sorry count remains 0.
 
-### Concrete signature
+## Priorities
 
-In `OpenMath/Chapter4/Section404.lean`, immediately after
-`implicitEulerLMM_isStable` (line 273), add:
+### P1 (mandatory, ~7 LOC) — `trapezoidalLMM_sum_β_pos` example
 
-```lean
-/-- The trapezoidal rule is Dahlquist-stable. -/
-theorem trapezoidalLMM_isStable : trapezoidalLMM.IsStable := by
-  intro y hy
-  have hconst : ∀ n, y n = y 0 := by
-    intro n
-    induction n with
-    | zero => rfl
-    | succ n ih =>
-        have hrec := hy n
-        simp [trapezoidalLMM] at hrec
-        linarith
-  refine ⟨|y 0|, fun n => ?_⟩
-  rw [hconst n]
-```
+Mirror of `bdf2LMM_sum_β_pos` example at `Section422.lean:1045–1049`.
+Direct invocation of cycle 349's `sum_β_pos_of_stable_consistent` with
+cycle 352's `trapezoidalLMM_isConsistent` + cycle 354's
+`trapezoidalLMM_isStable`.
 
-### Required imports
+**Placement**: in `Section422.lean`, immediately after the existing
+`bdf2LMM_sum_β_pos` `example` block (line ~1049). The new block forms
+a natural pair with it.
 
-None new. `trapezoidalLMM` is already defined at Section404.lean:179
-(cycle 352).
+**Numerical sanity (paper-verified)**: trapezoidal has `k = 1`,
+`β = (1/2, 1/2)`, so `Σᵢ:Fin 2 βᵢ = 1/2 + 1/2 = 1 > 0`.
 
-### Verification
-
-```bash
-lake build OpenMath.Chapter4.Section404
-echo '#print axioms OpenMath.Chapter4.Section404.trapezoidalLMM_isStable' \
-  | lake env lean --stdin OpenMath/Chapter4/Section404.lean
-```
-
-Expected output: `[propext, Classical.choice, Quot.sound]`.
-
-### Faithfulness check
-
-* Entity: `def:403A` (no separate entity — stability is a predicate,
-  not a textbook theorem). Trapezoidal stability is folklore (Dahlquist
-  §403 implicitly).
-* Lean statement matches `LinearMultistepMethod.IsStable` verbatim
-  (cycle 346 precedent: same shape as `bdf2LMM_isStable`).
-* Tautology check: PASS (the proof does real work — induction on the
-  recurrence is not a hypothesis re-export).
-* Hypothesis-strength check: PASS (no hypotheses beyond the predicate).
-
-**P1 ships definitively. Do this first.**
-
-## §C — P2 (SUBSTANTIVE, ~100–200 LOC, MEDIUM-HIGH risk): `bdf3LMM_isStable`
-
-The proof structure ports cycle 346's `bdf2LMM_isStable` recipe
-(`Section451.lean:330-348`) to k = 3 with a real-form closed-form
-decomposition that handles the complex conjugate root pair.
-
-### Mathematical setup
-
-BDF3 characteristic polynomial: `11z³ − 18z² + 9z − 2 = 0`. Factor as
-`(z − 1)(11z² − 7z + 2)`.
-
-* **Real root**: `z₁ = 1`, simple, on the unit circle.
-* **Complex conjugate pair**: roots of `11z² − 7z + 2 = 0`. Discriminant
-  `49 − 88 = −39 < 0`. Real part `7/22`, imaginary part `√39/22`.
-  Magnitude `|z|² = 2/11 ≈ 0.182 < 1`. **Strictly inside the disc.**
-
-### Recommended route — auxiliary-sequence + Lyapunov
-
-The naive trig closed-form `Y(n) = A + (2/11)^(n/2)·(B·cos(nθ) +
-C·sin(nθ))` is Lean-fiddly because of the trig identities required at
-each induction step. The cleaner approach:
-
-**Step 1 — auxiliary sequence is constant**. Define `Z(n) := Y(n+2)
-− (7/11)·Y(n+1) + (2/11)·Y(n)`. Direct substitution of BDF3's
-recurrence `Y(n+3) = (18/11)·Y(n+2) − (9/11)·Y(n+1) + (2/11)·Y(n)`
-into `Z(n+1)` shows `Z(n+1) = Z(n)`. So `Z` is constant with
-`Z(n) = C₀ := Y(2) − (7/11)·Y(1) + (2/11)·Y(0)`.
-
-**Step 2 — `Y` satisfies an inhomogeneous 2-term recurrence**.
-Equivalently:
-
-  `Y(n+2) = (7/11)·Y(n+1) − (2/11)·Y(n) + C₀`.
-
-The unique constant particular solution is `A := 11·C₀/6` (from
-`(6/11)·A = C₀`). The homogeneous part `W(n) := Y(n) − A` satisfies
-
-  `W(n+2) = (7/11)·W(n+1) − (2/11)·W(n)`,
-
-whose characteristic polynomial has roots strictly inside the unit
-disc.
-
-**Step 3 — Lyapunov bound on `W`**. Find `α, β > 0` such that
-`Q(W(n), W(n+1)) := α·W(n)² + β·W(n+1)²` is non-increasing in `n`.
-Concretely: paper-verify
-
-  `Q(W(n+1), W(n+2)) − Q(W(n), W(n+1))
-     = β·W(n+2)² + (α − β)·W(n+1)² − α·W(n)² ≤ 0`
-
-for some specific `(α, β)`. (A reasonable trial: `α = 2, β = 11`,
-because `11·W(n+2)² ≈ 11·((7/11)W(n+1) − (2/11)W(n))² = (49/11)·W(n+1)²
-+ (4/11)·W(n)² − (28/11)·W(n+1)·W(n)`; the negative-semidefiniteness
-inequality with the trial pair may or may not hold — verify on paper
-before committing.) If `(2, 11)` doesn't work, try `(1, 7)` or
-`(4, 11)`. The general criterion is that the quadratic form
-`-α·x² + 2·(−14β/121)·x·y + (β·49/121 + α − β)·y²` is negative
-semidefinite as a form on `(x, y) = (W(n), W(n+1))`. **Verify on
-paper first**; if no clean rational `(α, β)` works, fall back to the
-trig route.
-
-**Step 4 — boundedness**. `Q(W(0), W(1))` is a finite constant, so
-`W(n)² ≤ Q(W(n), W(n+1))/min(α, β) ≤ Q(W(0), W(1))/min(α, β)`, i.e.
-`|W(n)| ≤ √(Q(W(0), W(1))/min(α, β))`. Then `|Y(n)| ≤ |A| + |W(n)|`
-is uniformly bounded.
-
-### Concrete Lean shape
-
-In `OpenMath/Chapter4/Section451.lean`, after `bdf2LMM_isStable` (line
-348). Three private theorems + one public:
+**Concrete Lean**:
 
 ```lean
--- (1) Z is constant.
-private theorem bdf3_auxiliary_const (Y : ℕ → ℝ)
-    (hY : bdf3LMM.IsHomogeneousSolution Y) :
-    ∀ n, Y (n+2) - (7/11)·Y (n+1) + (2/11)·Y n
-       = Y 2 - (7/11)·Y 1 + (2/11)·Y 0 := by
-  intro n
-  induction n with
-  | zero => rfl
-  | succ n ih =>
-      have hrec := hY n
-      simp [bdf3LMM, Fin.sum_univ_three] at hrec
-      linarith [ih]
+/-- *Trapezoidal D′.2.0 witness (cycle 355):* end-to-end exercise of
+`sum_β_pos_of_stable_consistent` on the trapezoidal (Crank–Nicolson)
+LMM, discharging stability via `trapezoidalLMM_isStable` (cycle 354)
+and consistency via `trapezoidalLMM_isConsistent` (cycle 352).
 
--- (2) Y = A + W where W satisfies a 2-term recurrence.
--- Define A := 11·C₀/6 and W := Y - A. Prove W satisfies the
--- 2-term recurrence by direct substitution (uses (1)).
-
--- (3) Lyapunov: Q(W) := α·W² + β·W² is non-increasing.
--- (paper-verify the α, β values FIRST)
-
--- (4) bdf3LMM_isStable: combine (1) + (3) for boundedness.
+Numerical sanity: trapezoidal's β-sum is `1/2 + 1/2 = 1 > 0`. -/
+example : (0 : ℝ) < ∑ i : Fin 2, OpenMath.Chapter4.Section404.trapezoidalLMM.β i :=
+  sum_β_pos_of_stable_consistent OpenMath.Chapter4.Section404.trapezoidalLMM
+    (by norm_num : (0 : ℕ) < 1)
+    OpenMath.Chapter4.Section404.trapezoidalLMM_isStable
+    OpenMath.Chapter4.Section404.trapezoidalLMM_isConsistent
 ```
 
-### Time-box and fallback ladder
+**Verify**: build Section422, ensure example accepts (no `#print axioms`
+needed for `example`s — they don't get a name).
 
-* **0–20 min**: paper-verify a clean `(α, β)` Lyapunov pair. If
-  the inequality with rational `(α, β) ∈ {(2, 11), (1, 7), (4, 11),
-  (5, 12)}` doesn't fire, pivot to the trig route or fall back
-  immediately to P3.
-* **20–90 min**: write the three private theorems + public
-  theorem in Lean. Run `lake build OpenMath.Chapter4.Section451`
-  after each non-trivial step.
-* **90+ min, NOT CLOSED**: **STOP** and fall back to P3.
+### P2 (mandatory, ~7 LOC) — `bdf3LMM_sum_β_pos` example
 
-### Faithfulness check (when shipped)
+Same shape as P1, with BDF3 inputs:
+* `OpenMath.Chapter4.Section451.bdf3LMM` (Section451.lean:161)
+* `OpenMath.Chapter4.Section451.bdf3LMM_isStable` (cycle 354)
+* `OpenMath.Chapter4.Section451.bdf3LMM_isConsistent` (Section451.lean:193, cycle 353)
 
-* Entity: same as P1 (`def:403A` predicate, no separate textbook
-  entity).
-* Lean statement: `bdf3LMM.IsStable`, matches the predicate directly.
-* Tautology check: PASS (decomposition + Lyapunov argument is real
-  work).
-* Hypothesis-strength check: PASS (no extra hypotheses).
+**Placement**: immediately after P1's `example` block.
 
-## §D — P3 (FALLBACK and STRETCH, ~15–60 LOC each)
+**Numerical sanity (paper-verified)**: BDF3 has `k = 3`,
+`β = (6/11, 0, 0, 0)`, so `Σᵢ:Fin 4 βᵢ = 6/11 + 0 + 0 + 0 = 6/11 > 0`.
 
-If P2 stalls past 90 min, ship one or more of these instead. Each is
-guaranteed-close ~15–60 LOC.
-
-### P3a (recommended first fallback) — `trapezoidalLMM_sum_β_pos`
-
-Composition of P1's `trapezoidalLMM_isStable` with cycle 349's
-`sum_β_pos_of_stable_consistent` (Section422.lean) and cycle 352's
-`trapezoidalLMM_isConsistent`. One-liner:
+**Concrete Lean**:
 
 ```lean
-/-- Cycle 349 `sum_β_pos_of_stable_consistent` exercised at the
-trapezoidal rule. -/
-theorem trapezoidalLMM_sum_β_pos :
-    0 < ∑ i : Fin 2, trapezoidalLMM.β i :=
-  sum_β_pos_of_stable_consistent trapezoidalLMM (by norm_num)
-    trapezoidalLMM_isStable trapezoidalLMM_isConsistent
+/-- *BDF3 D′.2.0 witness (cycle 355):* end-to-end exercise of
+`sum_β_pos_of_stable_consistent` on BDF3, discharging stability via
+`bdf3LMM_isStable` (cycle 354) and consistency via `bdf3LMM_isConsistent`
+(cycle 353).
+
+Numerical sanity: BDF3's β-sum is `6/11 + 0 + 0 + 0 = 6/11 > 0`. -/
+example : (0 : ℝ) < ∑ i : Fin 4, OpenMath.Chapter4.Section451.bdf3LMM.β i :=
+  sum_β_pos_of_stable_consistent OpenMath.Chapter4.Section451.bdf3LMM
+    (by norm_num : (0 : ℕ) < 3)
+    OpenMath.Chapter4.Section451.bdf3LMM_isStable
+    OpenMath.Chapter4.Section451.bdf3LMM_isConsistent
 ```
 
-Add to `Section422.lean` after cycle 352's trapezoidal block. Verify
-the exact name and signature of `sum_β_pos_of_stable_consistent`
-against `Section422.lean` (cycle 349 added it, but the worker
-should grep before consuming).
+### P3 (mandatory, ~10 LOC) — `trapezoidalLMM_coef_α_plus_coef_β_ne_zero`
 
-### P3b — `bdf3LMM_coef_α_plus_coef_β_ne_zero` numerical witness
+Mirror of `bdf2LMM_coef_α_plus_coef_β_ne_zero` at
+`Section422.lean:1128–1135` (cycle 350). Named theorem (not `example`)
+so downstream consumers can cite it.
 
-Even without `bdf3LMM_isStable`, the algebraic identity
-`coef_α + coef_β = Σᵢ (i+1)·βᵢ` (cycle 350) instantiated at BDF3
-gives a one-liner non-vacuity:
+**Placement**: immediately after `bdf2LMM_coef_α_plus_coef_β_ne_zero`
+(line ~1135).
+
+**Numerical sanity (paper-verified)**: trapezoidal at `k = 1`:
+* `coef_α = 1·α(1) = 1·1 = 1`
+* `coef_β = 0·β(0) + 1·β(1) = 0 + 1/2 = 1/2`
+* `coef_α + coef_β = 3/2 ≠ 0` ✓
+
+**Concrete Lean** (mirror cycle 350's pattern; use `Fin.sum_univ_one`
+for the α-side at `k = 1` and `Fin.sum_univ_two` for the β-side at
+`k + 1 = 2`):
 
 ```lean
-/-- BDF3 satisfies the non-vanishing side hypothesis from cycle 350's
-weakened (422a) corollary: `coef_α + coef_β = 6/11 ≠ 0`. -/
+/-- *Trapezoidal D′.2.1 non-vanishing witness (cycle 355):*
+trapezoidal's denominator `coef_α + coef_β = 1 + 1/2 = 3/2 ≠ 0`.
+Numerical witness for the cycle 350 weakened-hypothesis ship at the
+trapezoidal (Crank–Nicolson) LMM. -/
+theorem trapezoidalLMM_coef_α_plus_coef_β_ne_zero :
+    (∑ i : Fin 1, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section404.trapezoidalLMM.α i.succ)
+      + (∑ i : Fin 2, ((i.val : ℕ) : ℝ) *
+            OpenMath.Chapter4.Section404.trapezoidalLMM.β i) ≠ 0 := by
+  simp [OpenMath.Chapter4.Section404.trapezoidalLMM,
+    Fin.sum_univ_one, Fin.sum_univ_two]
+  norm_num
+```
+
+### P4 (mandatory, ~10 LOC) — `bdf3LMM_coef_α_plus_coef_β_ne_zero`
+
+Same shape as P3, BDF3 inputs.
+
+**Placement**: immediately after P3's theorem.
+
+**Numerical sanity (paper-verified)**: BDF3 at `k = 3`:
+* `coef_α = 1·(18/11) + 2·(-9/11) + 3·(2/11) = (18 - 18 + 6)/11 = 6/11`
+* `coef_β = 0·(6/11) + 1·0 + 2·0 + 3·0 = 0`
+* `coef_α + coef_β = 6/11 ≠ 0` ✓
+
+**Concrete Lean** (use `Fin.sum_univ_three` for α-side at `k = 3` and
+`Fin.sum_univ_four` for β-side at `k + 1 = 4`):
+
+```lean
+/-- *BDF3 D′.2.1 non-vanishing witness (cycle 355):* BDF3's denominator
+`coef_α + coef_β = 6/11 + 0 = 6/11 ≠ 0`. Numerical witness for the
+cycle 350 weakened-hypothesis ship at BDF3. -/
 theorem bdf3LMM_coef_α_plus_coef_β_ne_zero :
-    (∑ i : Fin 3, ((i.val + 1 : ℕ) : ℝ) * bdf3LMM.α i.succ)
-      + (∑ i : Fin 4, ((i.val : ℕ) : ℝ) * bdf3LMM.β i) ≠ 0 := by
-  simp [bdf3LMM, Fin.sum_univ_three, Fin.sum_univ_four]; norm_num
+    (∑ i : Fin 3, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section451.bdf3LMM.α i.succ)
+      + (∑ i : Fin 4, ((i.val : ℕ) : ℝ) *
+            OpenMath.Chapter4.Section451.bdf3LMM.β i) ≠ 0 := by
+  simp [OpenMath.Chapter4.Section451.bdf3LMM,
+    Fin.sum_univ_three, Fin.sum_univ_four]
+  norm_num
 ```
 
-(Adapt the simp set to whatever cycle 350 used.)
+**Risk note**: `Fin.sum_univ_four` exists in Mathlib
+(`Mathlib.Algebra.BigOperators.Fin`; cycle 268's worker confirmed the
+companion `Fin.prod_univ_four` at the same location). If it does NOT
+fire on first try, fall back to a manual unfold:
+`rw [show (4 : ℕ) = 3 + 1 from rfl, Fin.sum_univ_succ];
+ simp [Fin.sum_univ_three]; norm_num`
+or use `decide` on the BDF3 β-side (which is all-but-one-zero and
+should reduce trivially). Worker should NOT spend more than 10
+minutes on this sub-step before applying a fallback.
 
-### P3c — Scoping issue file for BDF3 stability
+### P5 (stretch, ~15 LOC) — end-to-end trapezoidal Eq422a witness
 
-If P2 stalls AND there's time, write `.prover-state/issues/
-bdf3_stability_path.md` (≥150 lines Markdown, no Lean code)
-decomposing BDF3 stability into the auxiliary-sequence + Lyapunov
-route as a multi-cycle plan, with paper-verified Lyapunov
-coefficients and a 2-3 cycle decomposition. Template:
-`.prover-state/issues/eq422a_eta_phase_D_prime_step_2_scoping.md`.
+Mirror of the `example` at `Section422.lean:1143–1156` (BDF2 `η(τ) = 1`
+end-to-end). For trapezoidal: `η(τ) = sum_β / (coef_α + coef_β) =
+1 / (3/2) = 2/3`.
 
-## §E — Explicitly DO NOT pursue
+**Placement**: immediately after P4.
 
-* **DO NOT add to `OpenMath/Chapter4/Section441.lean`.** It is
-  GPFS-blocked (43+ consecutive compile timeouts since cycle 182).
-  Adding even a 5-line lemma triggers the pathology. All `Section441`
-  consumers work through cached `.olean`s — that's fine. See
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`.
-* **DO NOT attempt Phase D′.2.2 Step 2 main theorem this cycle**
-  (`0 ≤ Σᵢ (i+1)²·α(i.succ)` under stable + preconsistent + order ≥ 2).
-  Substantive multi-cycle work requiring `ρ''(1) ≥ 0` infrastructure
-  in Section441 (blocked) or §441 Möbius transform extension (also
-  Section441). The cycle 351 algebraic identity reduces Step 2 to a
-  polynomial-derivative positivity claim; closing that is genuinely
-  multi-cycle.
-* **DO NOT attempt BDF3 stability via "companion matrix
-  power-boundedness"**. That route requires building the entire
-  matrix-power-bounded-on-finite-dim infrastructure from scratch and
-  is multi-cycle (see `cesaro_inverse_I_minus_V.md` for an analogous
-  Section514 obstruction).
-* **DO NOT attempt BDF3 stability via "all complex roots in closed
-  unit disc ⇒ stable" general theorem**. That's the §441 root-condition
-  ↔ Dahlquist-stability bridge and is multi-cycle infrastructure work
-  (same family as `thm:441C`, the Dahlquist barrier).
-* **DO NOT introduce `axiom` / `constant` declarations** for any
-  step.
-* **DO NOT raise `maxHeartbeats` above 200000**. If the BDF3
-  Lyapunov inequality's `nlinarith` times out, decompose into
-  intermediate lemmas first.
-* **DO NOT attempt `bdf3LMM_isGStable`** (G-stability witness) as
-  an alternative to Dahlquist stability. G-stability requires
-  constructing a specific 3×3 positive-definite matrix `G` and
-  verifying `gMatrix bdf3LMM G` is PSD — substantial work, multi-cycle.
-  The cycle 346 BDF2 precedent (Section451.lean:280-283) used a
-  hand-supplied `bdf2GWitness` matrix from Butcher's textbook; BDF3's
-  textbook witness is not currently in our codebase.
-* **DO NOT pivot to a fresh entity** before P1 ships. The
-  trapezoidal stability witness is the floor deliverable.
-* **DO NOT attempt the trig closed-form route as the primary
-  approach.** The auxiliary-sequence + Lyapunov route (§C above) is
-  simpler. Trig is the fallback if Lyapunov coefficients don't work.
+**Concrete Lean**:
 
-## §F — Cycle 354 deliverable bar
+```lean
+/-- *Non-vacuity for the cycle 355 weakened ship (trapezoidal):*
+end-to-end exercise of `Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened`
+on trapezoidal, pinning `η(τ) = 1 / (3/2) = 2/3` for the underlying
+one-step method corresponding to the Crank–Nicolson LMM. -/
+example (η_q : Quotient PhiEquivalent.setoidSigma)
+    (hEq : Eq422a OpenMath.Chapter4.Section404.trapezoidalLMM η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex = 2 / 3 := by
+  have h := Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened
+    OpenMath.Chapter4.Section404.trapezoidalLMM
+    (by norm_num : (0 : ℕ) < 1)
+    OpenMath.Chapter4.Section404.trapezoidalLMM_isStable
+    OpenMath.Chapter4.Section404.trapezoidalLMM_isPreconsistent
+    trapezoidalLMM_coef_α_plus_coef_β_ne_zero
+    hEq
+  rw [h]
+  simp [OpenMath.Chapter4.Section404.trapezoidalLMM,
+    Fin.sum_univ_one, Fin.sum_univ_two]
+  norm_num
+```
 
-* **Score = +2 floor**: P1 (`trapezoidalLMM_isStable`) shipped
-  axiom-clean.
-* **Score = +3 target**: P1 + P2 (`bdf3LMM_isStable`) both shipped
-  axiom-clean.
-* **Score = +2 fallback**: P1 + P3a (`trapezoidalLMM_sum_β_pos`)
-  shipped axiom-clean; BDF3 stability deferred to a scoping doc
-  (P3c) for cycle 355.
+Only ship P5 if P1–P4 close cleanly within the cycle's first 60 minutes.
+If any of P1–P4 stalls, drop P5 and document.
 
-Sorry count must remain at **0** (cycle 200/201 rollback precedent —
-sorry-first scaffolds for multi-cycle targets without single-cycle
-closure get rolled back).
+## Verification protocol
 
-## §G — Task results format
+After each priority:
+1. `lake env lean OpenMath/Chapter4/Section422.lean` — must exit 0.
+2. For P3, P4 only: spot-check `#print axioms <theorem-name>` from a
+   scratch file — expect `[propext, Classical.choice, Quot.sound]`.
+   (P1, P2, P5 are `example`s; not named, so axiom-check N/A.)
+3. After all priorities: `lake build OpenMath.Chapter4.Section422`
+   (full module rebuild) to confirm no upstream regressions.
+4. `grep -c "sorry" OpenMath/Chapter4/Section422.lean` — must stay 0.
 
-Cycle 354 worker MUST write `.prover-state/task_results/cycle_354.md`
-with:
+If `lake env lean` reports any error, **stop and decompose**. Do not
+chain priorities through a broken file state.
 
-* `## Worked on`: which of P1/P2/P3 attempted, in order.
-* `## Approach`: which BDF3 route chosen (auxiliary-sequence Lyapunov
-  vs trig closed-form), if P2 was attempted. If Lyapunov, record
-  the `(α, β)` pair used.
-* `## Result`: SUCCESS / FAILED with line counts and axiom report per
-  theorem.
-* `## Faithfulness check`: per-theorem entity citation + tautology /
-  identity / hypothesis-strength checks. Note that `def:403A` is a
-  predicate with no separate textbook theorem, so the stability
-  witnesses are non-vacuity for that predicate, not citations of
-  named textbook theorems.
-* `## Dead ends`: any blind alleys hit during P2's BDF3 attempt
-  (e.g., trig identity that didn't fire, Lyapunov coefficient that
-  didn't bound). Be specific so cycle 355 can learn.
-* `## Discovery`: any Mathlib hooks identified for future cycles
-  (Lyapunov-style monotone-norm reasoning, complex-root closed forms,
-  etc.).
-* `## Suggested next approach`: cycle 355 priorities. Candidates:
-  - If BDF3 stability shipped: pivot to `Phase D′.2.2 Step 2` proper
-    (now that all four §404 stable methods — Euler×2, trapezoidal,
-    BDF2, BDF3 — have stability + consistency witnesses, the
-    motivation for unconditional Phase D′ corollaries is stronger).
-  - If BDF3 stability deferred: continue with the auxiliary-sequence
-    or trig closed-form route per the P3c scoping doc.
-  - Pivot candidates: `def:451A` `IsGStable` for trapezoidal
-    (Section451 extension); `def:422B` `underlyingOneStepMethod`
-    Phase D.2/D.3 work (multi-cycle per `def_422B_path.md`); or
-    `bdf3LMM_isGStable` as a separate Section451 ship (needs
-    textbook G-matrix lookup).
+## What NOT to do
 
-## §H — Cycle 354 execution discipline
+1. **Do NOT attempt Phase D′.2.2 Step 2** (the unconditional `0 ≤
+   coef_β` derivation from `IsStable + IsConsistent` alone). It is
+   documented as multi-cycle in
+   `.prover-state/issues/eq422a_eta_phase_D_prime_step_2_scoping.md`
+   §4 — Routes A/B/C/D each have a structural obstruction. The cycle
+   351 worker tried Route D Step 1 already; Step 2 needs `0 ≤ Σᵢ
+   i²·αᵢ` infrastructure which is not in the codebase. Save for a
+   dedicated multi-cycle planning epoch.
 
-1. **First 10 min**: read §B above, write trapezoidal stability,
-   build, verify, commit P1 alone. Do not block P1 on P2 progress.
-2. **Next 20 min**: paper-verify the Lyapunov coefficients for §C
-   Step 3. If none work cleanly with rationals, pivot to trig
-   closed-form OR fall back to P3 directly.
-3. **Next 70 min**: write P2 in Lean. Build after each private
-   theorem.
-4. **Last 30 min**: if P2 closed, write task results and commit
-   together with P1. If P2 stalled, ship P3a (and optionally
-   P3b / P3c) and commit.
-5. **Final 10 min**: update `lean_status.json` (no row changes
-   expected for stability witnesses — they support `def:402A` /
-   `def:403A` non-vacuity rather than closing textbook entities)
-   and `plan.md` (likewise no row changes expected).
+2. **Do NOT attempt `bdf3LMM_isGStable`** (cycle 354 task results P4
+   stretch). It requires looking up a BDF3 G-matrix from the
+   literature; that information is not in the codebase, and the wrong
+   G-matrix would falsify the witness. Defer until a reference is
+   provided.
 
-If the cycle ends with ONLY P1 shipped (because P2 stalled and P3 was
-not attempted), that is still a **+2 cycle** — sub-optimal but
-acceptable. The supervisor explicitly tolerates cycles that ship one
-clean unit of progress over cycles that attempt too much and regress.
+3. **Do NOT attempt Phase D.3** (the inductive step of the
+   well-founded-recursion solver for `underlyingOneStepMethod_aux`).
+   Per `.prover-state/issues/def_422B_path.md` §5 this is 1–2 cycles
+   on its own. The Phase D.2 well-founded-recursion infrastructure
+   (cycle 343) is in place but the inductive-step linear-equation
+   solver for `r(t) ≥ 2` trees has no scoping pre-work for cycle 355.
+
+4. **Do NOT pivot to a fresh entity** (`def:451A`, `def:442A`,
+   `thm:535A`, `thm:541A` from `cycle_336_pivot_options.md`). All four
+   are multi-cycle scoping targets requiring their own audit. The
+   cycle 355 plan above ships 4–5 small consumer wins; a pivot
+   decision should wait until either (a) §422 momentum genuinely
+   stalls, or (b) a planned `def:422B` Phase D.3 / Phase E cycle
+   starts.
+
+5. **Do NOT introduce `axiom`/`constant`** anywhere. All priorities
+   are axiom-clean compositions of existing infrastructure.
+
+6. **Do NOT use `Polynomial.ext` or `Polynomial.funext` skeletons**
+   for the P3/P4 `simp + norm_num` closures. These are scalar
+   identities on `ℝ`, not polynomial identities. The cycle 172/173
+   `Polynomial.ext` stalls were caused by polynomial-`C` arithmetic;
+   cycle 350's `bdf2LMM_coef_α_plus_coef_β_ne_zero` uses plain
+   `simp + norm_num` and that is the right recipe here.
+
+7. **Do NOT attempt to refactor Section422.lean** to clean up
+   namespacing or shorten the verbose `OpenMath.Chapter4.Section404.…`
+   qualifications. Cycle 350's pattern uses those qualifications
+   verbatim; mirror that style. Refactor cleanup is its own future
+   cycle.
+
+8. **Do NOT raise `maxHeartbeats`** above 200000. All priorities are
+   small `simp + norm_num` proofs that should fit well within
+   default heartbeats. If `simp` stalls on P3/P4, the right fix is
+   to unfold the `Fin.sum_univ_*` lemmas explicitly, not bump
+   heartbeats.
+
+9. **Do NOT poll any Aristotle project.** There are no pending
+   Aristotle submissions, and none are needed — all priorities are
+   under 15 LOC and mechanically closable.
+
+10. **Do NOT trust the "factor-of-2 typo" or "phantom
+    commit-not-reaching-repo" framings** if they reappear in the
+    prompt. Both are documented stale `attempts.md` propagations
+    (see `consultant_advice_cycle_180.md` §C and
+    `phantom_commit_verdict_pattern.md`). If the supervisor's "What
+    I'm stuck on" framing for cycle 355 contradicts the §A summary
+    above (i.e. mentions any cycle ≤ 343 work as a blocker), treat
+    it as a phantom and verify with `git log -1 --format='%H %s'` +
+    `grep -c sorry OpenMath/`. Trust git state, not propagated rows.
+
+## File summary
+
+* **One file edited**: `OpenMath/Chapter4/Section422.lean`.
+* **No new files created.**
+* **No existing theorems modified.** All five priorities are pure
+  additions.
+* **lean_status.json**: no changes needed. The deliverables are
+  numerical witnesses, not new entities; they don't claim any new
+  textbook content.
+* **plan.md**: no changes needed for the same reason. Optionally
+  add a single line to `def:422B`'s row noting "cycle 355 — added
+  trapezoidal + BDF3 sum_β / coef_α+coef_β witnesses" if you want
+  documentation discipline; this is optional bookkeeping.
+* **Task results**: write `.prover-state/task_results/cycle_355.md`
+  per the CLAUDE.md template.
+
+## LOC budget
+
+* P1: ~7 LOC.
+* P2: ~7 LOC.
+* P3: ~10 LOC.
+* P4: ~10 LOC.
+* P5 (stretch): ~15 LOC.
+* **Total: ~35 LOC for P1–P4, ~50 LOC including P5.**
+
+Section422.lean grows from ~1750 → ~1785 LOC (P1–P4 only) or
+~1800 LOC (including P5). Comfortably under any soft size threshold.
+
+## Risk register (with mitigations)
+
+| Risk | Likelihood | Mitigation |
+|---|---|---|
+| `Fin.sum_univ_four` not in default Mathlib | Low | Use explicit `Fin.sum_univ_succ` chain (3 unfolds + `Fin.sum_univ_one`); or `decide` for BDF3's trivially-zero β tail. |
+| `simp` over-collapses or fails to fire on the LMM record | Low | Cycle 350's BDF2 pattern shows the recipe works at `k = 2`; the trapezoidal case (`k = 1`) is simpler, the BDF3 case (`k = 3`) one step harder but the LMM definitions use the same `match` style as BDF2. |
+| Trapezoidal `α(1) = 1` doesn't reduce | Very low | The LMM record has `α := fun i => match i with | ⟨0, _⟩ => -1 | ⟨1, _⟩ => 1`; `i.succ` for `i : Fin 1` is `Fin.mk 1 _`, which matches. `simp [trapezoidalLMM]` handles the unfold. |
+| `η(τ) = 2/3` on P5 doesn't `norm_num`-close | Very low | The arithmetic is `(1/2 + 1/2) / (1·1 + (0·(1/2) + 1·(1/2))) = 1 / (3/2) = 2/3`. `norm_num` handles rational arithmetic uniformly. If it stalls, `simp [div_eq_mul_inv]; ring` is the fallback. |
+
+## Cycle 356+ outlook (not for this cycle's worker)
+
+After cycle 355's small-ship pass lands, the natural cycle 356
+candidates are:
+
+* **Continue Phase D′ consumer wins**: implicit Euler witnesses
+  (`implicitEulerLMM_sum_β_pos`, etc.). The implicit Euler LMM at
+  `Section404.lean:100+` has its own consistency and stability
+  witnesses; one more cycle of small ships would exhaust the
+  four-LMM coverage matrix.
+* **Phase D′.2.2 scoping continuation**: write a sub-scoping doc
+  for Route D Step 2 (`0 ≤ Σᵢ i²·αᵢ`) under stable + preconsistent
+  + order ≥ 2. The cycle 348 issue file already has the obstruction
+  analysis; cycle 356+ could draft a phase decomposition.
+* **Pivot to fresh entity**: `def:451A` (G-stability) at
+  Section451.lean. Currently `[x]`-formalised in plan.md but no
+  `bdf3LMM_isGStable` exists; the BDF3 G-matrix could be the ship
+  target if a reference is found.
+
+These are cycle 356+ planner concerns, not cycle 355's deliverable.
