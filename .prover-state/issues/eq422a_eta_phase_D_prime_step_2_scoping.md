@@ -775,3 +775,61 @@ implementing**, and defer Phase D′.2.1 to cycle 350+.
 * `extraction/raw_text/ch04.txt:2280–2463` — §451 G-stability.
 * `extraction/raw_text/ch04.txt:2465–2502` — §452 one-leg ↔ LMM
   transformation (`coef_β / sum_β` as fractional time offset).
+
+## §9 Cycle 351 update — Phase D′.2.2 Route D Step 1 closed
+
+Cycle 351 shipped the **Phase D′.2.2 Route D Step 1** algebraic
+identity in `OpenMath/Chapter4/Section422.lean`:
+
+```lean
+theorem coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two
+    {k : ℕ} (M : LinearMultistepMethod k)
+    (hOrder : M.HasOrderAtLeast 2) :
+    (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i)
+      = (1 / 2) *
+        ∑ i : Fin k, (((i.val + 1 : ℕ) : ℝ))^2 * M.α i.succ
+```
+
+Plus the BDF2 order-2 precursor `bdf2LMM_hasOrderAtLeast_two` and
+the per-method sanity witness `bdf2LMM_coef_β_eq_half_sum_i_sq_alpha`.
+
+**Derivation**: unfold `C M 2 = C M (1 + 1)` via the `j + 1` branch
+of `Section410.C`. The α-sum's `(-(i.val + 1))^2 = (i.val + 1)^2`
+(even power) and the β-sum's `(-i.val)^1 = -(i.val)` (odd power)
+collapse signs; factorials `1! = 1` and `2! = 2` reduce. Result:
+`C M 2 = -(1/2) · Σᵢ (i+1)²·α(i.succ) + Σᵢ i · β i`. Setting this
+to zero yields the identity. Both half-sums proved via
+`Finset.sum_congr` + `push_cast` + `ring`. The final algebraic
+combination closes via `linarith`.
+
+**LOC delta**: Section422.lean: 1204 → ~1320 LOC (+~115 LOC for P1
+main + BDF2 precursor + BDF2 witness + docstrings).
+
+**Status of Phase D′.2.2**:
+
+* Step 1 (algebraic identity `coef_β ↔ Σ i²·α`): **CLOSED**.
+* Step 2 (`0 ≤ Σᵢ i²·αᵢ` under stability + preconsistency +
+  order ≥ 2): **STILL OPEN**. Per the cycle 351 strategy, this
+  requires either a `ρ''(1) ≥ 0` argument (second-derivative-of-ρ
+  route) or the §441 Möbius infrastructure. Not single-cycle
+  attempted in cycle 351 — see strategy §"Cycle 352+ outlook".
+
+**Remaining work for the unconditional Phase D′ corollary**:
+
+After Step 2 closes, the composition produces `coef_β ≥ 0` under
+stability + preconsistency + order ≥ 2. Combined with cycle 344's
+`coef_α_pos_of_stable_preconsistent`, this yields `coef_α + coef_β >
+0` (strict positivity, since `coef_α > 0`), which discharges the
+`h_denom_ne` side hypothesis of
+`Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened` — the
+unconditional cycle 350 surface.
+
+**Faithfulness note (cycle 351)**: the Route D Step 1 lemma
+strengthens the textbook §410 / §422 condition `IsConsistent`
+(order ≥ 1) to `HasOrderAtLeast 2` (order ≥ 2). This is a
+documented hypothesis-strengthening — see the inline docstring
+on `coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two`. The
+cycle 350 Route E surface
+(`Eq422a_at_vertex_eta_eq_of_stable_consistent`) remains the
+cycle 350 weakened-form for callers without order ≥ 2 in hand.
+

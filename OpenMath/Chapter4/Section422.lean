@@ -1203,4 +1203,125 @@ example (η_q : Quotient PhiEquivalent.setoidSigma)
   simp [OpenMath.Chapter4.Section451.bdf2LMM,
     Fin.sum_univ_three]
 
+/-! ### Phase D′.2.2 Route D Step 1 — algebraic bridge
+
+Under `M.HasOrderAtLeast 2`, the §410 Taylor coefficient identity
+`C M 2 = 0` rearranges to a direct algebraic equality between the
+β-coefficient sum `coef_β = Σᵢ i · M.β i` and the half-weighted
+α-square sum `(1/2) · Σᵢ (i+1)² · M.α i.succ`. This is the
+**Route D** Step 1 of `eq422a_eta_phase_D_prime_step_2_scoping.md`:
+it provides a different bridge from the cycle 350 Route E surface,
+trading the Phase D′.2.1 `IsConsistent` hypothesis (order ≥ 1) for
+the stronger `HasOrderAtLeast 2` so the identity is an equality
+rather than a one-sided inequality.
+
+**Faithfulness note**: textbook (Butcher §410 / §422) conditions
+for `def:422B`'s underlying-one-step-method require only
+`IsConsistent` (order ≥ 1). Under `HasOrderAtLeast 2` the
+additional constraint `C M 2 = 0` makes the bridge from `coef_β`
+to `Σᵢ (i+1)² · M.α i.succ` an equality. The cycle 350 Route E
+surface (`Eq422a_at_vertex_eta_eq_of_stable_consistent`) remains
+available for callers without order ≥ 2 in hand; this Route D
+lemma is the algebraic identity Phase D′.2.2 Step 1 needs.
+Compatible with the cycle 250 `alphaWeight` precedent on
+hypothesis-strengthening. -/
+
+/-- *Phase D′.2.2 Route D Step 1 (cycle 351):* under
+`M.HasOrderAtLeast 2`, the §410 Taylor coefficient identity
+`C M 2 = 0` rearranges to the algebraic equality
+`Σᵢ i · M.β i = (1/2) · Σᵢ (i+1)² · M.α i.succ`. -/
+theorem coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hOrder : M.HasOrderAtLeast 2) :
+    (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i)
+      = (1 / 2) *
+        ∑ i : Fin k, (((i.val + 1 : ℕ) : ℝ))^2 * M.α i.succ := by
+  have hC2 : OpenMath.Chapter4.Section410.C M 2 = 0 :=
+    hOrder 2 (by norm_num)
+  have hC2_unfold : OpenMath.Chapter4.Section410.C M 2 =
+      -∑ i : Fin k,
+          M.α i.succ * (-(((i.val + 1 : ℕ) : ℝ))) ^ (1 + 1) /
+            (Nat.factorial (1 + 1) : ℝ)
+      - ∑ i : Fin (k + 1),
+          M.β i * (-(((i.val : ℕ) : ℝ))) ^ 1 /
+            (Nat.factorial 1 : ℝ) := rfl
+  rw [hC2_unfold] at hC2
+  have h_alpha :
+      ∑ i : Fin k,
+          M.α i.succ * (-(((i.val + 1 : ℕ) : ℝ))) ^ (1 + 1) /
+            (Nat.factorial (1 + 1) : ℝ)
+        = (1 / 2) *
+          ∑ i : Fin k, (((i.val + 1 : ℕ) : ℝ))^2 * M.α i.succ := by
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro i _
+    have hfact : (Nat.factorial (1 + 1) : ℝ) = 2 := by
+      norm_num [Nat.factorial]
+    rw [hfact]
+    ring
+  have h_beta :
+      ∑ i : Fin (k + 1),
+          M.β i * (-(((i.val : ℕ) : ℝ))) ^ 1 /
+            (Nat.factorial 1 : ℝ)
+        = -∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i := by
+    rw [← Finset.sum_neg_distrib]
+    apply Finset.sum_congr rfl
+    intro i _
+    have hfact : (Nat.factorial 1 : ℝ) = 1 := by
+      norm_num [Nat.factorial]
+    rw [hfact]
+    ring
+  rw [h_alpha, h_beta] at hC2
+  linarith
+
+/-- *Phase D′.2.2 BDF2 order-2 witness (cycle 351 precursor):* BDF2
+satisfies `HasOrderAtLeast 2`. Verified by checking
+`C bdf2LMM j = 0` for `j ∈ {0, 1, 2}`:
+* `C bdf2LMM 0 = 1 - (4/3 + (-1/3)) = 0` (preconsistency);
+* `C bdf2LMM 1 = 0` (consistency);
+* `C bdf2LMM 2 = -((4/3)·(-1)²/2 + (-1/3)·(-2)²/2) - 0 =
+  -(2/3 - 2/3) = 0`. -/
+theorem bdf2LMM_hasOrderAtLeast_two :
+    OpenMath.Chapter4.Section451.bdf2LMM.HasOrderAtLeast 2 := by
+  intro j hj
+  interval_cases j
+  · -- C bdf2LMM 0 = 0
+    show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf2LMM 0 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf2LMM, Fin.sum_univ_two]
+    norm_num
+  · -- C bdf2LMM 1 = 0 (consistency)
+    show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf2LMM 1 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf2LMM,
+      Fin.sum_univ_two, Fin.sum_univ_three, Nat.factorial]
+    norm_num
+  · -- C bdf2LMM 2 = 0
+    show OpenMath.Chapter4.Section410.C
+        OpenMath.Chapter4.Section451.bdf2LMM 2 = 0
+    simp [OpenMath.Chapter4.Section410.C,
+      OpenMath.Chapter4.Section451.bdf2LMM,
+      Fin.sum_univ_two, Fin.sum_univ_three, Nat.factorial]
+    norm_num
+
+/-- *Phase D′.2.2 BDF2 sanity witness (cycle 351):* end-to-end
+exercise of `coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two`
+on BDF2. Both sides vanish on BDF2 (the textbook order-2 method):
+* LHS `coef_β(bdf2LMM) = 0·(2/3) + 1·0 + 2·0 = 0`;
+* RHS `(1/2) · Σᵢ (i+1)²·αᵢ = (1/2) · (1²·(4/3) + 2²·(-1/3)) =
+  (1/2) · (4/3 - 4/3) = 0`.
+The witness exercises the theorem at an order-2 method where the
+identity trivializes to `0 = 0`. -/
+theorem bdf2LMM_coef_β_eq_half_sum_i_sq_alpha :
+    (∑ i : Fin 3, ((i.val : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section451.bdf2LMM.β i)
+      = (1 / 2) *
+        ∑ i : Fin 2, (((i.val + 1 : ℕ) : ℝ))^2 *
+          OpenMath.Chapter4.Section451.bdf2LMM.α i.succ :=
+  coef_β_eq_half_sum_i_sq_alpha_of_hasOrderAtLeast_two
+    OpenMath.Chapter4.Section451.bdf2LMM
+    bdf2LMM_hasOrderAtLeast_two
+
 end OpenMath.Chapter4.Section422
