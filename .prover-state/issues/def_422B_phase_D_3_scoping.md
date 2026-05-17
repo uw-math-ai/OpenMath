@@ -1178,3 +1178,42 @@ argument is now structurally clean.
   example, axiom-clean); P2 shipped (this audit doc).
   Phase D.3.b Step 2 deferred to cycle 365+ (post-redefinition).
   Phase D.3.b redefinition deferred to cycle 364.
+
+### Cycle 364 closure — `linearResidualAt` redefinition ship
+
+**Status**: SHIPPED, axiom-clean.
+
+Cycle 364 executed the cycle 363 P2 audit's "Recommended cycle 364
+plan" (Priority 0) as a single focused cycle:
+
+* **`linearResidualAt` definition** redefined to
+  `Φ_{η_q^(-i)}(t) + i·Φ_{η_q}(t)` (the `(-1)^t.order` factor removed,
+  sign flipped) to match the §383 quotient-encoded coefficient `-i`
+  per this §10 audit.
+* **4 closed-form theorems** updated (statement + proof):
+  - `coeff_eta_t_in_eta_zpow_neg` — RHS coefficient is `-(i:ℝ)`.
+  - `linearResidualAt_vertex_eq_zero` — proof simplified (no `h_ord`
+    rewrite).
+  - `linearResidualAt_one_mk_eq` — `(-1)^t.order` factor dropped;
+    `M.elementaryWeight t` term flipped to `+`.
+  - `linearResidualAt_succ_mk_eq` — same shape as one_mk_eq.
+* **4 non-vacuity `example`s** restated for the new RHS shapes;
+  all close via the updated theorem applications.
+* **Header `Phase D.3.b` block docstring** updated to note the
+  cycle 364 redefinition and cross-link to this §10.
+* `lake build OpenMath.Chapter4.Section422` exits 0 (Built in 269 s);
+  `grep -c sorry` = 0.
+* `#print axioms` on all 4 updated theorems returns
+  `[propext, Classical.choice, Quot.sound]`.
+* `Section381.lean` and
+  `derivativeWeightWithSrc_eq_of_strict_subtree_agreement` unchanged,
+  as scheduled.
+
+**Cycle 365+ entry point** (per §H of cycle 364 strategy): Phase D.3.b
+parametricity Step 2 (`linearResidualAt_depends_only_on_strict_subtrees`)
+is now structurally tractable per Discovery §4 of this audit (the
+`+(m+1)·M.elementaryWeight t` term in `linearResidualAt_succ_mk_eq`
+cancels cleanly against the powRep-sum's hidden
+`-(m+1)·M.elementaryWeight t` contribution). Estimated 150–250 LOC;
+may decompose into a dedicated "composite inverse decomposition"
+sub-lemma.
