@@ -484,6 +484,139 @@ example :
   rw [elementaryWeightQ_phi_zpow_vertex, D_element_elementaryWeight_vertex]
   norm_num
 
+/-! ### Phase D.3.a — representative-form elementary-weight expansion (cycle 358)
+
+Cycle 341 P1/P2/P3 closed the elementary-weight expansion of
+`*`, `⁻¹`, and `^ (· : ℤ)` at the single-vertex tree `τ`. Cycle 358
+generalises P1 and P2 to **arbitrary trees** `t`, lifting cycle 239's
+`elementaryWeightQ_phi_composeQ_phi_mk` from `composeQ_phi`-notation
+to the `*`/`⁻¹`-notation that `Eq422a` uses.
+
+The shipped theorems are:
+
+* `elementaryWeightQ_phi_mul_mk` — representative-form additivity.
+  Wraps cycle 239 by unfolding `*` to `composeQ_phi`.
+* `elementaryWeightQ_phi_inv_mk` — representative-form inverse
+  characterization. Combines cycle 236's `inv_mul_cancel` with
+  `_mul_mk` and cycle 239's `elementaryWeightQ_phi_id`.
+
+Both theorems carry a bottom-block contribution involving the
+**source-method-threaded** `derivativeWeightWithSrc`, because the
+bottom-block sum's stage count does not descend to the abstract
+Φ-quotient (cycle 239 design note at `Section381.lean:4727`). At
+`t = RootedTree.vertex` the bottom-block collapses to `1`
+(`RKTableau.derivativeWeightWithSrc_vertex`) and the formulas recover
+cycle 341 P1/P2's symmetric form.
+
+**D.3.a.3 deferred to cycle 359.** Lifting cycle 341 P3
+(`elementaryWeightQ_phi_zpow_vertex`) to arbitrary `t` requires a
+canonical representative of `η_q ^ m : Quotient PhiEquivalent.setoidSigma`
+for each `m : ℕ`, since the bottom-block of each `pow_succ` step
+depends on the chosen representative of the previous power. The
+infrastructure (a `RKTableau.powRep : (m : ℕ) → Σ s', RKTableau s'`
+construction and its quotient-equality lemma) is multi-cycle work
+parallel to Phase D.3.b. See `.prover-state/issues/def_422B_phase_D_3_scoping.md`
+§5 cycle-358 update.
+-/
+
+/-- *Phase D.3.a (cycle 358) D.3.a.1 — representative-form additivity:*
+at an arbitrary tree `t`, the elementary weight of a §383 group
+product decomposes into the LHS-representative's elementary weight
+plus a bottom-block contribution involving the source-method-threaded
+`derivativeWeightWithSrc` of the RHS representative. Lifts cycle
+239's `elementaryWeightQ_phi_composeQ_phi_mk` from `composeQ_phi`
+notation to the `*` notation used by `Eq422a`.
+
+At `t = RootedTree.vertex` the bottom-block collapses to
+`M₂.elementaryWeight vertex` (via `derivativeWeightWithSrc_vertex`
+and `derivativeWeight_vertex`) and recovers cycle 341 P1's
+symmetric additivity. At arbitrary `t` the bottom-block depends
+on `M₁`'s elementary weights through `derivativeWeightWithSrc`, so
+the asymmetric representative form is unavoidable. -/
+theorem elementaryWeightQ_phi_mul_mk
+    {s₁ s₂ : ℕ} (M₁ : RKTableau s₁) (M₂ : RKTableau s₂)
+    (t : RT) :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩) *
+         (Quotient.mk PhiEquivalent.setoidSigma ⟨s₂, M₂⟩)) t
+      = elementaryWeightQ_phi
+          (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩) t
+        + ∑ i : Fin s₂, M₂.b i * M₂.derivativeWeightWithSrc M₁ i t := by
+  show elementaryWeightQ_phi (composeQ_phi
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩)
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₂, M₂⟩)) t = _
+  exact elementaryWeightQ_phi_composeQ_phi_mk M₁ M₂ t
+
+/-- *Phase D.3.a (cycle 358) D.3.a.1 — non-vacuity at `cherry`.*
+Exercises the representative-form additivity on the order-2 tree
+`cherry = mk [vertex]` with two copies of `explicitEuler`. -/
+example :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) *
+         (Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩)) RootedTree.cherry
+      = elementaryWeightQ_phi
+          (Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) RootedTree.cherry
+        + ∑ i : Fin 1,
+            RKTableau.explicitEuler.b i *
+            RKTableau.explicitEuler.derivativeWeightWithSrc
+              RKTableau.explicitEuler i RootedTree.cherry :=
+  elementaryWeightQ_phi_mul_mk
+    RKTableau.explicitEuler RKTableau.explicitEuler RootedTree.cherry
+
+/-- *Phase D.3.a (cycle 358) D.3.a.2 — representative-form inverse
+characterization:* at an arbitrary tree `t`, the elementary weight
+of the §383 group inverse class equals the negation of the bottom-
+block contribution from `M.inverse * M = 1`. Derived from cycle
+236's `inv_mul_cancel`, cycle 239's `elementaryWeightQ_phi_id`, and
+D.3.a.1 above.
+
+At `t = RootedTree.vertex` the bottom-block collapses to
+`M.elementaryWeight vertex` (each `derivativeWeightWithSrc` factor
+is `1`), and the formula reduces to cycle 341 P2's
+`Φ_{η_q⁻¹}(τ) = -Φ_{η_q}(τ)`. At arbitrary `t` the bottom-block
+genuinely depends on `M.inverse`'s structure, so the
+characterization form is the cleanest representative-form output. -/
+theorem elementaryWeightQ_phi_inv_mk
+    {s : ℕ} (M : RKTableau s) (t : RT) :
+    elementaryWeightQ_phi
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩)⁻¹ t
+      = - ∑ i : Fin s, M.b i * M.derivativeWeightWithSrc M.inverse i t := by
+  -- ⟦M⟧⁻¹ = ⟦M.inverse⟧ by `inverseQ_phi_mk` (`@[simp]`, `:= rfl`).
+  -- Apply `inv_mul_cancel` at the quotient level, then expand
+  -- `elementaryWeightQ_phi` of the LHS via D.3.a.1.
+  have h_cancel :
+      (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M.inverse⟩) *
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) = 1 := by
+    show (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩)⁻¹ *
+          (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) = 1
+    exact inv_mul_cancel _
+  have h_w := elementaryWeightQ_phi_eq_of_eq h_cancel t
+  rw [elementaryWeightQ_phi_mul_mk M.inverse M t] at h_w
+  have h_one : (1 : Quotient PhiEquivalent.setoidSigma)
+      = Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩ := rfl
+  rw [h_one, elementaryWeightQ_phi_id] at h_w
+  -- h_w : Φ_{⟦M.inverse⟧}(t) + Σᵢ M.b i · M.derivativeWeightWithSrc M.inverse i t = 0
+  -- Goal: Φ_{⟦M⟧⁻¹}(t) = - Σᵢ …  (LHS reduces to Φ_{⟦M.inverse⟧}(t) by `inverseQ_phi_mk`).
+  show elementaryWeightQ_phi
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M.inverse⟩) t = _
+  linarith
+
+/-- *Phase D.3.a (cycle 358) D.3.a.2 — non-vacuity at `cherry`.*
+Exercises the representative-form inverse characterization on the
+order-2 tree `cherry` with `explicitEuler`. -/
+example :
+    elementaryWeightQ_phi
+        (Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩)⁻¹ RootedTree.cherry
+      = - ∑ i : Fin 1,
+            RKTableau.explicitEuler.b i *
+            RKTableau.explicitEuler.derivativeWeightWithSrc
+              RKTableau.explicitEuler.inverse i RootedTree.cherry :=
+  elementaryWeightQ_phi_inv_mk RKTableau.explicitEuler RootedTree.cherry
+
 /-! ### Phase D.1 — closed-form `η(τ)` base-case solver (cycle 342)
 
 Cycle 341's P1/P2/P3 (`elementaryWeightQ_phi_{mul,inv,zpow}_vertex`)

@@ -293,10 +293,57 @@ substantive deliverable of the Phase D.3 sequence.
 
 | Phase | Cycles | Deliverable | LOC est. | Aristotle |
 |---|---|---|---|---|
-| **D.3.a** | 1 (cycle 358) | Per-tree elementary-weight expansion lemma: `elementaryWeightQ_phi_mul_mk`, `elementaryWeightQ_phi_inv_mk`, `elementaryWeightQ_phi_zpow_mk` — generalise cycle 341 P1–P3 from `vertex` to arbitrary trees via the §381 `composeQ_phi_mk` hook. | 150 | Good (3–4 sub-lemmas) |
-| **D.3.b** | 1 (cycle 359) | Linear coefficient extraction: `coeff_eta_t_in_eta_zpow_neg` — the textbook claim "coefficient of η(t) in η⁻ⁱ(t) is i(−1)^r(t)". Uses D.3.a. | 100 | Partial (sign algebra) |
-| **D.3.c** | 1 (cycle 360) | `sum_i_alpha_ne_zero_of_stable` — `ρ'(1) ≠ 0` from ρ-stability via simple-root analysis. **Mathlib hook check required first.** | 80 | Poor (polynomial roots) |
-| **D.3.d** | 1 (cycle 361) | `noncomputable def underlyingOneStepMethod_aux` recursion + `_satisfies_Eq422a` spec lemma. Closes `thm:422A`'s substantive content. | 120 | Partial (well-founded recursion proof obligations) |
+| **D.3.a.{1,2}** | 1 (cycle 358) ✅ | `elementaryWeightQ_phi_mul_mk` (`*`-additivity at arbitrary `t`) + `elementaryWeightQ_phi_inv_mk` (`⁻¹`-characterization at arbitrary `t`). Both axiom-clean; 2 non-vacuity `example`s on `explicitEuler` at `RootedTree.cherry`. | ~145 (actual) | Not needed |
+| **D.3.a.3** | 1 (cycle 359, deferred) | `elementaryWeightQ_phi_zpow_mk` (`^ (· : ℤ)` at arbitrary `t`). Requires a `RKTableau.powRep : (m : ℕ) → Σ s', RKTableau s'` construction (recursive composition + quotient-equality lemma) since the bottom-block at each `pow_succ` step depends on the chosen representative of the previous power. | ~80 | Partial |
+| **D.3.b** | 1 (cycle 360) | Linear coefficient extraction: `coeff_eta_t_in_eta_zpow_neg` — the textbook claim "coefficient of η(t) in η⁻ⁱ(t) is i(−1)^r(t)". Uses D.3.a.{1,2,3}. | 100 | Partial (sign algebra) |
+| **D.3.c** | 1 (cycle 361) | `sum_i_alpha_ne_zero_of_stable` — `ρ'(1) ≠ 0` from ρ-stability via simple-root analysis. **Mathlib hook check required first.** | 80 | Poor (polynomial roots) |
+| **D.3.d** | 1 (cycle 362) | `noncomputable def underlyingOneStepMethod_aux` recursion + `_satisfies_Eq422a` spec lemma. Closes `thm:422A`'s substantive content. | 120 | Partial (well-founded recursion proof obligations) |
+
+### Cycle 358 update — D.3.a partial ship
+
+**Shipped (cycle 358)**:
+
+* `elementaryWeightQ_phi_mul_mk` (D.3.a.1): one-line `exact
+  elementaryWeightQ_phi_composeQ_phi_mk M₁ M₂ t` after `show … =
+  composeQ_phi …` (cycle 236's `instMul_phi` provides the
+  definitional unfold). Pre-flight on cycle 239's hook confirmed
+  output shape matches strawman.
+* `elementaryWeightQ_phi_inv_mk` (D.3.a.2): formula
+  `Φ_{⟦M⟧⁻¹}(t) = - Σᵢ M.b i · M.derivativeWeightWithSrc M.inverse i t`
+  (note: NOT the strategy's strawman `-Φ_M(t) - Σ…`; the cleaner
+  formula above falls directly out of `inv_mul_cancel` + D.3.a.1 +
+  cycle 239's `elementaryWeightQ_phi_id`, and at `t = vertex`
+  reduces correctly to cycle 341 P2 since the
+  `derivativeWeightWithSrc` factor is `1`).
+
+**Deferred to cycle 359 (D.3.a.3)**:
+
+At arbitrary `t`, lifting cycle 341 P3's
+`elementaryWeightQ_phi_zpow_vertex` requires a canonical
+representative of `η_q ^ m` for each `m : ℕ`, since the bottom-block
+of each `pow_succ` step in D.3.a.1 depends on a specific
+representative (`derivativeWeightWithSrc` is representative-only by
+design; cycle 333's note at `Section381.lean:2660–2700`). Closed
+form does not exist via P3's `pow_succ`-induction route at
+arbitrary `t` because the bottom-block does not telescope (each
+step introduces a fresh `derivativeWeightWithSrc <pow_m_rep>` term
+where `pow_m_rep`'s structure grows with `m`).
+
+The proposed Phase D.3.a.3 cycle 359 strategy:
+
+1. Define `RKTableau.powRep : (m : ℕ) → RKTableau s →
+   Σ s', RKTableau s'` recursively via repeated `compose` with
+   `RKTableau.id` at `m = 0`.
+2. Prove `⟦powRep m M⟧ = ⟦M⟧ ^ m` at the §383 quotient level.
+3. State D.3.a.3 as a recursive identity in `m` using `powRep` for
+   the bottom-block representative.
+4. Extend to `n : ℤ` via case split on `Int.ofNat` / `Int.negSucc`
+   composing D.3.a.2 (inverse) with the natural-number version.
+
+This is ~80 LOC and 1 cycle. Cycle 359 worker absorbs this before
+proceeding to D.3.b. The §422 ladder horizon extends by one cycle
+(D.3.b ↦ cycle 360, D.3.c ↦ cycle 361, D.3.d ↦ cycle 362, Phase E
+sealing ↦ cycle 363).
 
 **Total**: 4 cycles. Sequential dependencies (D.3.a → D.3.b → D.3.d
 must be in order; D.3.c is parallel to D.3.a/D.3.b).
