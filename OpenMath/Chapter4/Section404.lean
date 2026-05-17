@@ -272,6 +272,22 @@ theorem implicitEulerLMM_isStable : implicitEulerLMM.IsStable := by
   refine ⟨|y 0|, fun n => ?_⟩
   rw [hconst n]
 
+/-- The trapezoidal rule (Crank–Nicolson) is Dahlquist-stable. The
+homogeneous recurrence is `y (m+1) = y m` (`k = 1`, `α 1 = 1`), so
+every solution is constant and trivially bounded by `|y 0|`. -/
+theorem trapezoidalLMM_isStable : trapezoidalLMM.IsStable := by
+  intro y hy
+  have hconst : ∀ n, y n = y 0 := by
+    intro n
+    induction n with
+    | zero => rfl
+    | succ n ih =>
+        have hrec := hy n
+        simp [trapezoidalLMM] at hrec
+        linarith
+  refine ⟨|y 0|, fun n => ?_⟩
+  rw [hconst n]
+
 /-! ## §402 — Convergence (def:402A)
 
 Butcher §402, p. 340. We add the recurrence predicate `IsLMMSolution`

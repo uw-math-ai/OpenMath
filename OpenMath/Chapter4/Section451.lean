@@ -381,4 +381,108 @@ theorem bdf2LMM_isConsistent : bdf2LMM.IsConsistent := by
     simp [bdf2LMM, Fin.sum_univ_two, Fin.sum_univ_three]
     norm_num
 
+/-! ## Dahlquist (zero-)stability for BDF3 (cycle 354)
+
+BDF3's homogeneous recurrence unfolds to
+`Y(n+3) = (18/11)·Y(n+2) − (9/11)·Y(n+1) + (2/11)·Y n`. Its
+characteristic polynomial factors as
+`11z³ − 18z² + 9z − 2 = (z − 1)(11z² − 7z + 2)`, with real root
+`z = 1` and a conjugate complex pair of magnitude `√(2/11) < 1`.
+
+We avoid explicit closed-form solutions (which would require complex
+roots) by a **Lyapunov route**:
+
+1. The auxiliary sequence `Z(n) := Y(n+2) − (7/11)·Y(n+1) + (2/11)·Y n`
+   is constant. (Direct substitution: the BDF3 recurrence rearranges
+   to `Z(n+1) = Z(n)`.)
+2. Setting `A := (11/6)·Z(0)` yields the unique constant particular
+   solution; the deviation `W(n) := Y(n) − A` satisfies the homogeneous
+   2-term recurrence `W(n+2) = (7/11)·W(n+1) − (2/11)·W n`.
+3. The Lyapunov form `Q(n) := 2·W(n)² + 11·W(n+1)²` is non-increasing:
+   `Q(n+1) − Q(n) = −(2/11)·(25·W(n+1)² + 14·W(n)·W(n+1) + 9·W(n)²)`
+   where the inner quadratic form has discriminant `196 − 900 = −704 < 0`
+   and is therefore non-negative (factorable as
+   `25·(25·a² + 14·a·b + 9·b²) = (25·a + 7·b)² + 176·b²`).
+4. Hence `2·W(n)² ≤ Q(0)`, so `|W(n)| ≤ √(Q(0)/2)` and
+   `|Y(n)| ≤ |A| + |W(n)|` is uniformly bounded.
+
+The Lyapunov coefficients `(α, β) = (2, 11)` were chosen by paper
+analysis of the negative-semidefiniteness condition on
+`(4β − 121α)·x² − 28β·x·y + (121α − 72β)·y² ≤ 0` (cycle 354 work
+log). -/
+
+/-- BDF3 auxiliary sequence is constant: for every solution `Y` of
+BDF3's homogeneous recurrence,
+`Y(n+2) − (7/11)·Y(n+1) + (2/11)·Y n = Y 2 − (7/11)·Y 1 + (2/11)·Y 0`.
+
+Proved by induction on `n`. -/
+private theorem bdf3_aux_const (Y : ℕ → ℝ)
+    (hY : bdf3LMM.IsHomogeneousSolution Y) :
+    ∀ n, Y (n+2) - (7/11) * Y (n+1) + (2/11) * Y n
+       = Y 2 - (7/11) * Y 1 + (2/11) * Y 0 := by
+  intro n
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+      have hrec := hY n
+      simp [bdf3LMM, Fin.sum_univ_three] at hrec
+      -- hrec : Y (n + 3) = (18/11) * Y (n + 2) - (9/11) * Y (n + 1) + (2/11) * Y n
+      -- Normalize the goal indices: n + 1 + 2 = n + 3, n + 1 + 1 = n + 2.
+      show Y (n + 3) - (7/11) * Y (n + 2) + (2/11) * Y (n + 1)
+         = Y 2 - (7/11) * Y 1 + (2/11) * Y 0
+      linarith [hrec, ih]
+
+/-- **BDF3 is Dahlquist-stable** (Butcher §403, p. 341).
+
+Lyapunov decomposition with constant particular solution
+`A := (11/6)·(Y 2 − (7/11)·Y 1 + (2/11)·Y 0)` and deviation
+`W := Y − A`; the form `2·W(n)² + 11·W(n+1)²` is non-increasing,
+giving a uniform bound on `|Y n|`. -/
+theorem bdf3LMM_isStable : bdf3LMM.IsStable := by
+  intro Y hY
+  set A : ℝ := (11/6) * (Y 2 - (7/11) * Y 1 + (2/11) * Y 0) with hA_def
+  have hAux := bdf3_aux_const Y hY
+  -- W(n+2) = (7/11) W(n+1) - (2/11) W n
+  have hWrec : ∀ n, Y (n+2) - A
+        = (7/11) * (Y (n+1) - A) - (2/11) * (Y n - A) := by
+    intro n
+    have h := hAux n
+    have hA : (6/11 : ℝ) * A = Y 2 - (7/11) * Y 1 + (2/11) * Y 0 := by
+      rw [hA_def]; ring
+    linarith
+  -- Q(W(n), W(n+1)) ≤ Q(W(0), W(1))
+  have hQ_bound : ∀ n, 2 * (Y n - A)^2 + 11 * (Y (n+1) - A)^2
+        ≤ 2 * (Y 0 - A)^2 + 11 * (Y 1 - A)^2 := by
+    intro n
+    induction n with
+    | zero => exact le_refl _
+    | succ n ih =>
+        -- Normalize goal indices: (n + 1) + 1 = n + 2.
+        show 2 * (Y (n+1) - A)^2 + 11 * (Y (n + 2) - A)^2
+           ≤ 2 * (Y 0 - A)^2 + 11 * (Y 1 - A)^2
+        have hrec := hWrec n
+        -- Step inequality: Q(W(n+1), W(n+2)) ≤ Q(W(n), W(n+1))
+        have hstep : 2 * (Y (n+1) - A)^2 + 11 * (Y (n + 2) - A)^2
+                  ≤ 2 * (Y n - A)^2 + 11 * (Y (n+1) - A)^2 := by
+          rw [hrec]  -- substitute Y (n+2) - A via the 2-term recurrence
+          nlinarith [sq_nonneg (25 * (Y (n+1) - A) + 7 * (Y n - A)),
+                     sq_nonneg (Y n - A), sq_nonneg (Y (n+1) - A)]
+        linarith
+  -- (Y n - A)^2 ≤ (2·(Y 0 - A)^2 + 11·(Y 1 - A)^2)/2
+  have hW_sq : ∀ n, (Y n - A)^2 ≤ ((Y 0 - A)^2 + (11/2) * (Y 1 - A)^2) := by
+    intro n
+    have h := hQ_bound n
+    have h_nonneg : 0 ≤ 11 * (Y (n+1) - A)^2 := by positivity
+    linarith
+  -- Bound |Y n|
+  refine ⟨|A| + Real.sqrt ((Y 0 - A)^2 + (11/2) * (Y 1 - A)^2), fun n => ?_⟩
+  have h_sq : (Y n - A)^2 ≤ (Y 0 - A)^2 + (11/2) * (Y 1 - A)^2 := hW_sq n
+  have h_abs : |Y n - A| ≤ Real.sqrt ((Y 0 - A)^2 + (11/2) * (Y 1 - A)^2) := by
+    rw [← Real.sqrt_sq_eq_abs]
+    exact Real.sqrt_le_sqrt h_sq
+  have h_tri : |Y n| ≤ |A| + |Y n - A| := by
+    calc |Y n| = |A + (Y n - A)| := by congr 1; ring
+      _ ≤ |A| + |Y n - A| := abs_add_le A (Y n - A)
+  linarith
+
 end OpenMath.Chapter4.Section451
