@@ -1312,6 +1312,30 @@ example (η_q : Quotient PhiEquivalent.setoidSigma)
     Fin.sum_univ_two]
   norm_num
 
+/-- *Non-vacuity for the cycle 350 weakened ship at BDF3 (cycle 357):*
+end-to-end exercise of `Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened`
+on BDF3, discharging the weakened non-vanishing hypothesis via
+`bdf3LMM_coef_α_plus_coef_β_ne_zero` (cycle 355). The underlying-
+one-step-method `η ∈ G₁` corresponding to BDF3 pins
+`η(τ) = (6/11) / (6/11) = 1`. Completes the 5-LMM × 3-theorem
+consumer-witness matrix
+{explicitEulerLMM, implicitEulerLMM, trapezoidalLMM, bdf2LMM, bdf3LMM}
+× {sum_β_pos, coef_α_plus_coef_β_ne_zero, Eq422a_at_vertex_eta_eq}. -/
+example (η_q : Quotient PhiEquivalent.setoidSigma)
+    (hEq : Eq422a OpenMath.Chapter4.Section451.bdf3LMM η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex = 1 := by
+  have h := Eq422a_at_vertex_eta_eq_of_stable_preconsistent_weakened
+    OpenMath.Chapter4.Section451.bdf3LMM
+    (by norm_num : (0 : ℕ) < 3)
+    OpenMath.Chapter4.Section451.bdf3LMM_isStable
+    OpenMath.Chapter4.Section451.bdf3LMM_isPreconsistent
+    bdf3LMM_coef_α_plus_coef_β_ne_zero
+    hEq
+  rw [h]
+  simp [OpenMath.Chapter4.Section451.bdf3LMM,
+    Fin.sum_univ_three, Fin.sum_univ_four]
+  norm_num
+
 /-- *Phase D′.2.1 consistent-form corollary (cycle 350, stretch):*
 under stability + consistency plus the side hypothesis that the
 `(i+1)`-weighted β-sum `Σᵢ (i+1) · βᵢ` is non-zero, the (422a)
