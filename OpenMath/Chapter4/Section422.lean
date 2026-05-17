@@ -2,6 +2,8 @@ import Mathlib
 import OpenMath.Chapter3.Section301
 import OpenMath.Chapter3.Section381
 import OpenMath.Chapter4.Section404
+import OpenMath.Chapter4.Section441
+import OpenMath.Chapter4.Section451
 
 /-!
 # Butcher §422 — The underlying one-step method (Phase A.0)
@@ -670,5 +672,90 @@ theorem Eq422a_at_vertex_eta_eq
   have h := Eq422a_at_vertex_linear hEq
   field_simp
   linarith
+
+/-! ### Phase D bridge (cycle 344) — `coef_α(M) = ρ'(1)` and positivity
+
+This block ships the algebraic bridge from cycle 342's
+`Eq422a`-coefficient notation `coef_α(M) = Σ_{i:Fin k} (i+1) · α_{i+1}`
+to cycle 178's `ρPoly` machinery (`Section441.lean`).
+
+* **P1** (`coef_α_eq_ρPoly_deriv_at_one_of_preconsistent`): under
+  preconsistency, `coef_α(M) = ρ'(1)`.
+* **P2** (`coef_α_pos_of_stable_preconsistent`): direct composition
+  of P1 with cycle 178's `ρPoly_deriv_eval_one_pos_of_stable_preconsistent`
+  yields `coef_α(M) > 0` for any stable preconsistent LMM with `0 < k`.
+
+This unlocks discharging the non-vanishing hypothesis of
+`Eq422a_at_vertex_eta_eq` (cycle 342) under the textbook hypotheses
+without manual coefficient inspection. The cycle 344 ship is purely
+additive: cycle 342's signature is preserved.
+-/
+
+/-- *Phase D bridge (cycle 344) — P1:* under preconsistency, the
+§422 coefficient `coef_α(M) = Σ_{i:Fin k} (i+1) · α_{i+1}` equals
+`ρ'(1)`, the derivative of the §441 stability polynomial at `1`.
+
+Algebraic derivation: cycle 178's
+`ρPoly_deriv_eval_one_unconditional` (Section441.lean:375) gives
+`ρ'(1) = k - Σ M.α i.succ · (k - (i.val + 1))`. Distributing inside
+the sum and using preconsistency `Σ M.α i.succ = 1` to collapse
+`k - k·1 = 0`, the residual is exactly `coef_α(M)`. -/
+theorem coef_α_eq_ρPoly_deriv_at_one_of_preconsistent
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hPre : M.IsPreconsistent) :
+    (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+      = M.ρPoly.derivative.eval 1 := by
+  rw [M.ρPoly_deriv_eval_one_unconditional]
+  unfold OpenMath.Chapter4.Section404.LinearMultistepMethod.IsPreconsistent
+    at hPre
+  -- Canonicalize the LHS summands to `α * (i+1)` (in ℝ) so they match
+  -- the residual that pops out of the RHS expansion below.
+  have hLHS : (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+      = ∑ i : Fin k, M.α i.succ * (((i.val : ℝ) + 1)) := by
+    apply Finset.sum_congr rfl
+    intro i _
+    push_cast
+    ring
+  rw [hLHS]
+  -- Distribute the RHS subtraction: `α · (k - (i+1)) = α·k - α·(i+1)`.
+  have hRHS : (∑ i : Fin k, M.α i.succ * ((k : ℝ) - ((i.val : ℝ) + 1)))
+      = (∑ i : Fin k, M.α i.succ) * (k : ℝ)
+          - ∑ i : Fin k, M.α i.succ * (((i.val : ℝ) + 1)) := by
+    rw [Finset.sum_mul, ← Finset.sum_sub_distrib]
+    apply Finset.sum_congr rfl
+    intro i _
+    ring
+  rw [hRHS, ← hPre]
+  ring
+
+/-- *Phase D bridge (cycle 344) — P2:* for a stable preconsistent
+LMM with `0 < k`, the §422 coefficient `coef_α(M)` is strictly
+positive. Direct composition of P1 with cycle 178's
+`ρPoly_deriv_eval_one_pos_of_stable_preconsistent`
+(Section441.lean:767). -/
+theorem coef_α_pos_of_stable_preconsistent
+    {k : ℕ} (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (hk : 0 < k) (hStab : M.IsStable) (hPre : M.IsPreconsistent) :
+    0 < ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ := by
+  rw [coef_α_eq_ρPoly_deriv_at_one_of_preconsistent M hPre]
+  exact M.ρPoly_deriv_eval_one_pos_of_stable_preconsistent hk hStab hPre
+
+/-- *Non-vacuity for P1 (cycle 344):* `explicitEulerLMM`'s
+`coef_α = 1` matches the §441 closed form `ρ'(1) = 1` at `k = 1`,
+`α₁ = 1`. -/
+example :
+    (∑ i : Fin 1, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section404.explicitEulerLMM.α i.succ) = 1 := by
+  simp [OpenMath.Chapter4.Section404.explicitEulerLMM]
+
+/-- *Non-vacuity for P1 (cycle 344):* `bdf2LMM`'s `coef_α = 2/3`
+matches cycle 176's `bdf2LMM_ρPoly_deriv_eval_one_eq = 2/3` at
+`k = 2`, `α₁ = 4/3`, `α₂ = -1/3`:
+`1·(4/3) + 2·(-1/3) = 4/3 - 2/3 = 2/3`. -/
+example :
+    (∑ i : Fin 2, ((i.val + 1 : ℕ) : ℝ) *
+        OpenMath.Chapter4.Section451.bdf2LMM.α i.succ) = 2 / 3 := by
+  simp [OpenMath.Chapter4.Section451.bdf2LMM, Fin.sum_univ_two]
+  norm_num
 
 end OpenMath.Chapter4.Section422

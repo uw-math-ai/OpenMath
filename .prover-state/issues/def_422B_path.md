@@ -1092,3 +1092,41 @@ The base case at `t = mk [] = vertex` reduces to cycle 342's
 `η(t)` from the lower-order `η(c)` terms.
 
 **Phase D.2 status: CLOSED.** Phase D.3 / E / F remain deferred per §5.
+
+## Cycle 344 update — `coef_α(M) = ρ'(1)` bridge + positivity corollary
+
+**Status: SHIPPED.** The §422 ↔ §441 algebraic bridge closed in
+~50 LOC added to `OpenMath/Chapter4/Section422.lean` after cycle
+342's `Eq422a_at_vertex_eta_eq` block. Two public theorems and two
+`example` non-vacuity witnesses:
+
+* `coef_α_eq_ρPoly_deriv_at_one_of_preconsistent` — under
+  `M.IsPreconsistent`,
+  `Σ_{i:Fin k} (i+1) · α_{i+1} = M.ρPoly.derivative.eval 1`.
+  Proved via `ρPoly_deriv_eval_one_unconditional` (cycle 178)
+  + RHS sum-split + preconsistency collapse `Σ α = 1`.
+* `coef_α_pos_of_stable_preconsistent` — for stable preconsistent
+  `M` with `0 < k`, `coef_α(M) > 0`. One-line composition of
+  P1 with `ρPoly_deriv_eval_one_pos_of_stable_preconsistent`
+  (cycle 178, Section441.lean:767).
+* Two `example`s: `explicitEulerLMM.coef_α = 1` (closes via
+  `simp [explicitEulerLMM]`), `bdf2LMM.coef_α = 2/3` (closes via
+  `simp [bdf2LMM, Fin.sum_univ_two] + norm_num`).
+
+**Axioms (verified via inline `#print axioms`):**
+Both theorems → `[propext, Classical.choice, Quot.sound]` only.
+
+**LOC trajectory:** Section422.lean: 674 → ~745 (P1+P2 + 2 examples
++ docstrings). New imports: `OpenMath.Chapter4.Section441`,
+`OpenMath.Chapter4.Section451`.
+
+**Cycle 342's `Eq422a_at_vertex_eta_eq` signature untouched** — the
+non-vanishing hypothesis remains explicit; cycle 345+ can strengthen
+to consume `coef_α_pos` directly once `coef_β` handling is decided.
+
+**Cycle 345 entry point (Phase D.3 inductive step) — UNCHANGED:**
+the cycle 343 §"Cycle 344 entry point" plan for scaffolding
+`underlyingEta_aux` is now better-supported by the positivity bridge:
+the recursive solver's per-step linear inversion requires
+`coef_α + coef_β ≠ 0`, and having `coef_α > 0` as a separate fact
+simplifies threading. Phase D.3 / E / F remain deferred per §5.
