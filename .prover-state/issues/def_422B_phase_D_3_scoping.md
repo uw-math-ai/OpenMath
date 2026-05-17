@@ -294,7 +294,7 @@ substantive deliverable of the Phase D.3 sequence.
 | Phase | Cycles | Deliverable | LOC est. | Aristotle |
 |---|---|---|---|---|
 | **D.3.a.{1,2}** | 1 (cycle 358) ✅ | `elementaryWeightQ_phi_mul_mk` (`*`-additivity at arbitrary `t`) + `elementaryWeightQ_phi_inv_mk` (`⁻¹`-characterization at arbitrary `t`). Both axiom-clean; 2 non-vacuity `example`s on `explicitEuler` at `RootedTree.cherry`. | ~145 (actual) | Not needed |
-| **D.3.a.3** | 1 (cycle 359, deferred) | `elementaryWeightQ_phi_zpow_mk` (`^ (· : ℤ)` at arbitrary `t`). Requires a `RKTableau.powRep : (m : ℕ) → Σ s', RKTableau s'` construction (recursive composition + quotient-equality lemma) since the bottom-block at each `pow_succ` step depends on the chosen representative of the previous power. | ~80 | Partial |
+| **D.3.a.3** | 1 (cycle 359) ✅ | `RKTableau.powRep` + `RKTableau.powRep_quotient_eq` infrastructure in `Section381.lean` (after `instGroup_phi`) + `elementaryWeightQ_phi_pow_succ_mk` (ℕ-form, recursive `pow_succ` identity) in `Section422.lean`. All axiom-clean; three non-vacuity `example`s on `explicitEuler`. ℤ-form `elementaryWeightQ_phi_zpow_mk` explicitly deferred to cycle 360 per §5 Step 4. | ~75 (actual) | Not needed |
 | **D.3.b** | 1 (cycle 360) | Linear coefficient extraction: `coeff_eta_t_in_eta_zpow_neg` — the textbook claim "coefficient of η(t) in η⁻ⁱ(t) is i(−1)^r(t)". Uses D.3.a.{1,2,3}. | 100 | Partial (sign algebra) |
 | **D.3.c** | 1 (cycle 361) | `sum_i_alpha_ne_zero_of_stable` — `ρ'(1) ≠ 0` from ρ-stability via simple-root analysis. **Mathlib hook check required first.** | 80 | Poor (polynomial roots) |
 | **D.3.d** | 1 (cycle 362) | `noncomputable def underlyingOneStepMethod_aux` recursion + `_satisfies_Eq422a` spec lemma. Closes `thm:422A`'s substantive content. | 120 | Partial (well-founded recursion proof obligations) |
@@ -344,6 +344,88 @@ This is ~80 LOC and 1 cycle. Cycle 359 worker absorbs this before
 proceeding to D.3.b. The §422 ladder horizon extends by one cycle
 (D.3.b ↦ cycle 360, D.3.c ↦ cycle 361, D.3.d ↦ cycle 362, Phase E
 sealing ↦ cycle 363).
+
+### Cycle 359 update — D.3.a.3 ship
+
+**Shipped (cycle 359)**:
+
+* `OpenMath.Chapter3.Section312.RKTableau.powRep` (Phase D.3.a.3
+  infrastructure): the recursive self-composition as a Σ-typed value.
+  `powRep M 0 = ⟨0, RKTableau.id⟩`, `powRep M (m+1) = ⟨(powRep M m).1
+  + s, (powRep M m).2.compose M⟩`. Inserted in `Section381.lean`
+  immediately after `instGroup_phi` (cycle 236), inside the
+  `OpenMath.Chapter3.Section312.RKTableau` namespace. `noncomputable
+  def` (matches cycle 222's `inverseQ_phi` pattern). ~6 LOC.
+
+* `OpenMath.Chapter3.Section312.RKTableau.powRep_quotient_eq`: the
+  certifier `⟦M.powRep m⟧ = ⟦⟨s, M⟩⟧^m`. Induction on `m`. Both
+  base and succ cases close via `show ... = _` (Σ-eta on the body
+  of `powRep` makes the goal pattern match) + `rw [pow_zero]` /
+  `rw [pow_succ, ← ih]` + `rfl` (definitional reduction through
+  `composeQ_phi_mk`'s `rfl`-level `Quotient.lift₂_mk` unfold). The
+  strategy's Step 2 fallback (explicit `show composeQ_phi …`) was
+  not needed; the cleaner `Quotient.mk PhiEquivalent.setoidSigma
+  ⟨_, _.compose _⟩` form already exposes the right shape. ~15 LOC.
+
+* `OpenMath.Chapter4.Section422.elementaryWeightQ_phi_pow_succ_mk`:
+  the Phase D.3.a.3 ℕ-form statement. Proof recipe (3 lines):
+  `rw [pow_succ]` (LHS `⟦M⟧^(m+1) ↦ ⟦M⟧^m * ⟦M⟧`); `rw [←
+  RKTableau.powRep_quotient_eq M m]` (this single `rw` fires on
+  BOTH the LHS `⟦M⟧^m` factor and the RHS first summand
+  simultaneously — no second `rw` or `conv_rhs` needed; the
+  strategy's Step C/D `conv_rhs` fallback was eliminated after
+  discovering the global `rw` behavior); `exact
+  elementaryWeightQ_phi_mul_mk (M.powRep m).2 M t` (D.3.a.1 closes
+  with `M₁ := (M.powRep m).2`, `M₂ := M`, using Σ-eta on
+  `⟦M.powRep m⟧` to match D.3.a.1's `⟦⟨s₁, M₁⟩⟧` shape). ~15 LOC.
+
+* Three non-vacuity `example`s in `Section422.lean` exercising
+  `powRep` on `explicitEuler`: base-case identity (`powRep 0 =
+  ⟨0, RKTableau.id⟩` by `rfl`), first-step stage count
+  (`(powRep 1).1 = 1` by `rfl`), end-to-end ℕ-form at `cherry`
+  with `m = 0`. ~15 LOC.
+
+All three new public symbols axiom-clean (`[propext,
+Classical.choice, Quot.sound]` only), verified via `#print axioms`
+on a separate axiom-check Lean file after `lake build` refreshed
+the .oleans. `lake build OpenMath.Chapter3 OpenMath.Chapter4` both
+exit 0; sorry count remains 0 in both target files.
+
+**Implementation notes for the cycle 360 worker**:
+
+1. The strategy's "two-step" rewrite (one `rw [← powRep_quotient_eq]`
+   then a `conv_rhs => rw [← ...]`) was an over-specification. The
+   first `rw` fires globally and the second pattern is not found.
+   Eliminating the second rewrite simplified the proof to 3 lines.
+
+2. The `show` form in `powRep_quotient_eq` requires an explicit type
+   ascription on the Σ-value (`(⟨0, RKTableau.id⟩ : Σ s' : ℕ,
+   RKTableau s')` and analogously for the succ case) to disambiguate
+   the implicit sigma; without the ascription the elaborator picked
+   the wrong sigma type (`PSigma`). Worth keeping the ascription for
+   the cycle 360 worker if they need a parallel construction.
+
+3. `RKTableau.compose` is `def` (not `noncomputable`), but `powRep`
+   is `noncomputable def` (because the Σ-typed return forces
+   noncomputable propagation through `Quotient.mk` operations
+   downstream). This matches the cycle 222 `inverseQ_phi` precedent
+   and does not trigger any unexpected `Decidable` lookup failures
+   (R3 risk did not fire).
+
+**Deferred to cycle 360**: the ℤ-form
+`elementaryWeightQ_phi_zpow_mk`. The cycle 359 worker did not ship
+the stretch ℤ-form per strategy §C.4 — the exact signature should
+be pinned by Phase D.3.b's consumption requirements (cycle 360
+deliverable), not guessed in advance. The cycle 359 ship gives D.3.b
+everything it needs for the **positive-integer-power** side; the
+negative-integer-power side composes via D.3.a.2 (cycle 358's
+`elementaryWeightQ_phi_inv_mk`) once the ℤ-form is shaped.
+
+**Cycle 360 entry point**: Phase D.3.b — linear coefficient
+extraction: `coeff_eta_t_in_eta_zpow_neg` (the textbook claim
+"coefficient of η(t) in η⁻ⁱ(t) is i(−1)^r(t)"). Per §5 phase table,
+~100 LOC, partial Aristotle for the sign-cancellation algebra. Uses
+D.3.a.{1,2,3} as inputs.
 
 **Total**: 4 cycles. Sequential dependencies (D.3.a → D.3.b → D.3.d
 must be in order; D.3.c is parallel to D.3.a/D.3.b).

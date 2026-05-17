@@ -617,6 +617,70 @@ example :
               RKTableau.explicitEuler.inverse i RootedTree.cherry :=
   elementaryWeightQ_phi_inv_mk RKTableau.explicitEuler RootedTree.cherry
 
+/-- *Phase D.3.a (cycle 359) D.3.a.3 — recursive `pow_succ` form for
+elementary weight on §383 powers at arbitrary trees.* Generalises
+cycle 341 P3 (`elementaryWeightQ_phi_zpow_vertex`) from `vertex` to
+arbitrary `t : RT`, in *recursive* form. Unlike the vertex case
+(which admits the closed form `(n : ℝ) · Φ_η(τ)`), at arbitrary `t`
+the recursion uses the canonical representative `powRep` (cycle 359's
+new infrastructure in `Section381.lean`) for the bottom-block source
+method at each step.
+
+By induction on `m` via D.3.a.1 (`elementaryWeightQ_phi_mul_mk`)
+plus cycle 359's `RKTableau.powRep_quotient_eq` to identify
+`⟦M.powRep m⟧` with `⟦⟨s, M⟩⟧ ^ m`. -/
+theorem elementaryWeightQ_phi_pow_succ_mk {s : ℕ} (M : RKTableau s)
+    (m : ℕ) (t : RT) :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) ^ (m + 1)) t
+      = elementaryWeightQ_phi
+          ((Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) ^ m) t
+        + ∑ i : Fin s, M.b i *
+            M.derivativeWeightWithSrc (M.powRep m).2 i t := by
+  -- Step A: ⟦M⟧^(m+1) = ⟦M⟧^m * ⟦M⟧ via pow_succ.
+  rw [pow_succ]
+  -- Step B: rewrite both `⟦⟨s, M⟩⟧ ^ m` occurrences to
+  -- `⟦M.powRep m⟧` via `powRep_quotient_eq` (reversed); a single
+  -- `rw` fires on both the LHS factor and the RHS first summand.
+  -- This exposes a `*` between two `Quotient.mk` classes on the LHS
+  -- that D.3.a.1 can consume directly, and matches the RHS first
+  -- summand to D.3.a.1's RHS first summand.
+  rw [← RKTableau.powRep_quotient_eq M m]
+  -- Step C: D.3.a.1 with `M₁ := (M.powRep m).2`, `M₂ := M` closes
+  -- the equation. The `⟦M.powRep m⟧` form is definitionally equal
+  -- to `⟦⟨(M.powRep m).1, (M.powRep m).2⟩⟧` via Σ-eta.
+  exact elementaryWeightQ_phi_mul_mk (M.powRep m).2 M t
+
+/-- *Phase D.3.a (cycle 359) D.3.a.3 — `powRep` base case
+non-vacuity on `explicitEuler`.* The `m = 0` value of
+`powRep explicitEuler` is the 0-stage identity tableau. -/
+example :
+    RKTableau.explicitEuler.powRep 0
+      = (⟨0, RKTableau.id⟩ : Σ s' : ℕ, RKTableau s') := rfl
+
+/-- *Phase D.3.a (cycle 359) D.3.a.3 — `powRep` first-step
+stage-count non-vacuity on `explicitEuler`.* For `explicitEuler`
+(`s = 1`), the `m = 1` value of `powRep` has stage count
+`0 + 1 = 1`. -/
+example : (RKTableau.explicitEuler.powRep 1).1 = 1 := rfl
+
+/-- *Phase D.3.a (cycle 359) D.3.a.3 — end-to-end non-vacuity at
+`cherry`, `m = 0`.* Exercises the recursive `pow_succ` identity on
+`explicitEuler` at the order-2 tree `cherry` with `m = 0`, the
+shortest non-trivial instance. -/
+example :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) ^ (0 + 1)) RootedTree.cherry
+      = elementaryWeightQ_phi
+          ((Quotient.mk PhiEquivalent.setoidSigma
+              ⟨1, RKTableau.explicitEuler⟩) ^ 0) RootedTree.cherry
+        + ∑ i : Fin 1, RKTableau.explicitEuler.b i *
+            RKTableau.explicitEuler.derivativeWeightWithSrc
+              (RKTableau.explicitEuler.powRep 0).2 i RootedTree.cherry :=
+  elementaryWeightQ_phi_pow_succ_mk
+    RKTableau.explicitEuler 0 RootedTree.cherry
+
 /-! ### Phase D.1 — closed-form `η(τ)` base-case solver (cycle 342)
 
 Cycle 341's P1/P2/P3 (`elementaryWeightQ_phi_{mul,inv,zpow}_vertex`)

@@ -4328,6 +4328,60 @@ noncomputable instance instGroup_phi :
     composeQ_phi_id_left
     composeQ_phi_inverseQ_phi_left
 
+/-! ### §383 `powRep` — canonical representative of `⟦M⟧ ^ m` (cycle 359)
+
+Phase D.3.a.3 infrastructure. Lifting cycle 341 P3
+(`elementaryWeightQ_phi_zpow_vertex`) from `vertex` to arbitrary trees
+needs, at each `pow_succ` step, a canonical RK representative of
+`⟦M⟧ ^ m` whose stage count is fixed (so that `derivativeWeightWithSrc`
+can target it). `powRep M m` is the recursive self-composition that
+plays this role: at `m = 0` it is `⟨0, RKTableau.id⟩` (matching cycle
+234's quotient identity), and at `m = k + 1` it composes the previous
+power with one more copy of `M` via cycle 209's `RKTableau.compose`.
+The companion `powRep_quotient_eq` certifies that this representative
+realises the §383 quotient-level `m`-fold power. -/
+
+/-- *Phase D.3.a.3 infrastructure (cycle 359):* the explicit `m`-fold
+self-composition of an `RKTableau` `M` as a Σ-typed value, packaging
+both the resulting stage count (`0` for `m = 0`, then `s · m` for
+`m ≥ 1`) and the assembled tableau. Used as the canonical
+representative for `⟦M⟧ ^ m` in the §383 quotient group.
+
+Base case `powRep M 0 = ⟨0, RKTableau.id⟩` matches cycle 219's
+identity element. Recursive case `powRep M (m + 1) = ⟨(powRep M m).1 + s,
+(powRep M m).2.compose M⟩` composes the previous power with one more
+copy of `M` via cycle 209's `RKTableau.compose`. -/
+noncomputable def powRep {s : ℕ} (M : RKTableau s) :
+    ℕ → Σ s' : ℕ, RKTableau s'
+  | 0 => ⟨0, RKTableau.id⟩
+  | m + 1 => ⟨(M.powRep m).1 + s, (M.powRep m).2.compose M⟩
+
+/-- *Phase D.3.a.3 infrastructure (cycle 359):* the `powRep`
+representative correctly realises the §383 quotient-level `m`-fold
+power. By induction on `m`:
+* `m = 0`: `⟦powRep M 0⟧ = ⟦⟨0, RKTableau.id⟩⟧ = 1 = ⟦⟨s, M⟩⟧ ^ 0`.
+* `m = k + 1`: `⟦powRep M (k+1)⟧ = ⟦⟨_, (powRep M k).2.compose M⟩⟧
+  = ⟦powRep M k⟧ * ⟦⟨s, M⟩⟧ = ⟦⟨s, M⟩⟧ ^ k * ⟦⟨s, M⟩⟧ = ⟦⟨s, M⟩⟧ ^ (k+1)`.
+The middle equality uses cycle 232's `composeQ_phi_mk` (definitionally
+through cycle 236's `instMul_phi`); the final step is `pow_succ`. -/
+theorem powRep_quotient_eq {s : ℕ} (M : RKTableau s) (m : ℕ) :
+    Quotient.mk PhiEquivalent.setoidSigma (M.powRep m)
+      = (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) ^ m := by
+  induction m with
+  | zero =>
+    show Quotient.mk PhiEquivalent.setoidSigma (⟨0, RKTableau.id⟩ :
+            Σ s' : ℕ, RKTableau s')
+      = (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) ^ 0
+    rw [pow_zero]
+    rfl
+  | succ k ih =>
+    show Quotient.mk PhiEquivalent.setoidSigma
+          (⟨(M.powRep k).1 + s, (M.powRep k).2.compose M⟩ :
+            Σ s' : ℕ, RKTableau s')
+      = (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) ^ (k + 1)
+    rw [pow_succ, ← ih]
+    rfl
+
 /-- *Inverse-step inversion lemma.* If a stage tuple `Y` witnesses
 `M.IsRKOneStep f y₀ H y_mid`, then the *same* stage tuple witnesses
 `M.inverse.IsRKOneStep f y_mid H y₀`. This is the load-bearing
