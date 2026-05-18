@@ -4928,6 +4928,278 @@ example (f : RT → ℝ) :
                 [RootedTree.vertex, RootedTree.cherry]),
       if_pos rfl]
 
+/-! ### Phase α'.1 (cycle 380) — Family A recursive helper `inversePolyChain`
+
+Cycle 380 ships the partial V1 recursive shape for Phase α': a
+recursive helper `inversePolyChain : ℕ → (RT → ℝ) → ℝ` capturing the
+closed-form recursion for the single-child ladder trees
+`t_n = mk^n[vertex]` (Family A in the cycle 379 scoping doc
+`.prover-state/issues/def_422B_phase_alpha_prime_scoping.md` §4).
+
+**Derivation.** Let `c_k := Φ_η(t_k) = f (chainTree k)` and
+`P_n := Φ_{η⁻¹}(t_n)`. From cycle 358's `_inv_mk`
+(`Section422.lean:582`) and the per-row factorisation pattern in
+the cycle 367 / 368 / 369 / 378 proof bodies, `dws(t_n, i)`
+admits the expansion `∑_{p=0}^{n} α_{n,p}(c_*) · a_i^{(p)}` where:
+
+* `a_i^{(p)} := M.derivativeWeight i (t_p)` (with `a_i^{(0)} = 1`,
+  `a_i^{(p+1)} = ∑_j M.A i j · a_j^{(p)}`),
+* `α_{n,n} = 1`, `α_{n,p} = P_{n-p-1}` for `0 ≤ p ≤ n-1`.
+
+Summing against `M.b i` and using `∑_i M.b i · a_i^{(p)} = c_p`
+gives the closed-form quotient-level convolution recursion:
+
+  `P_0 = -c_0`
+  `P_{n+1} = -(∑_{p=0}^{n} P_{n-p} · c_p) - c_{n+1}`
+
+**Verification (hand-derivation against the cycle 341/367/369/378 closed forms).**
+
+* `P_0 = -c_0 = -v` ✓ (matches cycle 341).
+* `P_1 = -(P_0 · c_0) - c_1 = -(-c_0)·c_0 - c_1 = c_0² - c_1
+        = v² - c` ✓ (matches cycle 367).
+* `P_2 = -(P_1·c_0 + P_0·c_1) - c_2`
+       `= -((c_0² - c_1)·c_0 + (-c_0)·c_1) - c_2`
+       `= -c_0³ + c_0c_1 + c_0c_1 - c_2`
+       `= -c_0³ + 2c_0c_1 - c_2 = -v³ + 2vc - m` ✓
+  (matches cycle 369 for `mk [cherry]`).
+* `P_3 = -(P_2·c_0 + P_1·c_1 + P_0·c_2) - c_3`
+       `= -((-c_0³+2c_0c_1-c_2)·c_0 + (c_0²-c_1)·c_1 + (-c_0)·c_2) - c_3`
+       `= c_0⁴ - 3c_0²c_1 + c_1² + 2c_0c_2 - c_3`
+       `= v⁴ - 3v²c + c² + 2vm - M_mc` ✓
+  (matches cycle 378 for `mk [mk [cherry]]`).
+
+**Phase α'.1 partial V1 fallback (scoping doc §10).** This cycle
+ships the recursive helper plus 4 bridge lemmas linking
+`inversePolyChain k` to `inversePolynomial (chainTree k)` for
+`k ∈ {0, 1, 2, 3}` (the 4 Family A trees in the ladder). Family B
+and Family C trees remain as explicit `if-then-else` branches in
+the cycle 374/377/378 `inversePolynomial` pattern match, which
+this cycle does not modify. The 8 existing calibration witnesses
+(lines 4704–4929) continue to pass unmodified.
+
+Future cycles (Phase α'.2+) will either (i) extend `inversePolyChain`
+to cover Family B/C, or (ii) replace `inversePolynomial`'s body
+with a fully recursive `match` driven by `inversePolyChain` plus
+helpers for Family B/C. The Phase γ migration
+(`inversePolynomial_eq_of_subtree_agreement`, `Section422.lean:5260`)
+will rely on the recursive shape for arbitrary `t`, but cycle 380's
+partial helper alone is sufficient progress: the convolution recursion
+is now formally captured in Lean and verified against the 4 Family A
+closed forms. -/
+
+/-- *Phase α'.1 (cycle 380) — depth-`n` single-child ladder tree.*
+`chainTree n = mk^n[vertex]`. Concretely:
+`chainTree 0 = vertex`,
+`chainTree 1 = mk [vertex] = cherry`,
+`chainTree 2 = mk [mk [vertex]] = mk [cherry]`,
+`chainTree 3 = mk [mk [mk [vertex]]] = mk [mk [cherry]]`. -/
+def chainTree : ℕ → RT
+  | 0 => RootedTree.vertex
+  | n + 1 => OpenMath.Chapter3.Section310.RootedTree.mk [chainTree n]
+
+/-- *Phase α'.1 (cycle 380) — `chainTree 1 = cherry`.* -/
+theorem chainTree_one : chainTree 1 = RootedTree.cherry := rfl
+
+/-- *Phase α'.1 (cycle 380) — `chainTree 2 = mk [cherry]`.* -/
+theorem chainTree_two :
+    chainTree 2 = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry] := rfl
+
+/-- *Phase α'.1 (cycle 380) — `chainTree 3 = mk [mk [cherry]]`.* -/
+theorem chainTree_three :
+    chainTree 3
+      = OpenMath.Chapter3.Section310.RootedTree.mk
+          [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]] := rfl
+
+/-- *Phase α'.1 (cycle 380) — Family A recursive closed-form helper.*
+
+For the depth-`n` single-child ladder tree `t_n = chainTree n`,
+`inversePolyChain n f` evaluates to `Φ_{η⁻¹}(t_n)` (when
+`f = Φ_η`) via the convolution recursion derived in the section
+docstring above.
+
+Base case: `inversePolyChain 0 f = -f vertex`.
+
+Recursive case: for `n ≥ 0`,
+`inversePolyChain (n+1) f = -(∑_{p=0}^n inversePolyChain (n-p) f · f (chainTree p))
+                            - f (chainTree (n+1))`.
+
+The recursion terminates structurally on `n` (each recursive call
+has first-argument `n - p.val ≤ n < n + 1`). -/
+noncomputable def inversePolyChain : ℕ → (RT → ℝ) → ℝ
+  | 0, f => -f RootedTree.vertex
+  | n + 1, f =>
+    -(∑ p : Fin (n + 1),
+        inversePolyChain (n - p.val) f * f (chainTree p.val))
+    - f (chainTree (n + 1))
+
+/-- *Phase α'.1 (cycle 380) — `inversePolyChain` base-case evaluation.* -/
+theorem inversePolyChain_zero (f : RT → ℝ) :
+    inversePolyChain 0 f = -f RootedTree.vertex := by
+  rw [inversePolyChain]
+
+/-- *Phase α'.1 (cycle 380) — `inversePolyChain` closed form at depth 1.*
+
+Computes the cycle 367 closed form `(Φ_η τ)² − Φ_η [τ]` for `cherry`. -/
+theorem inversePolyChain_one (f : RT → ℝ) :
+    inversePolyChain 1 f
+      = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry := by
+  rw [inversePolyChain, Fin.sum_univ_one]
+  show -(inversePolyChain 0 f * f RootedTree.vertex) - f RootedTree.cherry = _
+  rw [inversePolyChain_zero]
+  ring
+
+/-- *Phase α'.1 (cycle 380) — `inversePolyChain` closed form at depth 2.*
+
+Computes the cycle 369 closed form
+`-(Φ_η τ)³ + 2·Φ_η τ·Φ_η [τ] − Φ_η [[τ]]` for `mk [cherry]`. -/
+theorem inversePolyChain_two (f : RT → ℝ) :
+    inversePolyChain 2 f
+      = -(f RootedTree.vertex) ^ 3
+        + 2 * f RootedTree.vertex * f RootedTree.cherry
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) := by
+  rw [inversePolyChain, Fin.sum_univ_two]
+  show -(inversePolyChain 1 f * f RootedTree.vertex
+          + inversePolyChain 0 f * f RootedTree.cherry)
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) = _
+  rw [inversePolyChain_one, inversePolyChain_zero]
+  ring
+
+/-- *Phase α'.1 (cycle 380) — `inversePolyChain` closed form at depth 3.*
+
+Computes the cycle 378 closed form
+`(Φ_η τ)⁴ − 3·(Φ_η τ)²·Φ_η [τ] + (Φ_η [τ])² + 2·Φ_η τ·Φ_η [[τ]]
+   − Φ_η [[[τ]]]` for `mk [mk [cherry]]`. This is the Phase α'.1
+deliverable: a recursive definition matches the cycle 378
+hand-derived closed form. -/
+theorem inversePolyChain_three (f : RT → ℝ) :
+    inversePolyChain 3 f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + (f RootedTree.cherry) ^ 2
+        + 2 * f RootedTree.vertex
+            * f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]) := by
+  rw [inversePolyChain, Fin.sum_univ_three]
+  show -(inversePolyChain 2 f * f RootedTree.vertex
+          + inversePolyChain 1 f * f RootedTree.cherry
+          + inversePolyChain 0 f
+              * f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]))
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]) = _
+  rw [inversePolyChain_two, inversePolyChain_one, inversePolyChain_zero]
+  ring
+
+/-- *Phase α'.1 (cycle 380) — Family A bridge at depth 0 (vertex).*
+
+Verifies that the recursive `inversePolyChain 0` matches the
+existing pattern-match `inversePolynomial RootedTree.vertex`.
+Both routes reduce to `-f vertex`: `inversePolyChain` via its base
+case, `inversePolynomial` via cycle 374's first `if_pos rfl` branch. -/
+theorem inversePolyChain_zero_eq_inversePolynomial (f : RT → ℝ) :
+    inversePolyChain 0 f = inversePolynomial RootedTree.vertex f := by
+  rw [inversePolyChain_zero]
+  unfold inversePolynomial
+  rw [if_pos rfl]
+
+/-- *Phase α'.1 (cycle 380) — Family A bridge at depth 1 (cherry).*
+
+Verifies that the recursive `inversePolyChain 1` matches the
+existing pattern-match `inversePolynomial RootedTree.cherry`.
+Both routes reduce to `(f vertex)² - f cherry`: `inversePolyChain`
+via the depth-1 convolution recursion, `inversePolynomial` via
+cycle 374's cherry branch (`if_neg ≠ vertex, if_pos = cherry`). -/
+theorem inversePolyChain_one_eq_inversePolynomial (f : RT → ℝ) :
+    inversePolyChain 1 f = inversePolynomial RootedTree.cherry f := by
+  rw [inversePolyChain_one]
+  unfold inversePolynomial
+  rw [if_neg (by decide : RootedTree.cherry ≠ RootedTree.vertex),
+      if_pos rfl]
+
+/-- *Phase α'.1 (cycle 380) — Family A bridge at depth 2 (`mk [cherry]`).*
+
+Verifies that the recursive `inversePolyChain 2` matches the
+existing pattern-match `inversePolynomial (mk [cherry])`.
+Both routes reduce to `-(f vertex)³ + 2·f vertex·f cherry − f (mk [cherry])`:
+`inversePolyChain` via the depth-2 convolution recursion (using
+`inversePolyChain_one`), `inversePolynomial` via cycle 374's
+`mk [cherry]` branch (3 `if_neg`s before `if_pos rfl`). -/
+theorem inversePolyChain_two_eq_inversePolynomial (f : RT → ℝ) :
+    inversePolyChain 2 f
+      = inversePolynomial
+          (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) f := by
+  rw [inversePolyChain_two]
+  unfold inversePolynomial
+  rw [if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.vertex),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.cherry),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.broom₃),
+      if_pos rfl]
+
+/-- *Phase α'.1 (cycle 380) — Family A bridge at depth 3 (`mk [mk [cherry]]`).*
+
+Verifies that the recursive `inversePolyChain 3` matches the
+existing pattern-match `inversePolynomial (mk [mk [cherry]])`
+shipped at cycle 378. Both routes reduce to the cycle 378 closed
+form `v⁴ − 3v²c + c² + 2vm − M_mc`: `inversePolyChain` via the
+depth-3 convolution recursion (using `inversePolyChain_two`),
+`inversePolynomial` via cycle 378's 8th branch (7 `if_neg`s before
+`if_pos rfl`). This is the Phase α'.1 deliverable bridging the
+recursive helper to the existing closed-form table on the full
+4-tree Family A subset of the cycle 378 ladder. -/
+theorem inversePolyChain_three_eq_inversePolynomial (f : RT → ℝ) :
+    inversePolyChain 3 f
+      = inversePolynomial
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]) f := by
+  rw [inversePolyChain_three]
+  unfold inversePolynomial
+  rw [if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]
+            ≠ RootedTree.vertex),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]
+            ≠ RootedTree.cherry),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]
+            ≠ RootedTree.broom₃),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]
+            ≠ RootedTree.bushy),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]),
+      if_pos rfl]
+
 /-! ### Phase β.1 (cycle 375) — per-tree bridges between `elementaryWeightQ_phi η_q⁻¹` and `inversePolynomial`
 
 For each tree `t` in the four-tree ladder
