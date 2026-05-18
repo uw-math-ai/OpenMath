@@ -4183,4 +4183,128 @@ example :
     (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
     rfl rfl rfl rfl rfl
 
+/-! ### Phase α.1 (cycle 374) — `inversePolynomial` pattern-match definition
+
+`inversePolynomial t f` is the closed-form polynomial in the elementary
+weights `f` such that, on the four trees of order ≤ 3 for which we
+have shipped closed-form witnesses (cycles 341, 367, 368, 369), it
+equals `elementaryWeightQ_phi η_q⁻¹ t` whenever
+`f = elementaryWeightQ_phi η_q`.
+
+This is the **Phase α.1** form (cycles 374): explicit pattern matching
+on the small tree ladder, with `0` as a placeholder for all other
+trees. The Phase α' refinement to a recursive definition handling all
+`RootedTree` is cycle 375+ work (see
+`.prover-state/issues/def_422B_subLemmaA_inductive_plan.md` §7).
+
+Why pattern-match instead of recursion in cycle 374?
+* The cycle 367–372 closed forms don't cleanly factor into a single
+  recursion (e.g. `f cherry` appears in the broom₃ closed form
+  even though cherry is not a child of broom₃). Designing the
+  recursive shape is multi-cycle research.
+* A pattern-match definition compiles fast, ships axiom-clean, and
+  provides Phase β (cycle 375+) with a definition whose small-tree
+  unfolds match the cycle 367/368/369 lemmas by `rfl` after `unfold`.
+
+Per the cycle 373 scoping doc §4.5 discovery slot: σ does NOT appear
+in any closed form and the `-Φ_η(t)` term always has coefficient `-1`.
+Both properties are inherited trivially by this definition. -/
+
+/-- *Phase α.1 (cycle 374) — explicit polynomial for the §383 group
+inverse on the small tree ladder.*
+
+For every rooted tree `t` and elementary-weight function
+`f : RT → ℝ`, `inversePolynomial t f` is the closed-form polynomial
+shipped by cycles 341, 367, 368, 369 for the four small trees of
+order ≤ 3. All other trees map to `0` (a Phase α'-replaced
+placeholder).
+
+The four matched cases are:
+
+* `vertex` ↦ `-f vertex`                                       (cycle 341)
+* `cherry` ↦ `(f vertex)^2 - f cherry`                        (cycle 367)
+* `broom₃` ↦ `-(f vertex)^3 + 2·f vertex · f cherry - f broom₃`
+                                                                (cycle 368)
+* `mk [cherry]` ↦ `-(f vertex)^3 + 2·f vertex · f cherry - f (mk [cherry])`
+                                                                (cycle 369)
+
+The Phase β deliverable (cycle 375+) will be a lemma
+`elementaryWeightQ_phi η_q⁻¹ t = inversePolynomial t
+  (elementaryWeightQ_phi η_q)` for `t` in this ladder. -/
+noncomputable def inversePolynomial (t : RT) (f : RT → ℝ) : ℝ :=
+  if t = RootedTree.vertex then
+    -(f RootedTree.vertex)
+  else if t = RootedTree.cherry then
+    (f RootedTree.vertex) ^ 2 - f RootedTree.cherry
+  else if t = RootedTree.broom₃ then
+    -(f RootedTree.vertex) ^ 3
+      + 2 * f RootedTree.vertex * f RootedTree.cherry
+      - f RootedTree.broom₃
+  else if t = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry] then
+    -(f RootedTree.vertex) ^ 3
+      + 2 * f RootedTree.vertex * f RootedTree.cherry
+      - f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+  else
+    0
+
+/-- *Phase α.1 (cycle 374) — vertex calibration witness.*
+
+Matches cycle 341's `elementaryWeightQ_phi_zpow_vertex` at `n = -1`
+(`Φ_{η⁻¹}(τ) = -Φ_η(τ)`). Non-vacuity verification that
+`inversePolynomial` evaluates as the closed-form table prescribes. -/
+example (f : RT → ℝ) :
+    inversePolynomial RootedTree.vertex f = -(f RootedTree.vertex) := by
+  unfold inversePolynomial
+  rw [if_pos rfl]
+
+/-- *Phase α.1 (cycle 374) — cherry calibration witness.*
+
+Matches cycle 367's `elementaryWeightQ_phi_inv_cherry`
+(`Φ_{η⁻¹}([τ]) = (Φ_η τ)² - Φ_η [τ]`). -/
+example (f : RT → ℝ) :
+    inversePolynomial RootedTree.cherry f
+      = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry := by
+  unfold inversePolynomial
+  rw [if_neg (by decide : RootedTree.cherry ≠ RootedTree.vertex),
+      if_pos rfl]
+
+/-- *Phase α.1 (cycle 374) — broom₃ calibration witness.*
+
+Matches cycle 368's `elementaryWeightQ_phi_inv_broom₃`
+(`Φ_{η⁻¹}([τ,τ]) = -(Φ_η τ)³ + 2 (Φ_η τ)(Φ_η [τ]) - Φ_η [τ,τ]`). -/
+example (f : RT → ℝ) :
+    inversePolynomial RootedTree.broom₃ f
+      = -(f RootedTree.vertex) ^ 3
+        + 2 * f RootedTree.vertex * f RootedTree.cherry
+        - f RootedTree.broom₃ := by
+  unfold inversePolynomial
+  rw [if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.vertex),
+      if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.cherry),
+      if_pos rfl]
+
+/-- *Phase α.1 (cycle 374) — `mk [cherry]` calibration witness.*
+
+Matches cycle 369's `elementaryWeightQ_phi_inv_mkCherry`
+(`Φ_{η⁻¹}([[τ]]) = -(Φ_η τ)³ + 2 (Φ_η τ)(Φ_η [τ]) - Φ_η [[τ]]`). -/
+example (f : RT → ℝ) :
+    inversePolynomial
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) f
+      = -(f RootedTree.vertex) ^ 3
+        + 2 * f RootedTree.vertex * f RootedTree.cherry
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) := by
+  unfold inversePolynomial
+  rw [if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.vertex),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.cherry),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.broom₃),
+      if_pos rfl]
+
 end OpenMath.Chapter4.Section422

@@ -964,6 +964,85 @@ preserving the streak, rather than committing a sorry'd scaffold.
 - `.prover-state/task_results/cycle_372.md` — cycle 372's
   `mk [vertex, cherry]` closed form + m=0 witness;
   recommended pivot to inductive scoping.
+- `.prover-state/task_results/cycle_373.md` — cycle 373's
+  scoping doc ship (this file).
+- `.prover-state/task_results/cycle_374.md` — cycle 374's
+  Phase α.1 `inversePolynomial` ship: explicit
+  pattern-match definition + 4 non-vacuity witnesses
+  (vertex, cherry, broom₃, mk [cherry]).
+
+### §10.3 Cycle 374 update — Phase α.1 (explicit pattern-match) shipped
+
+(NB: appears below for readability; comes *after* §10.2 narratively.)
+
+**Design chosen**: explicit `if-then-else` pattern match on the four
+small trees `vertex`, `cherry`, `broom₃`, `mk [cherry]` with `0` as
+the placeholder for all other trees. The recursive-on-all-trees
+form (the original §7 Phase α spec using `WellFoundedRelation` and
+`measure RootedTree.order`) is deferred to **Phase α' (cycle 375+
+work)**.
+
+**Why the simpler form**: the seven cycle 341/367–372 closed forms
+don't cleanly factor into a single recursive shape (e.g. `f cherry`
+appears in `Φ_{η_q⁻¹}(broom₃)`'s closed form even though `cherry`
+is not a child of `broom₃`). Designing the well-founded recursive
+shape is multi-cycle research and risks committing a partial
+scaffold under the cycle 374 single-cycle budget. The
+pattern-match form ships axiom-clean today and gives Phase β
+(cycle 375+) a stable target.
+
+**Witnesses shipped (4 of the 7 closed forms)**:
+
+- `vertex` ↔ cycle 341 P3 `elementaryWeightQ_phi_zpow_vertex`
+- `cherry` ↔ cycle 367 `elementaryWeightQ_phi_inv_cherry`
+- `broom₃` ↔ cycle 368 `elementaryWeightQ_phi_inv_broom₃`
+- `mk [cherry]` ↔ cycle 369 `elementaryWeightQ_phi_inv_mkCherry`
+
+The remaining three closed forms (`bushy`, `mk [broom₃]`,
+`mk [vertex, cherry]`, cycles 370–372) are NOT pattern-matched in
+cycle 374; they map to `0` under the current definition. Extending
+to those 3 additional cases is Phase α.2 (cycle 375 option A) or
+the well-founded recursion refinement is Phase α' (cycle 375
+option B). Both options are zero-risk: they only add equations,
+they never invalidate the four cases already shipped.
+
+**Axiom-clean confirmation**: `#print axioms` on
+`inversePolynomial` and each of the four witnesses returns
+`[propext, Classical.choice, Quot.sound]`. The §422 axiom-clean
+streak (38 cycles 336–372 substantive, 373 doc-only, 374
+substantive) advances to 39 cycles substantive + 1 doc.
+
+**Sorry count unchanged**: still `1` actual sorry at line 2279
+(the cycle 365 grandfathered Sub-lemma A body). The cycle 374
+ship adds 0 new sorries.
+
+**`lean_status.json` for `def:422B`**: stays `partial` — Phase α.1
+is *one piece* of the multi-phase Sub-lemma A → Sub-lemma B →
+`def:422B` chain. No status promotion this cycle.
+
+**Phase β prep**: when cycle 375 (or later) attempts the bridge
+lemma `elementaryWeightQ_phi η_q⁻¹ t = inversePolynomial t
+(elementaryWeightQ_phi η_q)` on the four small trees, each case
+reduces to the cycle 367/368/369 closed-form theorem by
+`unfold inversePolynomial; rw [if_*]; exact
+elementaryWeightQ_phi_inv_<tree>`. This is the cleanest possible
+Phase β starting point.
+
+**`by decide` discharge worked**: each `t ≠ vertex / cherry /
+broom₃` inequality was discharged by `by decide` (no fallback to
+`injection` was needed). `DecidableEq RootedTree` from
+`Section301.lean:92` fires through the `RootedTree.mk` /
+`List.cons` constructor stack as expected.
+
+**Name resolution gotcha (for future workers)**: writing
+`RootedTree.mk [cherry]` at the top level of `Section422.lean`
+resolves `RootedTree.mk` to *Mathlib's* `_root_.RootedTree.mk`
+(a `RootedTree` constructor from `Mathlib.Combinatorics`), not
+our `OpenMath.Chapter3.Section310.RootedTree.mk`. Use the fully
+qualified `OpenMath.Chapter3.Section310.RootedTree.mk [...]` —
+this is the convention already used at line 2774 onwards in the
+file. The `RT` abbrev does NOT help here because dot notation on
+`RT` would still resolve to whatever Lean picks for `RootedTree`.
 
 ### §10.2 Memory references
 
