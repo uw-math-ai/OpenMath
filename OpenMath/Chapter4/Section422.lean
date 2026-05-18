@@ -4930,16 +4930,11 @@ noncomputable def inversePolynomial (t : RT) (f : RT → ℝ) : ℝ :=
   else if t = RootedTree.cherry then
     inversePolyChain 1 f
   else if t = RootedTree.broom₃ then
-    -(f RootedTree.vertex) ^ 3
-      + 2 * f RootedTree.vertex * f RootedTree.cherry
-      - f RootedTree.broom₃
+    inversePolyBroom 2 f
   else if t = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry] then
     inversePolyChain 2 f
   else if t = RootedTree.bushy then
-    (f RootedTree.vertex) ^ 4
-      - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
-      + 3 * f RootedTree.vertex * f RootedTree.broom₃
-      - f RootedTree.bushy
+    inversePolyBroom 3 f
   else if t = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃] then
     (f RootedTree.vertex) ^ 4
       - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
@@ -4997,7 +4992,7 @@ example (f : RT → ℝ) :
   unfold inversePolynomial
   rw [if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.vertex),
       if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.cherry),
-      if_pos rfl]
+      if_pos rfl, inversePolyBroom_two]
 
 /-- *Phase α.1 (cycle 374) — `mk [cherry]` calibration witness.*
 
@@ -5044,7 +5039,7 @@ example (f : RT → ℝ) :
         (by decide :
           RootedTree.bushy
             ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
-      if_pos rfl]
+      if_pos rfl, inversePolyBroom_three]
 
 /-- *Phase α.2 (cycle 377) — `mk [broom₃]` calibration witness.*
 
@@ -5302,6 +5297,35 @@ theorem inversePolyChain_three_eq_inversePolynomial (f : RT → ℝ) :
                 [RootedTree.vertex, RootedTree.cherry]),
       if_pos rfl]
 
+/-- *Phase α'.3 (cycle 383) — Family B bridge at `broom₃` (k=2).*
+
+Verifies that the closed-form `inversePolyBroom 2` matches the
+post-migration `inversePolynomial RootedTree.broom₃` body. Both routes
+reduce to `-(f vertex)^3 + 2·f vertex · f cherry - f broom₃`. -/
+theorem inversePolyBroom_two_eq_inversePolynomial (f : RT → ℝ) :
+    inversePolyBroom 2 f = inversePolynomial RootedTree.broom₃ f := by
+  unfold inversePolynomial
+  rw [if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.vertex),
+      if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.cherry),
+      if_pos rfl]
+
+/-- *Phase α'.3 (cycle 383) — Family B bridge at `bushy` (k=3).*
+
+Verifies that the closed-form `inversePolyBroom 3` matches the
+post-migration `inversePolynomial RootedTree.bushy` body. Both routes
+reduce to `v⁴ − 3v²c + 3vb' − bushy`. -/
+theorem inversePolyBroom_three_eq_inversePolynomial (f : RT → ℝ) :
+    inversePolyBroom 3 f = inversePolynomial RootedTree.bushy f := by
+  unfold inversePolynomial
+  rw [if_neg (by decide : RootedTree.bushy ≠ RootedTree.vertex),
+      if_neg (by decide : RootedTree.bushy ≠ RootedTree.cherry),
+      if_neg (by decide : RootedTree.bushy ≠ RootedTree.broom₃),
+      if_neg
+        (by decide :
+          RootedTree.bushy
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+      if_pos rfl]
+
 /-! ### Phase β.1 (cycle 375) — per-tree bridges between `elementaryWeightQ_phi η_q⁻¹` and `inversePolynomial`
 
 For each tree `t` in the four-tree ladder
@@ -5360,7 +5384,7 @@ theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_broom₃
   unfold inversePolynomial
   rw [if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.vertex),
       if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.cherry),
-      if_pos rfl]
+      if_pos rfl, inversePolyBroom_two]
   exact elementaryWeightQ_phi_inv_broom₃ η_q
 
 /-- *Phase β.1 (cycle 375) — `mk [cherry]` bridge.*
@@ -5414,7 +5438,7 @@ theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy
         (by decide :
           RootedTree.bushy
             ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
-      if_pos rfl]
+      if_pos rfl, inversePolyBroom_three]
   exact elementaryWeightQ_phi_inv_bushy η_q
 
 /-- *Phase β.2 (cycle 377) — `mk [broom₃]` bridge.*
@@ -5664,7 +5688,8 @@ theorem inversePolynomial_eq_of_subtree_agreement
         if_pos rfl,
         if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.vertex),
         if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.cherry),
-        if_pos rfl, hv, hc, hb]
+        if_pos rfl,
+        inversePolyBroom_two, inversePolyBroom_two, hv, hc, hb]
   by_cases h_mkCherry :
       t = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
   · subst h_mkCherry
@@ -5728,7 +5753,8 @@ theorem inversePolynomial_eq_of_subtree_agreement
           (by decide :
             RootedTree.bushy
               ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
-        if_pos rfl, hv, hc, hb, hbu]
+        if_pos rfl,
+        inversePolyBroom_three, inversePolyBroom_three, hv, hc, hb, hbu]
   by_cases h_mkBroom :
       t = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
   · subst h_mkBroom

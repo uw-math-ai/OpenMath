@@ -840,6 +840,84 @@ This is the cycle 378 worker's "Option B" (rejected by cycle 379
 planner for general extension but acceptable as targeted Phase α'
 prep work).
 
+### Cycle 383 update — Phase α'.3 Family B bridge migration shipped
+
+Mirrors the cycle 381 Family A bridge migration for the Family B
+leaves of the 8-tree ladder.
+
+**Migration body changes** (Section422.lean ~4927–4965):
+
+* `inversePolynomial`'s `else if t = RootedTree.broom₃` branch now
+  reads `inversePolyBroom 2 f` (was the explicit polynomial
+  `-(f vertex)^3 + 2·f vertex · f cherry - f broom₃`).
+* `inversePolynomial`'s `else if t = RootedTree.bushy` branch now
+  reads `inversePolyBroom 3 f` (was the explicit polynomial
+  `(f vertex)^4 - 3·(f vertex)^2 · f cherry + 3·f vertex · f broom₃
+  - f bushy`).
+
+**Downstream theorem updates** (~30 LOC of additional `rw`
+arguments):
+
+* broom₃ calibration witness — appends `inversePolyBroom_two` to
+  the `rw [...]` chain after `if_pos rfl`.
+* bushy calibration witness — appends `inversePolyBroom_three`.
+* Phase β `elementaryWeightQ_phi_inv_eq_inversePolynomial_broom₃`
+  — trailing `inversePolyBroom_two` before the
+  `exact elementaryWeightQ_phi_inv_broom₃ η_q` close.
+* Phase β `elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy` —
+  trailing `inversePolyBroom_three` before the
+  `exact elementaryWeightQ_phi_inv_bushy η_q` close.
+* Phase γ `inversePolynomial_eq_of_subtree_agreement` broom₃ branch
+  — trailing `inversePolyBroom_two, inversePolyBroom_two` (once
+  per side `f`/`g`) before `hv, hc, hb` substitution.
+* Phase γ same theorem's bushy branch — trailing
+  `inversePolyBroom_three, inversePolyBroom_three` before
+  `hv, hc, hb, hbu`.
+
+**New public bridge theorems** (~25 LOC, sit after the four
+`inversePolyChain_*_eq_inversePolynomial` Family A bridges):
+
+* `inversePolyBroom_two_eq_inversePolynomial (f : RT → ℝ) :
+    inversePolyBroom 2 f = inversePolynomial RootedTree.broom₃ f`
+  — three-step `unfold + rw` (two `if_neg` discharges + `if_pos rfl`).
+* `inversePolyBroom_three_eq_inversePolynomial (f : RT → ℝ) :
+    inversePolyBroom 3 f = inversePolynomial RootedTree.bushy f`
+  — five-step `unfold + rw` (four `if_neg` discharges + `if_pos rfl`).
+
+**Verification**:
+
+* `lake env lean OpenMath/Chapter4/Section422.lean` exits 0 (only
+  warning is the grandfathered cycle 365 sorry at line 2279).
+* `lake build OpenMath.Chapter4` exits 0.
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 (unchanged).
+* Tautology regex over Section422.lean — 0 hits.
+* `#print axioms` on
+  `inversePolyBroom_two_eq_inversePolynomial`,
+  `inversePolyBroom_three_eq_inversePolynomial`,
+  `elementaryWeightQ_phi_inv_eq_inversePolynomial_broom₃`,
+  `elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy`,
+  `inversePolynomial_eq_of_subtree_agreement` — all return
+  `[propext, Classical.choice, Quot.sound]`.
+
+**Faithfulness**: Infrastructure migration; no new textbook entity.
+Closed-form RHS values for `broom₃` and `bushy` cases of
+`inversePolynomial` are unchanged from cycles 368 and 370. No
+hypothesis weakening or strengthening. `lean_status.json` `def:422B`
+row's `cycle_completed_at` bumped to 383; status remains `partial`.
+
+**§422 axiom-clean streak**: 46 substantive + 1 doc (336–382) →
+**47 substantive + 1 doc** (336–383).
+
+**Cycle 384+ outlook (unchanged from cycle 382 task results)**:
+
+* Cycle 384: Family C scoping doc for `mk [broom₃]` and
+  `mk [vertex, cherry]` heterogeneous-children trees (don't fit
+  Family A chain or Family B binomial recipes).
+* Cycle 385+: Phase α'.4 closure of the cycle 365 grandfathered
+  sorry via a unified recursive `inversePolynomial` (or
+  `inversePolyTree`) covering arbitrary `t`, plus the global bridge
+  `elementaryWeightQ_phi_inv_eq_inversePolynomial`.
+
 ## §11 Self-reference & cross-links
 
 ### Predecessor scoping docs
