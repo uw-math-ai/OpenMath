@@ -1662,3 +1662,64 @@ Phase E sealing of `def:422B` continues to be projected for **cycle
 general body is the multi-cycle blocker. Current trajectory: continue
 accumulating closed-form witnesses (one per cycle) while planning
 the Sub-lemma A inductive attack.
+
+### Cycle 371 update — `mk [broom₃]` (depth-2 ladder, order-4) closed form + m=0 witness ship
+
+Cycle 371 worker shipped **two new public theorems** in
+`OpenMath/Chapter4/Section422.lean`:
+
+* `elementaryWeightQ_phi_inv_mkBroom₃` — `Φ_{η_q⁻¹}(mk [broom₃])
+  = v⁴ − 3v²·c + v·b' + 2v·m − M` where `v = Φ_η(vertex)`,
+  `c = Φ_η(cherry)`, `b' = Φ_η(broom₃)`, `m = Φ_η(mk [cherry])`,
+  `M = Φ_η(mk [broom₃])`. **Sixth data point** in the Route B
+  hypothesis ladder, testing cycle 369's `_mkCherry` depth-2 ladder
+  pattern with `broom₃` as the unique child instead of `cherry`.
+* `powRep_sum_eq_of_agreement_at_mkBroom₃_zero` — m=0 specialisation
+  of Sub-lemma A at `t = mk [broom₃]`, five agreement hypotheses
+  (vertex, cherry, broom₃, mk [cherry], mk [broom₃]).
+
+Plus two non-vacuity examples on `⟦explicitEuler⟧`: closed-form witness
+pinning to 1, and reflexive m=0 witness via `rfl × 5`.
+
+Both new theorems are **axiom-clean** (`[propext, Classical.choice,
+Quot.sound]`). §422 streak extends to **37 consecutive axiom-clean
+cycles** (336–371). Witness library now has **6 trees**: vertex,
+cherry, broom₃, mk [cherry], bushy, mk [broom₃].
+
+**Discovery refresher** (cycle 371): the cycle 369 representative-lift
+pattern `M.inverse.elementaryWeight t = elementaryWeightQ_phi_inv_t
+(Quotient.mk ⟨s, M⟩)` is reusable for any quotient closed form because
+`inverseQ_phi_mk` and `elementaryWeightQ_phi_mk` are both `:= rfl`
+simp lemmas. Cycle 371 used this to lift cycle 368's
+`elementaryWeightQ_phi_inv_broom₃` as a one-liner.
+
+**Discovery refresher** (cycle 371): `ring` does NOT distribute scalars
+over `Finset.sum`. Inner-sum distribution (when the per-summand
+identity contains a nested `∑`) must be done explicitly via
+`Finset.sum_congr` + `ring` per term, then `Finset.sum_add_distrib`,
+then `← Finset.mul_sum`. This pattern has been used in every cycle
+since 367 and is now load-bearing infrastructure.
+
+**Cycle 372+ entry-point recommendation** (worker's perspective):
+
+1. **Recommended: `mk [vertex, cherry]`** — first asymmetric order-4
+   tree. Tests the heterogeneous-children pattern. Closed form
+   (cycle 371 strategy §E.2): `v⁴ − 3v²·c + c² + v·b' + v·m −
+   Φ_η(mk [vertex, cherry])`. Introduces a new elementary-weight
+   name, the first asymmetric order-4 weight. 6-term polynomial
+   in 6 weights.
+
+2. `mk [mk [cherry]]` — depth-3 ladder. Mechanistically a smaller
+   step than option 1; extends cycle 369 `_mkCherry` and cycle 371
+   `_mkBroom₃` patterns with an extra ladder wrap.
+
+3. **Pivot to scoping the inductive Sub-lemma A attack.** With 6
+   closed-form data points, the witness library is now sufficient
+   to inform a multi-cycle scoping doc analogous to
+   `lem_310B_plan.md`. The path off the witness-accumulation
+   treadmill.
+
+Cycle 371 worker recommends option 1 for cycle 372 (one more
+heterogeneous-children data point), then cycle 373's planner picks
+between option 2 (one more witness) and option 3 (pivot to inductive
+scoping). Cycle 374+ likely begins the multi-cycle inductive attack.
