@@ -1,411 +1,431 @@
-# Cycle 367 Strategy — Ship cherry closed form (Phase D.3.b Step 2 cherry specialisation)
+# Cycle 368 Strategy — §422 Phase D.3.b Step 2: broom₃ closed form
 
-## TL;DR
+## A. Current state (verified at HEAD `1d1422f`)
 
-Ship **`elementaryWeightQ_phi_inv_cherry`** (quotient-level closed
-form for `Φ_{η⁻¹}(cherry)`) plus the corollary
-**`powRep_sum_eq_of_agreement_at_cherry_zero`** (cherry-case
-specialisation of Sub-lemma A at `m = 0`). This is the cycle 366
-task results' explicitly-recommended Priority 1 deliverable (~50
-LOC core, ~1 cycle, axiom-clean target). It extends cycle 366's
-vertex witness (`powRep_sum_eq_of_agreement_at_vertex`) one tree
-higher and provides a second non-vacuity witness for the Sub-lemma A
-infrastructure introduced cycle 365.
+* `OpenMath/Chapter4/Section422.lean` — 2596 LOC.
+* Sole code-level sorry: line 2279, Sub-lemma A
+  `powRep_sum_eq_of_strict_subtree_agreement`'s general body
+  (grandfathered from cycle 365). **DO NOT touch this cycle.**
+* §422 axiom-clean streak: **33 consecutive cycles** (336–367).
+* Cycle 367 shipped: `elementaryWeightQ_phi_inv_cherry` (line 2376)
+  and `powRep_sum_eq_of_agreement_at_cherry_zero` (line 2477), both
+  axiom-clean.
+* Cycle 366 shipped: `powRep_sum_eq_of_agreement_at_vertex` (line
+  2314), axiom-clean.
+* Specialised-witness library for Sub-lemma A now covers
+  `{vertex, cherry (m=0)}`.
 
-**Do NOT attempt Sub-lemma A's general body** — cycle 366
-conclusively established that the heterogeneous-inner-tableau
-obstacle blocks both Sub-approaches 4.a (strong induction + cycle
-362 substitution) and 4.b (induction on `m` at quotient level).
-General body needs new infrastructure (cycle 368+ work) — see §G.
+There is **NO blocker**. Cycle 367 was a clean ship; cycle 368
+continues the small-tree witness ladder per cycle 367 task
+results' "Suggested next approach" §G (Route B at `broom₃`).
 
-## §A. Aristotle results
+## B. Cycle 368 target
 
-**None pending.** No Aristotle submissions active from prior cycles
-worth integrating. Cycle 367 is fully manual.
+**Ship `elementaryWeightQ_phi_inv_broom₃` plus its m=0 corollary
+`powRep_sum_eq_of_agreement_at_broom₃_zero` plus two non-vacuity
+examples on `explicitEuler`.** Both new theorems must be axiom-clean.
 
-## §B. Primary target — `elementaryWeightQ_phi_inv_cherry`
+This extends the cycle 367 cherry pattern to the third tree
+`broom₃ = mk [vertex, vertex]` (order 3, two children). It is the
+next-non-trivial test of whether the cycle 366 §G Route B hypothesis
+("closed-form polynomial in Φ at strict subtrees with quotient-
+invariant coefficients") generalises beyond order 2.
 
-### B.1 Signature
+### B.1 The closed-form identity (paper-derived; verify before
+shipping)
 
-```lean
-/-- Quotient-level closed form for `Φ_{η⁻¹}(cherry)`:
-    `Φ_{η⁻¹}(cherry) = (Φ_η(vertex))² − Φ_η(cherry)`.
+For `broom₃ = mk [vertex, vertex]` and any
+`η_q : Quotient PhiEquivalent.setoidSigma`, with representative
+`⟨s, M⟩`:
 
-    Companion to cycle 341's `elementaryWeightQ_phi_zpow_vertex`
-    (vertex closed form); this is the cherry analog. Both are
-    quotient-level identities — `Φ_{η⁻¹}(cherry)` admits a closed
-    expression in `Φ_η` at the subtrees of cherry (= {vertex,
-    cherry}), where the inverse-of-cherry coefficient is `−1`
-    (matching cycle 364's `linearResidualAt` coefficient) and the
-    inverse-of-vertex quadratic coefficient is `+1` (a non-trivial
-    structural fact). -/
-theorem elementaryWeightQ_phi_inv_cherry
-    (η_q : Quotient PhiEquivalent.setoidSigma) :
-    elementaryWeightQ_phi (η_q⁻¹) RootedTree.cherry
-      = (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 2
-        - elementaryWeightQ_phi η_q RootedTree.cherry
+```
+Φ_{η_q⁻¹}(broom₃) = -(Φ_η(vertex))³
+                    + 2 · Φ_η(vertex) · Φ_η(cherry)
+                    - Φ_η(broom₃)
 ```
 
-### B.2 Proof recipe (per cycle 366 task results §Discovery #2)
+**Derivation** (paper-only; worker should re-derive in scratch
+before writing the Lean):
+
+1. By cycle 358 `_inv_mk`:
+   `Φ_{⟦⟨s, M⟩⟧⁻¹}(broom₃) = -∑ᵢ M.b i · M.derivativeWeightWithSrc M.inverse i broom₃`.
+2. Unfold `derivativeWeightWithSrc M.inverse i broom₃` via the
+   `mk [vertex, vertex] = mk (vertex :: [vertex])` cons-structure
+   into:
+   `(M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j ·
+     M.derivativeWeightWithSrc M.inverse j vertex) ·
+    M.derivativeWeightWithSrcProd M.inverse i [vertex]`.
+3. The first factor reduces (via cycle 366
+   `derivativeWeightWithSrc_vertex = 1`) to
+   `(M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j)`.
+4. The second factor is **the same expression** (because `[vertex]`
+   has the same structure as the front of `[vertex, vertex]`):
+   `derivativeWeightWithSrcProd M.inverse i [vertex] =
+    (M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j) ·
+    derivativeWeightWithSrcProd M.inverse i [] =
+    (M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j) · 1 =
+    (M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j)`.
+5. So `derivativeWeightWithSrc M.inverse i broom₃ =
+   (M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j)²`.
+6. By cycle 367's `h_inv_v` helper computation:
+   `M.inverse.elementaryWeight vertex = -M.elementaryWeight vertex`.
+7. Let `v := Φ_η(vertex) = ∑ⱼ M.b j` and `Aᵢ := ∑ⱼ M.A i j` (the
+   "row sum"). Then `derivativeWeightWithSrc M.inverse i broom₃ =
+   (-v + Aᵢ)² = v² - 2·v·Aᵢ + Aᵢ²`.
+8. Sum over i with M.b weight:
+   `∑ᵢ M.b i · (v² - 2·v·Aᵢ + Aᵢ²)
+    = v² · (∑ᵢ M.b i) - 2·v · (∑ᵢ M.b i · Aᵢ) + ∑ᵢ M.b i · Aᵢ²
+    = v² · v - 2·v · Φ_η(cherry) + Φ_η(broom₃)
+    = v³ - 2·v·Φ_η(cherry) + Φ_η(broom₃)`.
+   (Using `Φ_η(cherry) = ∑ᵢ M.b i · ∑ⱼ M.A i j = ∑ᵢ M.b i · Aᵢ`
+   and `Φ_η(broom₃) = ∑ᵢ M.b i · derivativeWeight i broom₃
+                    = ∑ᵢ M.b i · Aᵢ²`, since
+    `derivativeWeight i broom₃ = (∑ⱼ M.A i j · derivativeWeight j vertex)
+                                 · derivativeWeightProd i [vertex]
+                               = Aᵢ · (∑ⱼ M.A i j · 1) · 1
+                               = Aᵢ · Aᵢ = Aᵢ²`.)
+9. Negate per step 1:
+   `Φ_{η⁻¹}(broom₃) = -v³ + 2·v·Φ_η(cherry) - Φ_η(broom₃)`.
+
+**Sanity check at `explicitEuler`** (s = 1, A = !![0], b = ![1]):
+* `v = Φ_η(vertex) = 1`.
+* `Aᵢ = 0` for all i, so `Φ_η(cherry) = 0` and `Φ_η(broom₃) = 0`.
+* Expected: `Φ_{η⁻¹}(broom₃) = -(1)³ + 2·1·0 - 0 = -1`.
+
+## C. Concrete proof recipe for `elementaryWeightQ_phi_inv_broom₃`
+
+Mirror cycle 367's `elementaryWeightQ_phi_inv_cherry` proof (lines
+2376–2439 of `Section422.lean`) with these extensions:
+
+1. `refine Quotient.inductionOn η_q ?_; rintro ⟨s, M⟩`.
+
+2. **Reuse cycle 367's helpers verbatim** (paste them into the
+   broom₃ proof body):
+   * `h_inv_v : M.inverse.elementaryWeight vertex = -M.elementaryWeight vertex`
+   * `h_vertex : M.elementaryWeight vertex = ∑ⱼ M.b j`
+   * `h_dw_cherry : ∀ i, M.derivativeWeight i cherry = ∑ⱼ M.A i j`
+   * `h_cherry : M.elementaryWeight cherry = ∑ᵢ M.b i · ∑ⱼ M.A i j`
+
+3. **Add three NEW helpers for broom₃**:
+   * `h_dw_broom₃ : ∀ i, M.derivativeWeight i broom₃ = (∑ⱼ M.A i j)²`.
+     Proof shape: `show (∑ⱼ M.A i j · derivativeWeight j vertex) ·
+     derivativeWeightProd i [vertex] = (∑ⱼ M.A i j)²`. Then:
+     - `derivativeWeightProd i [vertex] =
+        (∑ⱼ M.A i j · derivativeWeight j vertex) · derivativeWeightProd i []`
+       (from the recursive def — show this via `rfl` or
+       `show ... = ... from rfl`).
+     - `derivativeWeightProd i [] = 1` (`rfl`).
+     - Each inner sum collapses by `Finset.sum_congr +
+       derivativeWeight_vertex + mul_one` to `∑ⱼ M.A i j`.
+     - Final: `(∑ⱼ M.A i j) · (∑ⱼ M.A i j) · 1 = (∑ⱼ M.A i j)^2`
+       via `ring` or `sq`.
+
+   * `h_broom₃ : M.elementaryWeight broom₃ =
+                ∑ᵢ M.b i · (∑ⱼ M.A i j)²`.
+     One-line `Finset.sum_congr rfl (fun i _ => by rw [h_dw_broom₃ i])`
+     after `show ... = ...`.
+
+   * `h_dws_broom₃ : ∀ i,
+       M.derivativeWeightWithSrc M.inverse i broom₃ =
+         (M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j)^2`.
+     Proof shape: parallel to cycle 367's `h_dws_cherry`, with one
+     additional unfold layer. The `derivativeWeightWithSrcProd
+     M.inverse i [vertex]` factor expands the same way as the
+     outer factor:
+     `show (M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j ·
+       M.derivativeWeightWithSrc M.inverse j vertex) ·
+      derivativeWeightWithSrcProd M.inverse i [vertex] = ...`.
+     Then `derivativeWeightWithSrcProd M.inverse i [vertex] =
+     (M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j ·
+       M.derivativeWeightWithSrc M.inverse j vertex) · 1` (from
+     definitional unfold), and each inner sum collapses via
+     `derivativeWeightWithSrc_vertex = 1` to `∑ⱼ M.A i j`.
+     Close with `(x + Aᵢ) · ((x + Aᵢ) · 1) = (x + Aᵢ)²` via `ring`
+     where `x := M.inverse.elementaryWeight vertex`.
+
+4. **Main computation** (mirror cycle 367's lines 2423–2439):
+   ```
+   rw [elementaryWeightQ_phi_inv_mk M RootedTree.broom₃,
+       elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+       elementaryWeightQ_phi_mk]
+   ```
+   Need THREE `elementaryWeightQ_phi_mk` rewrites — one each for
+   Φ_η at vertex, cherry, broom₃ on the RHS — plus the implicit
+   one for Φ_{η⁻¹}(broom₃) on the LHS that `_inv_mk` handles.
+
+5. **Closed-form bridge** via a `have h_sum` block:
+   ```
+   have h_sum :
+       (∑ᵢ M.b i · M.derivativeWeightWithSrc M.inverse i broom₃)
+         = M.elementaryWeight vertex ^ 3
+           - 2 * M.elementaryWeight vertex * M.elementaryWeight cherry
+           + M.elementaryWeight broom₃ := by
+     have h_subst :
+         (∑ᵢ M.b i · M.derivativeWeightWithSrc M.inverse i broom₃)
+           = ∑ᵢ M.b i · (-M.elementaryWeight vertex + ∑ⱼ M.A i j)^2 := by
+       refine Finset.sum_congr rfl (fun i _ => ?_)
+       rw [h_dws_broom₃ i, h_inv_v]
+     rw [h_subst]
+     -- Expand the square per-summand:
+     -- ∑ᵢ M.b i · (v² - 2·v·Aᵢ + Aᵢ²)
+     -- = v² · (∑ᵢ M.b i) - 2·v · (∑ᵢ M.b i · Aᵢ) + ∑ᵢ M.b i · Aᵢ²
+     -- = v³ - 2·v·Φ_η(cherry) + Φ_η(broom₃)
+     -- WORKER: distribute the square per-summand via Finset.sum_congr +
+     -- ring into a ternary-sum form, then collapse via
+     -- Finset.sum_sub_distrib + Finset.sum_add_distrib +
+     -- ← Finset.mul_sum × 2.
+     sorry
+   rw [h_sum]; ring
+   ```
+
+   The trickiest step is the per-summand square expansion plus the
+   sum-distribution. Two paths:
+   * **Path A (recommended)**: expand the square via
+     `Finset.sum_congr rfl (fun i _ => by ring)` to get
+     `∑ᵢ (M.b i · v² - 2·v·M.b i·Aᵢ + M.b i·Aᵢ²)`, then
+     `Finset.sum_sub_distrib` + `Finset.sum_add_distrib`, then
+     `← Finset.mul_sum` for the constant-`v²` and `-2·v` factors.
+     Finally `rw [← h_vertex, ← h_cherry, ← h_broom₃]` and `ring`.
+   * **Path B (fallback)**: open the square `(x + y)^2 = x^2 + 2*x*y + y^2`
+     via `add_pow_two` first (verify Mathlib name with
+     `lean_local_search "add_pow_two"`), then distribute. May
+     produce cleaner intermediate goals.
+
+   Don't waste cycle budget — pick Path A. If after 30 minutes
+   the per-summand `ring` chain isn't closing, switch to Path B.
+
+6. **Close the main goal** with `rw [h_sum]; ring`.
+
+## D. `powRep_sum_eq_of_agreement_at_broom₃_zero` (m=0 corollary)
+
+Three-rewrite-line proof mirroring cycle 367 (line 2477). Note that
+the hypothesis list now has THREE agreement equations (vertex,
+cherry, broom₃) because the cycle-368 closed form involves all
+three:
 
 ```lean
-theorem elementaryWeightQ_phi_inv_cherry η_q := by
-  induction η_q using Quotient.inductionOn with
-  | h p =>
-    obtain ⟨s, M⟩ := p
-    -- Step 1: LHS expansion via cycle 358's _inv_mk
-    --   (Quotient.mk _ ⟨s, M⟩)⁻¹ = Quotient.mk _ ⟨s, M.inverse⟩
-    --   reduces by `rfl` through cycle 236's inverseQ_phi_mk simp lemma
-    rw [show (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩)⁻¹
-          = Quotient.mk PhiEquivalent.setoidSigma ⟨s, M.inverse⟩ from rfl]
-    rw [elementaryWeightQ_phi_inv_mk M RootedTree.cherry,
-        elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk]
-    -- Now goal:
-    --   -(Σⱼ M.b j · M.derivativeWeightWithSrc M.inverse j cherry)
-    --     = (M.elementaryWeight vertex)² - M.elementaryWeight cherry
-    -- Step 2: Expand derivativeWeightWithSrc at cherry = mk [vertex]
-    -- Per cycle 358's _inv_mk and the recursive def of
-    -- derivativeWeightWithSrcProd (Section381.lean:~2680-2700):
-    --   M.derivativeWeightWithSrc M.inverse j cherry
-    --     = M.derivativeWeightWithSrcProd M.inverse j [vertex]
-    --     = (M.inverse.elementaryWeight vertex
-    --        + Σ k, M.A j k · M.derivativeWeightWithSrc M.inverse k vertex)
-    --       * M.derivativeWeightWithSrcProd M.inverse j []
-    --   M.derivativeWeightWithSrcProd M.inverse j [] = 1   (empty-list base case)
-    --   M.derivativeWeightWithSrc M.inverse k vertex = 1   (cycle 341's _vertex)
-    --   M.inverse.elementaryWeight vertex
-    --     = -M.elementaryWeight vertex  (cycle 358 _inv_mk at vertex,
-    --                                    or directly from M.inverse.b = -M.b)
-    -- So inner factor at index j = -M.elementaryWeight vertex + (Σₖ M.A j k)
-    -- Step 3: Apply sumB_eq_elementaryWeight_vertex (§B.3 helper):
-    --   M.elementaryWeight vertex = Σⱼ M.b j
-    -- And recall the structural identity:
-    --   M.elementaryWeight cherry = Σⱼ M.b j · (Σₖ M.A j k)
-    -- (Derive inline from elementaryWeight_eq + derivativeWeight_mk at
-    --  cherry = mk [vertex] + derivativeWeight_vertex = 1.)
-    -- Step 4: Final algebra
-    -- LHS = -Σⱼ M.b j · (-M.elementaryWeight vertex + row-sum at j)
-    --     = M.elementaryWeight vertex · (Σⱼ M.b j)
-    --       - Σⱼ M.b j · (row-sum at j)
-    --     = M.elementaryWeight vertex · M.elementaryWeight vertex
-    --       - M.elementaryWeight cherry
-    --     = (M.elementaryWeight vertex)² - M.elementaryWeight cherry  ✓
-    sorry  -- worker: ~20-30 LOC arithmetic via
-           -- Finset.sum_mul, sum_neg_distrib, derivativeWeightWithSrcProd unfold
-```
-
-### B.3 Key sub-step: `sumB_eq_elementaryWeight_vertex`
-
-Ship this as a private helper *before* §B.2:
-
-```lean
-private lemma sumB_eq_elementaryWeight_vertex {s : ℕ} (M : RKTableau s) :
-    (∑ j : Fin s, M.b j) = M.elementaryWeight RootedTree.vertex := by
-  rw [elementaryWeight_eq]
-  -- now: Σ i, M.b i = Σ i, M.b i · M.derivativeWeight i vertex
-  simp [derivativeWeight_vertex]
-```
-
-If `derivativeWeight_vertex` is in cycle 187 (it is), this is a
-2-line proof. Alternative: just inline this where needed in §B.2's
-proof body via `simp [elementaryWeight_eq, derivativeWeight_vertex]`.
-
-### B.4 Non-vacuity example
-
-Add one example on `explicitEuler`. Numeric values:
-- `Φ_{explicitEuler}(vertex) = 1` (via cycle 337's
-  `D_element_elementaryWeight_vertex` or direct: `Σⱼ M.b j = 1`).
-- `Φ_{explicitEuler}(cherry) = Σⱼ M.b j · Σₖ M.A j k = 1 · 0 = 0`
-  (explicit Euler has `A = 0`).
-- So `Φ_{explicitEuler⁻¹}(cherry) = 1² − 0 = 1`.
-
-```lean
-example :
-    elementaryWeightQ_phi
-      (Quotient.mk PhiEquivalent.setoidSigma ⟨1, explicitEuler⟩)⁻¹
-      RootedTree.cherry = 1 := by
-  rw [elementaryWeightQ_phi_inv_cherry]
-  -- compute Φ_{explicitEuler}(vertex) and Φ_{explicitEuler}(cherry)
-  -- via elementaryWeightQ_phi_mk + Fin.sum_univ_one + simp on explicitEuler
-  sorry  -- worker: ~5 LOC of arithmetic
-```
-
-If the explicit Euler witnesses aren't readily available (this is
-Section381 / Section422 boundary territory), use the alternative
-witness `D_element` from cycle 337 — that has known closed-form
-elementary weights at vertex (= 1) and at higher trees (= 0).
-
-## §C. Secondary target — `powRep_sum_eq_of_agreement_at_cherry_zero`
-
-### C.1 Minimal corollary (Priority 1 mandatory ship)
-
-```lean
-/-- Cherry-case specialisation of Sub-lemma A
-    (`powRep_sum_eq_of_strict_subtree_agreement`) at `m = 0`.
-
-    At `t = cherry` and `n = -1` (i.e. `m = 0`), the closed-subtree
-    hypothesis simplifies to two equations (at `vertex` and at
-    `cherry`). Closure via cycle 367's `elementaryWeightQ_phi_inv_cherry`. -/
-theorem powRep_sum_eq_of_agreement_at_cherry_zero
+theorem powRep_sum_eq_of_agreement_at_broom₃_zero
     (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
     (h_vertex : elementaryWeightQ_phi η_q RootedTree.vertex
               = elementaryWeightQ_phi η_q' RootedTree.vertex)
     (h_cherry : elementaryWeightQ_phi η_q RootedTree.cherry
-              = elementaryWeightQ_phi η_q' RootedTree.cherry) :
-    elementaryWeightQ_phi (η_q ^ (-(((0 + 1 : ℕ) : ℤ)))) RootedTree.cherry
-      = elementaryWeightQ_phi (η_q' ^ (-(((0 + 1 : ℕ) : ℤ)))) RootedTree.cherry := by
-  -- Reduce `η_q ^ (-((1 : ℕ) : ℤ))` to `η_q⁻¹` via
-  -- `zpow_neg_one` + `Nat.cast_one` (cycle 360 bridge pattern).
-  -- Then apply `elementaryWeightQ_phi_inv_cherry` to both sides and
-  -- substitute `h_vertex`, `h_cherry`.
-  sorry  -- worker: ~5-8 LOC
+              = elementaryWeightQ_phi η_q' RootedTree.cherry)
+    (h_broom₃ : elementaryWeightQ_phi η_q RootedTree.broom₃
+              = elementaryWeightQ_phi η_q' RootedTree.broom₃) :
+    elementaryWeightQ_phi (η_q ^ (-(((0 + 1 : ℕ) : ℤ)))) RootedTree.broom₃
+      = elementaryWeightQ_phi (η_q' ^ (-(((0 + 1 : ℕ) : ℤ)))) RootedTree.broom₃ := by
+  have h_pow : ∀ ζ : Quotient PhiEquivalent.setoidSigma,
+      ζ ^ (-(((0 + 1 : ℕ) : ℤ))) = ζ⁻¹ := by
+    intro ζ; rw [zero_add, Nat.cast_one]; exact zpow_neg_one _
+  rw [h_pow η_q, h_pow η_q',
+      elementaryWeightQ_phi_inv_broom₃, elementaryWeightQ_phi_inv_broom₃,
+      h_vertex, h_cherry, h_broom₃]
 ```
 
-3-line proof body once §B lands. **This is the mandatory minimum
-deliverable**.
+## E. Non-vacuity examples (two of them)
 
-### C.2 General-`m` stretch (Priority 2 optional)
+1. **Closed-form witness at explicitEuler**:
+   ```lean
+   example :
+       elementaryWeightQ_phi
+         ((Quotient.mk PhiEquivalent.setoidSigma
+             ⟨1, RKTableau.explicitEuler⟩))⁻¹ RootedTree.broom₃ = -1 := by
+   ```
+   Expected: `-(1)³ + 2·1·0 - 0 = -1`. Proof recipe: same as cycle
+   367's cherry non-vacuity but with TWO inner-zero helpers
+   (`h_cherry_zero` from cycle 367 still valid; add
+   `h_broom₃_zero`):
+   ```
+   have h_broom₃_zero :
+       RKTableau.explicitEuler.derivativeWeight 0 RootedTree.broom₃ = 0 := by
+     show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j ·
+           RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex) ·
+          RKTableau.explicitEuler.derivativeWeightProd 0 [RootedTree.vertex] = 0
+     simp [RKTableau.explicitEuler]
+   ```
+   Then `simp [h_broom₃_zero]` + `norm_num` to close.
 
-Optionally also ship the general-`m` closed form
-`powRep_inv_cherry_closed_form`:
+2. **m=0 broom₃ witness with reflexive agreement**:
+   ```lean
+   example :
+       elementaryWeightQ_phi
+           ((Quotient.mk PhiEquivalent.setoidSigma
+              ⟨1, RKTableau.explicitEuler⟩) ^ (-(((0 + 1 : ℕ) : ℤ))))
+           RootedTree.broom₃
+         = elementaryWeightQ_phi
+             ((Quotient.mk PhiEquivalent.setoidSigma
+                ⟨1, RKTableau.explicitEuler⟩) ^ (-(((0 + 1 : ℕ) : ℤ))))
+             RootedTree.broom₃ :=
+     powRep_sum_eq_of_agreement_at_broom₃_zero
+       (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+       (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+       rfl rfl rfl
+   ```
 
-```lean
-/-- General closed form `Φ_{η^(-(m+1))}(cherry) = (m+1)(m+2)/2 ·
-    (Φ_η(vertex))² − (m+1) · Φ_η(cherry)` (per cycle 366 task
-    results §Discovery #2). -/
-theorem powRep_inv_cherry_closed_form (m : ℕ)
-    (η_q : Quotient PhiEquivalent.setoidSigma) :
-    elementaryWeightQ_phi (η_q ^ (-(((m + 1) : ℕ) : ℤ))) RootedTree.cherry
-      = ((m + 1 : ℝ) * (m + 2) / 2)
-          * (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 2
-        - (m + 1 : ℝ)
-          * elementaryWeightQ_phi η_q RootedTree.cherry
-```
+## F. Insertion location
 
-**Risk**: the inductive step would need `Φ_{η^(-(m+1)) · η⁻¹}(cherry)`
-decomposition, which requires `elementaryWeightQ_phi_mul_mk` (cycle
-358) plus a closed form for `Φ_{η₁·η₂}(cherry)` at the quotient
-level. Cycle 358 gave `_mul_mk` (full bottom-block sum form), but
-the cherry-specific cleanup may itself blow up.
+Insert the four new declarations (theorem + theorem + example +
+example) in `OpenMath/Chapter4/Section422.lean` **between line
+2507** (end of cycle 367's m=0 cherry non-vacuity example) **and
+line 2509** (start of cycle 365's `linearResidualAt_depends_only_on_strict_subtrees`
+docstring). Match the cycle 367 docstring style (Phase D.3.b Step 2
+labelling, multi-paragraph rationale, proof-recipe summary).
 
-**Recommended**: **defer §C.2 to cycle 368** unless cycle 367 worker
-finds the inductive step easy after §B + §C.1 land. The cherry
-closed form for general `m` is genuinely useful infrastructure but
-NOT cycle 367's mandatory bar.
+## G. Verification checklist
 
-If attempting §C.2: alternative route via cycle 359's `_pow_succ_mk`
-+ cycle 361's `_zpow_negSucc_mk`. The `Φ_{η^(-(m+1))} · η = η^(-m)`
-identity may give a cleaner recursion than direct `_mul_mk` use.
+After writing the four new declarations:
 
-## §D. What NOT to attempt
+1. `time timeout 600 lake env lean OpenMath/Chapter4/Section422.lean`
+   — expect <300s warm rebuild on healthy GPFS. EXIT=0 required.
+2. `grep -c sorry OpenMath/Chapter4/Section422.lean` — must remain
+   5 (4 documentation references + 1 grandfathered Sub-lemma A).
+   **If this increases, REVERT immediately and do not commit.**
+3. `#print axioms OpenMath.Chapter4.Section422.elementaryWeightQ_phi_inv_broom₃`
+   — must be `[propext, Classical.choice, Quot.sound]` (no
+   `sorryAx`). **If `sorryAx` appears, REVERT and diagnose.**
+4. `#print axioms OpenMath.Chapter4.Section422.powRep_sum_eq_of_agreement_at_broom₃_zero`
+   — same requirement.
+5. Spot-check that the cycle 365/366/367 axiom-clean theorems
+   (`linearResidualAt_depends_only_on_strict_subtrees`,
+   `powRep_sum_eq_of_agreement_at_vertex`,
+   `elementaryWeightQ_phi_inv_cherry`,
+   `powRep_sum_eq_of_agreement_at_cherry_zero`) still match their
+   expected axiom profiles (one `sorryAx` for the headline; clean
+   for the others).
 
-### D.1 Do NOT attempt Sub-lemma A's general body
+If verification passes, §422 axiom-clean streak extends from 33 → 34
+(336–368). The Sub-lemma A general-body sorry remains grandfathered.
 
-Cycle 366 pre-flight analysis (documented in cycle 366 task results
-§Dead ends and §Discovery #1) conclusively established that the
-existing infrastructure cannot bridge the heterogeneous-inner-tableau
-gap:
+## H. DO NOT (explicit prohibitions)
 
-1. **Sub-approach 4.a (strong induction on `t.order` + cycle 362
-   substitution)**: cycle 362's lemma substitutes the *source*
-   tableau (`M₁`), not the *inner* tableau (`M₂`). Sub-lemma A's
-   LHS/RHS difference is precisely in the inner tableau, so cycle
-   362 cannot fire across the two sides. **DO NOT retry.**
+* **DO NOT touch Sub-lemma A's body** at line 2279. This is the
+  cycle 365 grandfathered sorry; closing it requires the multi-cycle
+  inner-tableau substitution lemma (Route A) per cycle 366 task
+  results. Cycle 368 is small-tree witness work, not Route A work.
+* **DO NOT attempt the general-m broom₃ closed form** in the same
+  cycle. Cycle 367 strategy §G explicitly notes the general-m
+  cherry form would need a `Φ_{η₁·η₂}(cherry)` decomposition lemma
+  that is itself multi-cycle. The m=0 corollary is the only
+  cycle 368 stretch.
+* **DO NOT attempt `mk [cherry]`** (the fourth order-3 tree) in the
+  same cycle. It is a third witness on the order-3 ladder and not
+  needed for cycle 368's planner-validation goal.
+* **DO NOT attempt the multilinear Phase D.3.a.3 ℤ-form** at
+  arbitrary `t` (cycle 360 deferral). That is Route A territory.
+* **DO NOT modify `linearResidualAt`'s definition** (cycle 364
+  audit fix is final).
+* **DO NOT raise `maxHeartbeats`** above 200000. If the per-summand
+  ring expansion (Path A) stalls, decompose into smaller named
+  `have` blocks; do NOT increase heartbeats.
+* **DO NOT submit to Aristotle this cycle.** The proof recipe is
+  mechanical (cycle 367 template with one more unfold layer), and
+  Aristotle jobs in the §422 cluster have historically been weak
+  on convolution-product algebra. Manual closure is faster and
+  more reliable.
+* **DO NOT introduce new axioms or `noncomputable` definitions.**
 
-2. **Sub-approach 4.b (induction on `m` at quotient level)**: base
-   case `m = 0` already hits the heterogeneous-sum issue after
-   cycle 358 `_inv_mk` expansion. Same obstacle, different shape.
-   **DO NOT retry.**
+## I. Failed approaches NOT to repeat (from cycle 366 / 367 logs)
 
-3. **Cross-cancellation via `η^(m+1) · η^(-(m+1)) = 1`**:
-   positive-power parametricity is itself open with the same
-   heterogeneity. **DO NOT retry.**
+* **Strong induction on `t.order`** with cycle 362's
+  `derivativeWeightWithSrc_eq_of_strict_subtree_agreement` (cycle
+  366 attempt): the substitution lemma swaps the SOURCE tableau
+  (`M₁` argument), not the INNER tableau (`M₂` argument), so it
+  cannot bridge cross-side heterogeneity in Sub-lemma A's general
+  body. **This path is documented closed** in
+  `.prover-state/issues/def_422B_phase_D_3_scoping.md` cycle 366
+  update. Cycle 368 is per-tree witness work; Sub-lemma A general
+  body remains deferred.
+* **`rw [show ∀ i, ...]` syntax** under a binder (cycle 367 dead
+  end): cannot rewrite under a binder with `rw`. Use
+  `Finset.sum_congr rfl (fun i _ => by ...)` inside a `calc`
+  chain or as a `have h_subst` intermediate instead. **Reapply
+  this pattern verbatim** in the broom₃ proof's per-summand
+  square expansion.
+* **`simp [explicitEuler]` over-eager reduction** (cycle 367 dead
+  end at cherry non-vacuity): when `simp` reduces the outer sum
+  but leaves the inner `derivativeWeight i cherry` unfolded,
+  introduce a separate `h_<tree>_zero` step that manually unfolds
+  the inner expression via `show ... = 0` and a targeted simp set
+  with `RKTableau.explicitEuler` + `Fin.sum_univ_one`. **Reapply
+  this pattern** in the broom₃ non-vacuity example: add a separate
+  `h_broom₃_zero : RKTableau.explicitEuler.derivativeWeight 0
+  RootedTree.broom₃ = 0` step.
+* **`norm_num` for `Int.negSucc` bridging** (cycle 361 dead end):
+  `-(((m+1):ℕ):ℤ) = Int.negSucc m` is definitional `rfl`; do NOT
+  use `norm_num` (leaves display-ambiguous unsolved goal). Use
+  `Nat.cast_one + zpow_neg_one` (cycle 367 m=0 cherry recipe)
+  uniformly in the m=0 broom₃ corollary.
 
-These require new infrastructure (cycle 368+ — see §G).
+## J. Risk and abort criteria
 
-### D.2 Do NOT modify cycle 366's vertex witness
+* **MEDIUM risk** that the per-summand square expansion (Path A
+  in C.5) takes longer than expected. The cycle 367 cherry proof
+  was ~40 LOC; broom₃ may be 60–80 LOC due to the extra unfold
+  layer for two-child trees plus the squared-quantity arithmetic.
+* **Abort threshold**: if after 60 minutes of focused work the
+  per-summand expansion is not closing, ABANDON Path A and try
+  **Path B**: open the square via `add_sq` (Mathlib name; verify
+  with `lean_local_search "add_sq"` or
+  `lean_loogle "(_ + _) ^ 2"`) at the very start of `h_expand`,
+  getting an explicit ternary sum, then close via
+  `Finset.sum_add_distrib` + `Finset.sum_sub_distrib` +
+  `← Finset.mul_sum` × 2.
+* **Hard abort**: if neither path closes within 2 hours total,
+  REVERT to HEAD and ship only the m=0 corollary alongside a
+  cycle 369+ scoping note explaining the obstacle. **Do NOT leave
+  a sorry in the broom₃ closed form**. The cycle 365 rollback
+  precedent (revert if sorry count would rise) is in force.
+* **Sorry count discipline**: this cycle must NOT increase code-
+  level sorry count above 1 (the grandfathered Sub-lemma A
+  sorry). Any new sorry introduced REVERTS the cycle.
 
-`powRep_sum_eq_of_agreement_at_vertex` (cycle 366, axiom-clean) is
-correct and load-bearing for future planning. The cycle 367 cherry
-witness is *additional* infrastructure, not a replacement.
+## K. Expected cycle 368 outcome (success criteria)
 
-### D.3 Do NOT touch Sub-lemma B's headline
+* Two new public theorems shipped axiom-clean:
+  `elementaryWeightQ_phi_inv_broom₃` and
+  `powRep_sum_eq_of_agreement_at_broom₃_zero`.
+* Two new non-vacuity `example`s on `explicitEuler`.
+* `lake env lean OpenMath/Chapter4/Section422.lean` exits 0.
+* `grep -c sorry` returns 5 (unchanged).
+* §422 axiom-clean streak: 33 → 34.
+* Section422.lean grows from 2596 → ~2700 LOC.
+* `extraction/formalization_data/lean_status.json` unchanged for
+  `def:422B` (it's already `partial`).
+* `plan.md` def:422B row may be updated with a cycle 368 line
+  noting "third-tree closed form (broom₃) extends the witness
+  library; closed-form pattern now validated at 3 trees of orders
+  1, 2, 3".
 
-`linearResidualAt_depends_only_on_strict_subtrees` (cycle 365) is
-shipped axiom-clean modulo Sub-lemma A's body. Once Sub-lemma A
-lands in some future cycle, its `#print axioms` will auto-upgrade
-from `[propext, sorryAx, Classical.choice, Quot.sound]` to
-`[propext, Classical.choice, Quot.sound]` *without any headline
-restatement*. Do not preemptively touch the headline.
+## L. Cycle 369+ outlook (per cycle 367 §G decision rule)
 
-### D.4 Do NOT attempt to compile `Section441.lean`
+* **If broom₃ closed form ships cleanly in 1 cycle** (this cycle):
+  the Route B Hypothesis (cycle 366 §G) is now supported by THREE
+  data points (vertex, cherry, broom₃). Cycle 369 should attempt
+  the **inductive `t.order` formulation of Sub-lemma A** — i.e.
+  start the multi-cycle Route B closure, going through a uniform
+  `Φ_{η⁻¹}(t)` closed-form theorem indexed by tree depth.
+* **If broom₃ resists in 1 cycle** (e.g. abort at J): pivot to
+  Route A (inner-tableau substitution lemma) as a multi-cycle
+  effort. File a scoping doc explaining the obstacle.
+* **Stretch (skip this cycle)**: general-m cherry closed form
+  `powRep_inv_cherry_closed_form` per cycle 367 §C.2. This is
+  cycle 370+ work, NOT cycle 368.
 
-43+ consecutive GPFS timeouts since cycle 182 per
-`.prover-state/issues/cycle_182_gpfs_slowness.md`. Skip per the
-standing protocol.
+## M. Bottom line for the worker
 
-### D.5 Do NOT introduce sorries beyond the existing one
+Cycle 368 is a focused **single-tree extension** of the cycle 367
+cherry template. Mirror the cherry proof recipe (lines 2376–2439
+of `Section422.lean`) with one additional unfold layer for the
+two-child `broom₃` structure. The closed form is
+`Φ_{η⁻¹}(broom₃) = -(Φ_η(vertex))³ + 2·Φ_η(vertex)·Φ_η(cherry) -
+Φ_η(broom₃)`. The m=0 corollary is a 3-line `rw` chain. The
+non-vacuity at `explicitEuler` is `-1` and closes with the
+`h_broom₃_zero` workaround from cycle 367.
 
-The existing sorry at `Section422.lean:2279` (Sub-lemma A's body) is
-grandfathered from cycle 365. The cycle 367 deliverables must be
-axiom-clean. If §C.2's general-`m` form blocks, ship only §C.1's
-`m = 0` specialisation — that's strictly axiom-clean and preserves
-the streak.
+Both theorems must be axiom-clean. Sorry count must remain at 5.
+The Sub-lemma A grandfathered sorry stays untouched. Do not pursue
+the general-m form, do not pursue `mk [cherry]`, do not pursue
+Route A, do not submit to Aristotle.
 
-### D.6 Do NOT raise `maxHeartbeats`
-
-If §B.2's Step 4 arithmetic blows past the default 200000, factor
-the per-step calculations into private lemmas. Per CLAUDE.md.
-
-### D.7 Do NOT introduce `axiom` or `constant` declarations
-
-Per CLAUDE.md absolute rule. If §B or §C blocks on a Mathlib gap,
-file an issue and ship Priority 1 only.
-
-## §E. Faithfulness considerations
-
-Cycle 367's deliverables are Lean-side infrastructure helpers, NOT
-textbook entities. The §422 `def:422B` entity remains `partial` in
-`lean_status.json` (and `[~]` in `plan.md`). The cherry closed form
-and its `m = 0` corollary do not by themselves close any textbook
-lemma — they extend the Sub-lemma A specialised-witness library by
-one tree.
-
-**For the new `theorem` `elementaryWeightQ_phi_inv_cherry`**: 
-
-- Tautology check: PASS expected — conclusion
-  `Φ_{η⁻¹}(cherry) = (Φ_η(vertex))² − Φ_η(cherry)` is a genuine
-  closed-form identity, not equal to any hypothesis.
-- Identity check: PASS expected — proof composes cycle 358
-  `_inv_mk` + cycle 187 `derivativeWeight_vertex` + arithmetic;
-  not a one-line `exact h`.
-- Definition smuggling check: PASS — no new `def`/`structure`.
-- Hypothesis strength: PASS — universally quantified over all
-  `η_q : Quotient PhiEquivalent.setoidSigma`, matches the cycle
-  341 P3 vertex template's signature pattern.
-
-**For the new `theorem` `powRep_sum_eq_of_agreement_at_cherry_zero`**:
-
-- Tautology check: PASS — conclusion at `cherry, m = 0` is *not*
-  reachable from the per-tree hypotheses without the inv-cherry
-  closed form.
-- Identity check: PASS — 3-line proof using `_inv_cherry` + 2 `rw`s.
-- Hypothesis strength: matches the closed-subtree at cherry case
-  (just two equations); cannot be weakened further since both
-  `h_vertex` and `h_cherry` are individually load-bearing.
-
-Update `.prover-state/issues/def_422B_phase_D_3_scoping.md` with a
-"Cycle 367 update" subsection per the cycles 358/359/360/361/362/365/366
-precedent — summarise the cherry closed-form ship + where it sits
-relative to Phase D.3.d's blocking dependency on Sub-lemma A
-general body.
-
-## §F. Verification checklist
-
-After landing §B + §C.1:
-
-1. `lake build OpenMath.Chapter4.Section422` exits 0 (~150–270 s
-   warm cache expected).
-2. `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 lines
-   (unchanged from cycle 366: 4 doc references + 1 actual code
-   sorry — Sub-lemma A's body, grandfathered).
-3. `#print axioms` on each new public theorem returns
-   `[propext, Classical.choice, Quot.sound]` only:
-   - `elementaryWeightQ_phi_inv_cherry`
-   - `powRep_sum_eq_of_agreement_at_cherry_zero`
-   - (if shipped) `powRep_inv_cherry_closed_form`
-4. `#print axioms linearResidualAt_depends_only_on_strict_subtrees`
-   still returns `[propext, sorryAx, Classical.choice, Quot.sound]`
-   (unchanged — Sub-lemma A body still sorry'd).
-5. `grep -n "sorry" OpenMath/Chapter4/Section422.lean` shows only
-   the line at `Section422.lean:2279` (Sub-lemma A body) plus the
-   4 doc references.
-
-§422 axiom-clean streak target: **32 → 33** (336–367) if §B + §C.1
-both land.
-
-## §G. Cycle 368+ outlook — Sub-lemma A general body
-
-The heterogeneity obstacle requires new infrastructure beyond the
-cycle 367 cherry ship. Per cycle 366 §Discovery #1, three routes
-remain:
-
-* **Route A (cycle 368+, multi-cycle)**: inner-tableau substitution
-  lemma. Prove a cycle-362-style substitution where the *inner*
-  tableau varies under appropriate hypotheses. Likely 150–300 LOC
-  spanning 2–3 cycles. The substantive content is understanding how
-  `derivativeWeightWithSrc M₂ M₁ i t` depends on `M₂`'s `A, b, c`
-  data.
-
-* **Route B (cycle 368+, exploratory)**: quotient-level
-  reformulation. Cycle 367's cherry closed form
-  (`Φ_{η^(-(m+1))}(cherry) = (m+1)(m+2)/2 · Φ_η(vertex)² − (m+1) ·
-  Φ_η(cherry)`) is the cherry instance of a hoped-for *general*
-  closed-form pattern: `Φ_{η^(-(m+1))}(t)` as a polynomial in
-  `Φ_η` at strict subtrees of `t` with quotient-invariant
-  coefficients. If this pattern generalises (induction on
-  `t.order`?), Sub-lemma A reduces to a closed-form lookup.
-  **Cycle 367's cherry ship is the first non-trivial data point**
-  for this hypothesis — cycle 368 should attempt the pattern at
-  `broom₃` (next-simplest tree, order 3) to gauge tractability.
-
-* **Route C (cycle 368+, structural)**: well-founded induction on
-  `t.order` with a stronger motive. Same blocker as Sub-approach
-  4.a — inner-tableau heterogeneity at `t` itself unresolved.
-  **Unlikely to be the right path** without first attempting
-  Routes A or B.
-
-**Recommended cycle 368 strategy** (preliminary): ship Route B at
-`broom₃` (third tree). If the closed-form pattern is identifiable
-across vertex/cherry/broom₃, cycle 369+ can attempt the general
-inductive formulation. If broom₃ resists, pivot to Route A
-infrastructure (the safer multi-cycle path).
-
-**Phase D.3.d remains blocked** on Sub-lemma A general body. Cycle
-367's deliverables are pure infrastructure / non-vacuity ship, not
-a Phase D.3.d unblock. Phase E sealing of `def:422B` projected for
-cycle 370+ (revised down from earlier projections due to the
-multi-cycle Sub-lemma A blocker).
-
-## §H. Cycle 367 LOC budget
-
-| Deliverable                                              | LOC est. | Required? |
-|----------------------------------------------------------|----------|-----------|
-| `sumB_eq_elementaryWeight_vertex` (helper, or inline)    | ~5–15    | yes       |
-| `elementaryWeightQ_phi_inv_cherry`                       | ~40      | yes (§B)  |
-| `_inv_cherry` non-vacuity on `explicitEuler`             | ~5–10    | yes       |
-| `powRep_sum_eq_of_agreement_at_cherry_zero` (§C.1 minimal) | ~10    | yes       |
-| `powRep_inv_cherry_closed_form` (§C.2 general m)         | ~50      | stretch   |
-| Scoping doc update (`def_422B_phase_D_3_scoping.md`)     | ~30 doc  | yes       |
-
-Target total: **~85 LOC core + ~30 LOC doc = ~115 LOC**. Stretch:
-+50 LOC if §C.2 closes cleanly. Within cycle 367's single-cycle
-budget.
-
-## §I. Implementation order
-
-1. **(5 min)** Verify `lake build OpenMath.Chapter4.Section422`
-   exits 0 on HEAD (sanity check).
-2. **(15 min)** Read cycle 358 `_inv_mk` proof at
-   `Section381.lean:~2820` and cycle 226 `elementaryWeight_eq` /
-   cycle 187 `derivativeWeight_vertex` for the §B.2 proof body.
-   Verify `derivativeWeightWithSrcProd` recursion at
-   `Section381.lean:~2680–2700`.
-3. **(15 min)** Ship `sumB_eq_elementaryWeight_vertex` helper (or
-   plan to inline equivalently).
-4. **(45 min)** Ship `elementaryWeightQ_phi_inv_cherry` (§B).
-   Follow §B.2 recipe step-by-step. If Step 4 arithmetic blows
-   up, factor each algebraic step into a private `have` first.
-5. **(10 min)** Add the `explicitEuler` non-vacuity example (§B.4)
-   with the correct numeric RHS `1` (verified: `1² − 0 = 1`).
-6. **(15 min)** Ship `powRep_sum_eq_of_agreement_at_cherry_zero`
-   (§C.1) — 3-line proof via two `rw` calls.
-7. **(stretch, 60 min)** Attempt `powRep_inv_cherry_closed_form`
-   (§C.2 general-`m`). If the inductive step's `Φ_{·*·}(cherry)`
-   decomposition stalls past 30 min, STOP and ship Priority 1 only.
-8. **(15 min)** Run verification checklist (§F).
-9. **(15 min)** Update `.prover-state/issues/def_422B_phase_D_3_scoping.md`
-   with cycle 367 closure subsection per §E.
-10. **(10 min)** Write `.prover-state/task_results/cycle_367.md`.
-
-Total: ~2.5 hours core, +1 hour stretch.
+Total expected cycle effort: ~60–90 minutes of focused work,
+~80–100 new LOC across four declarations + their docstrings.
