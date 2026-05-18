@@ -4759,6 +4759,123 @@ theorem inversePolyChain_three (f : RT → ℝ) :
   rw [inversePolyChain_two, inversePolyChain_one, inversePolyChain_zero]
   ring
 
+/-! ### Phase α'.3 (cycle 382) — Family B closed-form helper `inversePolyBroom`
+
+This block introduces a closed-form helper `inversePolyBroom k f` parametrising
+the §385/§387 inverse polynomial values over the **broom family** of trees
+`broomTree k = mk [vertex, …, vertex]` (`k` leaves):
+
+* `broomTree 0 = vertex`
+* `broomTree 1 = cherry`
+* `broomTree 2 = broom₃`
+* `broomTree 3 = bushy`
+
+Unlike Family A's `inversePolyChain` (a single-child convolution recursion),
+the broom family closed forms follow a **binomial-style sum**:
+
+  `inversePolyBroom k f =
+     Σⱼ∈[0..k], (-1)^(k+1+j) · C(k,j) · (f vertex)^(k-j) · f (broomTree j)`.
+
+The closed-form theorems `inversePolyBroom_{zero,one,two,three}` reproduce
+the cycle 341 (vertex), 367 (cherry), 368 (broom₃), 370 (bushy) closed
+forms verbatim. This helper is **Phase α'.3 infrastructure** — the
+Family B branches of `inversePolynomial` are migrated in cycle 383+
+(parallel to the cycle 380 → 381 chain for Family A). -/
+
+/-- *Phase α'.3 (cycle 382) — `k`-leaf broom tree.*
+`broomTree 0 = vertex`, `broomTree (n+1) = mk (List.replicate (n+1) vertex)`.
+Concretely: `broomTree 1 = cherry`, `broomTree 2 = broom₃`,
+`broomTree 3 = bushy`. -/
+def broomTree : ℕ → RT
+  | 0 => RootedTree.vertex
+  | n + 1 =>
+    OpenMath.Chapter3.Section310.RootedTree.mk
+      (List.replicate (n + 1) RootedTree.vertex)
+
+/-- *Phase α'.3 (cycle 382) — `broomTree 1 = cherry`.* -/
+theorem broomTree_one : broomTree 1 = RootedTree.cherry := rfl
+
+/-- *Phase α'.3 (cycle 382) — `broomTree 2 = broom₃`.* -/
+theorem broomTree_two : broomTree 2 = RootedTree.broom₃ := rfl
+
+/-- *Phase α'.3 (cycle 382) — `broomTree 3 = bushy`.* -/
+theorem broomTree_three : broomTree 3 = RootedTree.bushy := rfl
+
+/-- *Phase α'.3 (cycle 382) — Family B closed-form helper.*
+
+For the `k`-leaf broom tree `broomTree k`,
+`inversePolyBroom k f` evaluates to `Φ_{η⁻¹}(broomTree k)` (when
+`f = Φ_η`) via the binomial-style closed form derived by expanding
+`(M.inverse.elementaryWeight vertex + Σⱼ M.A i j)^k = (Aᵢ − v)^k`
+(cycle 368 Discovery) and summing against `M.b i`.
+
+Closed form:
+`inversePolyBroom k f = Σⱼ∈range(k+1), (-1)^(k+1+j) · C(k,j) ·
+                          (f vertex)^(k-j) · f (broomTree j)`. -/
+noncomputable def inversePolyBroom (k : ℕ) (f : RT → ℝ) : ℝ :=
+  ∑ j ∈ Finset.range (k + 1),
+    (-1 : ℝ) ^ (k + 1 + j) * (Nat.choose k j : ℝ)
+      * (f RootedTree.vertex) ^ (k - j)
+      * f (broomTree j)
+
+/-- *Phase α'.3 (cycle 382) — `inversePolyBroom` base case `k = 0`.*
+
+Matches the cycle 341 vertex closed form `-Φ_η(τ)`. -/
+theorem inversePolyBroom_zero (f : RT → ℝ) :
+    inversePolyBroom 0 f = -f RootedTree.vertex := by
+  unfold inversePolyBroom
+  rw [Finset.sum_range_succ, Finset.sum_range_zero, zero_add]
+  show (-1 : ℝ) ^ (0 + 1 + 0) * ((Nat.choose 0 0 : ℕ) : ℝ)
+        * (f RootedTree.vertex) ^ (0 - 0) * f (broomTree 0) = _
+  simp [broomTree]
+
+/-- *Phase α'.3 (cycle 382) — `inversePolyBroom` closed form at `k = 1`.*
+
+Matches the cycle 367 closed form `(Φ_η τ)² − Φ_η [τ]` for `cherry`. -/
+theorem inversePolyBroom_one (f : RT → ℝ) :
+    inversePolyBroom 1 f
+      = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry := by
+  unfold inversePolyBroom
+  rw [Finset.sum_range_succ, Finset.sum_range_succ, Finset.sum_range_zero,
+      zero_add, show broomTree 0 = RootedTree.vertex from rfl, broomTree_one]
+  simp [Nat.choose]
+  ring
+
+/-- *Phase α'.3 (cycle 382) — `inversePolyBroom` closed form at `k = 2`.*
+
+Matches the cycle 368 closed form
+`-(Φ_η τ)³ + 2·Φ_η τ·Φ_η [τ] − Φ_η [τ,τ]` for `broom₃`. -/
+theorem inversePolyBroom_two (f : RT → ℝ) :
+    inversePolyBroom 2 f
+      = -(f RootedTree.vertex) ^ 3
+        + 2 * f RootedTree.vertex * f RootedTree.cherry
+        - f RootedTree.broom₃ := by
+  unfold inversePolyBroom
+  rw [Finset.sum_range_succ, Finset.sum_range_succ, Finset.sum_range_succ,
+      Finset.sum_range_zero, zero_add,
+      show broomTree 0 = RootedTree.vertex from rfl, broomTree_one, broomTree_two]
+  simp [Nat.choose]
+  ring
+
+/-- *Phase α'.3 (cycle 382) — `inversePolyBroom` closed form at `k = 3`.*
+
+Matches the cycle 370 closed form
+`(Φ_η τ)⁴ − 3·(Φ_η τ)²·Φ_η [τ] + 3·Φ_η τ·Φ_η [τ,τ] − Φ_η [τ,τ,τ]`
+for `bushy`. -/
+theorem inversePolyBroom_three (f : RT → ℝ) :
+    inversePolyBroom 3 f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy := by
+  unfold inversePolyBroom
+  rw [Finset.sum_range_succ, Finset.sum_range_succ, Finset.sum_range_succ,
+      Finset.sum_range_succ, Finset.sum_range_zero, zero_add,
+      show broomTree 0 = RootedTree.vertex from rfl, broomTree_one, broomTree_two,
+      broomTree_three]
+  simp [Nat.choose]
+  ring
+
 /-! ### Phase α.1 (cycle 374) — `inversePolynomial` pattern-match definition
 
 `inversePolynomial t f` is the closed-form polynomial in the elementary
