@@ -1,289 +1,402 @@
-# Cycle 382 strategy
+# Cycle 384 strategy
 
-## A. Status
+## TL;DR
 
-Cycle 381 closed Phase α'.2 (Family A bridge migration) axiom-clean,
-score=1. The §422 axiom-clean streak now stands at **46 substantive
-+ 1 doc** (cycles 336–381). Section422.lean: ~5870 LOC, sorry count
-**5 lines = 4 docstring + 1 code** (the grandfathered cycle 365 sorry
-at line 2272). No pending Aristotle results.
+**Ship `elementaryWeightQ_phi_inv_mkCherryCherry`** (the 9th-tree
+closed form at the order-5 tree `mk [cherry, cherry]`) plus its
+m=0 Sub-lemma A corollary, both axiom-clean. This is a mechanical
+extension of the cycle 367–372 single-tree-per-cycle ladder using
+the cycle 371/372 template (heterogeneous-children trees).
 
-State of `inversePolynomial` (Section422.lean:4810+):
-* Family A branches (vertex, cherry, mk [cherry], mk [mk [cherry]])
-  dispatch to `inversePolyChain k f` for `k = 0, 1, 2, 3` — cycle 381.
-* Family B/C branches (bushy, mk [broom₃], mk [vertex, cherry],
-  broom₃) still use explicit `if-then-else` polynomial bodies.
+Hard-rejected alternatives: scoping-doc-only (cycle 379 was scored
+**0** for shipping only markdown — the supervisor wants Lean code
+per cycle); Family C scoping work in isolation (premature: cycle
+372 worker explicitly said 2 Family C data points was insufficient
+for unification; need a 3rd disambiguation data point first); any
+attempt at the cycle 365 grandfathered sorry (multi-cycle work
+gated on a unified `inversePolyTree` recursion that doesn't exist
+yet).
 
-## B. Cycle 382 target — Phase α'.3 Family B `inversePolyBroom` helper
+This cycle continues the cycle 322-onward §422 axiom-clean streak
+**47 substantive + 1 doc → 48 substantive + 1 doc** (cycles 336–384).
 
-Per cycle 381 worker's "Suggested next approach" Option B
-(recommended). Mirror cycle 380's `inversePolyChain` ship pattern,
-but for the **broom family** (multi-leaf trees `mk [vertex, …, vertex]`).
-Do **NOT** migrate Family B branches in `inversePolynomial` this
-cycle — that is cycle 383+ work (parallel to cycle 380→381).
+## Status at HEAD (commit `091f6f3`)
 
-Define a closed-form sum helper (NOT a convolution recurrence — the
-broom family does not have the single-child convolution structure
-that `inversePolyChain` exploits) and prove four small-`k` closed
-forms matching cycles 341/367/368/370.
+* `OpenMath/Chapter4/Section422.lean`: ~5999 LOC.
+* `grep -c sorry` = 5 lines (4 docstring + 1 actual code sorry at
+  line 2279, the cycle 365 grandfathered
+  `powRep_sum_eq_of_strict_subtree_agreement` body).
+* Witness library: 8 trees with closed-form inverse +
+  m=0 corollaries shipped (vertex, cherry, broom₃, mk [cherry],
+  bushy, mk [broom₃], mk [vertex, cherry], mk [mk [cherry]]).
+* `inversePolynomial` covers 8 ladder trees + `0` fallback; Family
+  A `inversePolyChain` (4 cases) and Family B `inversePolyBroom` (4
+  cases) closed-form helpers migrated cycles 380/381/382/383.
+* The order-5 tree `mk [cherry, cherry]` already has B-series
+  infrastructure shipped in cycle 269
+  (`bseriesExactTerm_mkCherryCherry_scalar` at
+  `OpenMath/Chapter3/Section301.lean:1747`); confirmed `σ = 2`,
+  `γ = 20` via `rfl`-reducible structural values.
 
-## C. Concrete deliverables
+## P1 (primary, mandatory) — ship `elementaryWeightQ_phi_inv_mkCherryCherry`
 
-Append a new Phase α'.3 block to `OpenMath/Chapter4/Section422.lean`
-immediately after cycle 380's `inversePolyChain_three` (~line 4760)
-and BEFORE cycle 381's reordered Family A block boundary. Six
-new public declarations.
+**Target file**: `OpenMath/Chapter4/Section422.lean`. Insert the new
+theorem **immediately after** cycle 378's
+`powRep_sum_eq_of_agreement_at_mkMkCherry_zero` (which ends around
+line 4554). Keep the chronological cycle ordering visible in the
+file.
 
-### 1. `broomTree : ℕ → RT` definition
-
-```lean
-/-- *Phase α'.3 (cycle 382) — `k`-leaf broom tree.*
-`broomTree 0 = vertex`, `broomTree (k+1) = mk (List.replicate (k+1) vertex)`.
-Concretely: `broomTree 1 = cherry`, `broomTree 2 = broom₃`,
-`broomTree 3 = bushy`. -/
-def broomTree : ℕ → RT
-  | 0 => RootedTree.vertex
-  | n + 1 =>
-    OpenMath.Chapter3.Section310.RootedTree.mk
-      (List.replicate (n + 1) RootedTree.vertex)
-```
-
-### 2. Three name-equality theorems (each `by rfl`)
-
-```lean
-theorem broomTree_one : broomTree 1 = RootedTree.cherry := rfl
-theorem broomTree_two : broomTree 2 = RootedTree.broom₃ := rfl
-theorem broomTree_three : broomTree 3 = RootedTree.bushy := rfl
-```
-
-If `rfl` fails for `broomTree_two` / `broomTree_three`, fall back to
-`by simp [broomTree, List.replicate, RootedTree.broom₃,
-RootedTree.bushy]` or `by decide`.
-
-### 3. `inversePolyBroom : ℕ → (RT → ℝ) → ℝ` definition
-
-The closed-form sum (NOT a recurrence):
+**Target statement** (signature to type-check first; worker derives
+the precise polynomial during proof):
 
 ```lean
-/-- *Phase α'.3 (cycle 382) — Family B closed-form helper.*
+/-- **Quotient-level closed form: `Φ_{η_q⁻¹}` at `mk [cherry, cherry]`.**
 
-For the `k`-leaf broom tree `broomTree k`,
-`inversePolyBroom k f` evaluates to `Φ_{η⁻¹}(broomTree k)` (when
-`f = Φ_η`) via the binomial-style closed form derived by
-expanding `(M.inverse.elementaryWeight vertex + Σⱼ M.A i j)^k =
-(Aᵢ − v)^k` (cycle 368 Discovery) and summing against `M.b i`.
-
-Closed form:
-`inversePolyBroom k f = Σⱼ∈range(k+1), (-1)^(k+1+j) · C(k,j) ·
-                          (f vertex)^(k-j) · f (broomTree j)`. -/
-noncomputable def inversePolyBroom (k : ℕ) (f : RT → ℝ) : ℝ :=
-  ∑ j ∈ Finset.range (k + 1),
-    (-1 : ℝ) ^ (k + 1 + j) * (Nat.choose k j : ℝ)
-      * (f RootedTree.vertex) ^ (k - j)
-      * f (broomTree j)
+Order-5 tree with σ=2 (two identical cherry children — `2!·σ(cherry)²`).
+Ninth tree in the inverse-polynomial closed-form ladder; first
+**symmetric two-non-leaf-children** witness. Disambiguates Family C
+recipe alongside cycle 371 `mk [broom₃]` (single non-leaf child) and
+cycle 372 `mk [vertex, cherry]` (mixed leaf + non-leaf children). -/
+theorem elementaryWeightQ_phi_inv_mkCherryCherry
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi (η_q⁻¹)
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.cherry, RootedTree.cherry])
+      = -- closed form, derived below by worker
+        sorry
 ```
 
-### 4. Four closed-form calibration theorems
+**Closed-form derivation steps** (worker MUST derive symbolically
+on paper before coding the RHS):
 
-Mirror cycle 380's `inversePolyChain_{zero,one,two,three}` pattern:
+* Let `v := Φ_η(vertex), c := Φ_η(cherry), b' := Φ_η(broom₃),
+  m := Φ_η(mk [cherry]), C := Φ_η(mk [cherry, cherry])`.
+* Cycle 358 `elementaryWeightQ_phi_inv_mk` gives:
+  `Φ_{η⁻¹}(mk [cherry, cherry]) = −Σⱼ M.b j · M.derivativeWeightWithSrc M.inverse j (mk [cherry, cherry])`.
+* For `mk [cherry, cherry]`, the `derivativeWeightWithSrc M.inverse i`
+  factorizes via cycle 372-style two-child unfold into a product of
+  two source-tagged factors *each at `cherry`*. Both factors are
+  identical (same child); use cycle 367's `h_dws_cherry`:
+  `M.derivativeWeightWithSrc M.inverse i cherry = M.inverse.elementaryWeight vertex + (Σⱼ Aᵢⱼ)`
+  `= -v + Aᵢ` (using `h_inv_v`).
+* Per-row factor: `(-v + Aᵢ)²` where `Aᵢ := Σⱼ Aᵢⱼ`.
+* Distribute: `Σᵢ M.b i · (-v + Aᵢ)² = Σᵢ M.b i · (v² − 2v·Aᵢ + Aᵢ²)`.
+  - The `v² · Σᵢ M.b i = v² · v = v³` (using `h_vertex`).
+  - The `−2v · Σᵢ M.b i · Aᵢ = −2v · c` (using `h_cherry`).
+  - The `Σᵢ M.b i · Aᵢ² = b'` (using `h_broom₃`).
+* So `Σᵢ M.b i · derivativeWeightWithSrc M.inverse i (mk [cherry, cherry])
+  = v³ − 2v·c + b' + (the part involving C itself from the
+  outermost layer of derivativeWeightWithSrc)`.
+
+**WARNING**: the derivation above is incomplete — the worker must
+unfold `M.derivativeWeightWithSrc M.inverse i (mk [cherry, cherry])`
+carefully via the cycle 372 two-child cons-case pattern. There may
+be an additional `+M.elementaryWeight(mk [cherry, cherry])` term
+contributing from the outer-layer unfold beyond just the product of
+two cherry-child factors. Reference cycle 372's `h_dws_mkVertexCherry`
+proof at `Section422.lean:3940–3970` for the precise two-layer recipe.
+
+**Predicted closed form** (likely; worker verifies):
+
+```
+Φ_{η⁻¹}(mk [cherry, cherry])
+  = -v³ + 2v·c - b' - (something at mk [cherry])  -- speculative;
+  - C
+```
+
+OR (alternative shape, possibly correct):
+
+```
+Φ_{η⁻¹}(mk [cherry, cherry]) = v⁴ − 2v²·c + c² − v·b' + 2v·m − C
+```
+
+The cycle 371 `mk [broom₃]` form has 5 terms ending in `−M`; cycle
+372 `mk [vertex, cherry]` has 6 terms ending in `−V`. Cycle 384's
+`mk [cherry, cherry]` is symmetric like cycle 371 and probably has
+4–6 terms ending in `−C`. **Worker must compute, not guess.**
+
+**Proof recipe**: copy-paste the cycle 372
+`elementaryWeightQ_phi_inv_mkVertexCherry` skeleton verbatim
+(`Section422.lean:3798–4135`) and adapt:
+
+1. **Reused helpers** (verbatim from cycle 372 / 369 / 368 / 367):
+   - `h_inv_v`, `h_vertex` (cycle 367).
+   - `h_dw_cherry`, `h_cherry`, `h_dws_cherry` (cycle 367).
+   - `h_dw_broom₃`, `h_broom₃` (cycle 368).
+   - `h_inv_cherry` (cycle 369, representative-lift at `⟦M⟧`).
+   - `h_dw_mkCherry`, `h_mkCherry` (cycle 369) — include ONLY if
+     the closed form has an `m` term, else drop.
+
+2. **New helpers** for the two-identical-cherry-children structure:
+   - `h_dw_mkCherryCherry : ∀ i,
+        M.derivativeWeight i (mk [cherry, cherry])
+          = (∑ j, M.A i j * ∑ k, M.A j k)²`
+     via two-cons unfold using `h_dw_cherry` per slot; the two
+     identical cherry factors collapse to a square.
+   - `h_mkCherryCherry : M.elementaryWeight (mk [cherry, cherry])
+        = ∑ i, M.b i * (∑ j, M.A i j * ∑ k, M.A j k)²`
+     via `Finset.sum_congr` + `h_dw_mkCherryCherry`.
+   - `h_dws_mkCherryCherry : ∀ i,
+        M.derivativeWeightWithSrc M.inverse i (mk [cherry, cherry])
+          = (M.inverse.elementaryWeight cherry + ...)²` OR appropriate
+     two-cherry product form
+     via two-layer cons-case unfold; the *outer* layer strips `mk` and
+     produces a product of two source-tagged factors; both factors
+     reduce via cycle 367's `h_dws_cherry` (identical children, so
+     the same simplification applies twice). **CRITICAL**: this is
+     where the two-cherry symmetry differs from cycle 372's
+     `mk [vertex, cherry]` — for cycle 372 the first factor was
+     `M.derivativeWeightWithSrc M.inverse i vertex = 1` (trivial),
+     here it's `M.derivativeWeightWithSrc M.inverse i cherry` (non-trivial,
+     squared).
+
+3. **Main `h_sum` computation**:
+   - Apply cycle 358 `elementaryWeightQ_phi_inv_mk` to expose the
+     `-Σᵢ M.b i · M.derivativeWeightWithSrc M.inverse i (mk
+     [cherry, cherry])` form.
+   - Substitute `h_dws_mkCherryCherry` per `i`.
+   - Distribute `Σᵢ M.b i · (factor)²` via `Finset.sum_congr` +
+     `ring` per-term into a sum of named elementary weights via
+     `← Finset.mul_sum` + back-substitution
+     (`← h_vertex, ← h_cherry, ← h_broom₃, ...` as needed).
+
+4. **Close** with `linarith` or `ring` after all elementary weights
+   are re-substituted.
+
+**LOC budget**: 220 LOC (similar to cycle 371's 230 LOC, cycle 372's
+220 LOC).
+
+**Axiom target**: `[propext, Classical.choice, Quot.sound]` only.
+
+## P2 (mandatory) — ship `powRep_sum_eq_of_agreement_at_mkCherryCherry_zero`
+
+The m=0 Sub-lemma A corollary. Place immediately after the P1 theorem.
+Mirror cycle 371 `_at_mkBroom₃_zero` / cycle 372 `_at_mkVertexCherry_zero`
+exactly:
 
 ```lean
-theorem inversePolyBroom_zero (f : RT → ℝ) :
-    inversePolyBroom 0 f = -f RootedTree.vertex
-
-theorem inversePolyBroom_one (f : RT → ℝ) :
-    inversePolyBroom 1 f
-      = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry
-
-theorem inversePolyBroom_two (f : RT → ℝ) :
-    inversePolyBroom 2 f
-      = -(f RootedTree.vertex) ^ 3
-        + 2 * f RootedTree.vertex * f RootedTree.cherry
-        - f RootedTree.broom₃
-
-theorem inversePolyBroom_three (f : RT → ℝ) :
-    inversePolyBroom 3 f
-      = (f RootedTree.vertex) ^ 4
-        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
-        + 3 * f RootedTree.vertex * f RootedTree.broom₃
-        - f RootedTree.bushy
+/-- **m=0 case of Sub-lemma A at `t = mk [cherry, cherry]`.** -/
+theorem powRep_sum_eq_of_agreement_at_mkCherryCherry_zero
+    (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+    (h_vertex : elementaryWeightQ_phi η_q RootedTree.vertex
+                 = elementaryWeightQ_phi η_q' RootedTree.vertex)
+    (h_cherry : elementaryWeightQ_phi η_q RootedTree.cherry
+                 = elementaryWeightQ_phi η_q' RootedTree.cherry)
+    (h_broom₃ : elementaryWeightQ_phi η_q RootedTree.broom₃
+                 = elementaryWeightQ_phi η_q' RootedTree.broom₃)
+    -- include h_mkCherry only if the closed form mentions it
+    -- (h_mkCherry : ...)
+    (h_mkCherryCherry : elementaryWeightQ_phi η_q
+                    (RootedTree.mk [RootedTree.cherry, RootedTree.cherry])
+                   = elementaryWeightQ_phi η_q'
+                    (RootedTree.mk [RootedTree.cherry, RootedTree.cherry])) :
+    elementaryWeightQ_phi (η_q ^ (-(((0 + 1 : ℕ) : ℤ)))) (RootedTree.mk
+        [RootedTree.cherry, RootedTree.cherry])
+      = elementaryWeightQ_phi (η_q' ^ (-(((0 + 1 : ℕ) : ℤ)))) (RootedTree.mk
+        [RootedTree.cherry, RootedTree.cherry]) := by
+  -- 4-line ζ^{-1} bridge + apply P1 + rewrite via agreement hypotheses
+  ...
 ```
 
-Match the cycle 341 (vertex), 367 (cherry), 368 (broom₃), 370 (bushy)
-closed forms **verbatim**.
+Recipe (verbatim from cycle 371/372 corollaries):
 
-## D. Proof recipe per closed-form theorem
+1. `have h_neg_one : ∀ ζ : Quotient PhiEquivalent.setoidSigma,
+       ζ ^ (-(((0 + 1 : ℕ) : ℤ))) = ζ⁻¹ := by
+     intro ζ; rw [zero_add, Nat.cast_one]; exact zpow_neg_one _`.
+2. `rw [h_neg_one η_q, h_neg_one η_q']`.
+3. `rw [elementaryWeightQ_phi_inv_mkCherryCherry,
+       elementaryWeightQ_phi_inv_mkCherryCherry]`.
+4. Rewrite by all agreement hypotheses provided.
 
-For each `inversePolyBroom_k`:
+**LOC budget**: 15 LOC.
 
-1. `unfold inversePolyBroom`.
-2. `simp only [Finset.sum_range_succ, Finset.sum_range_zero]` to
-   expand the sum into `k+1` explicit summands plus a `0` base.
-3. `simp only [broomTree, broomTree_one, broomTree_two,
-   broomTree_three, Nat.choose]` to evaluate the `broomTree j`
-   calls at concrete `j` and the binomial coefficients.
-4. `push_cast` if Nat→ℝ casts (on `Nat.choose k j`) need normalising.
-5. `ring` to combine and verify the polynomial identity.
+**Hypothesis selection**: include exactly the elementary-weight names
+that appear on the RHS of P1's closed form. Do NOT add extraneous
+hypotheses (cycle 378 worker discovery: faithful corollary lists only
+the weights actually appearing in the closed-form RHS — the cycle 371
+m=0 corollary did NOT list `h_mkCherry` because `mk [broom₃]`'s
+closed form doesn't depend on `m`).
 
-If `simp` can't reduce `(-1 : ℝ) ^ (k+1+j)` to literal ±1 at concrete
-`k, j`, add explicit `show (-1 : ℝ)^_ = ...` rewrites with `(-1)^3 = -1`
-etc. discharged by `norm_num`. The cycle 380 `inversePolyChain_three`
-proof shows a clean `ring`-closed pattern when the sum is fully
-expanded.
+## P3 (mandatory) — non-vacuity examples
 
-**Pitfall to avoid (cycle 379 §4 sign-convention error)**: The cycle
-379 scoping doc §4 Family B derivation tried the formula
-`Σⱼ C(k,j) · v^(k-j) · (-1)^j · wⱼ` and produced wrong signs at
-`k = 2`. The correct sign factor is `(-1)^(k+1+j)`, not `(-1)^j`.
-I (planner) re-verified the formula against all four data points
-(k = 0, 1, 2, 3) before writing this strategy. Verification table:
+Mirror cycles 371/372 exactly. Two anonymous `example`s after the
+m=0 corollary:
 
-| k | j | (-1)^(k+1+j) | C(k,j) | term | expected |
-|---|---|---|---|---|---|
-| 0 | 0 | -1 | 1 | -v | -v ✓ |
-| 1 | 0 | +1 | 1 | +v² | +v² ✓ |
-| 1 | 1 | -1 | 1 | -c | -c ✓ |
-| 2 | 0 | -1 | 1 | -v³ | -v³ ✓ |
-| 2 | 1 | +1 | 2 | +2vc | +2vc ✓ |
-| 2 | 2 | -1 | 1 | -b' | -b' ✓ |
-| 3 | 0 | +1 | 1 | +v⁴ | +v⁴ ✓ |
-| 3 | 1 | -1 | 3 | -3v²c | -3v²c ✓ |
-| 3 | 2 | +1 | 3 | +3vb' | +3vb' ✓ |
-| 3 | 3 | -1 | 1 | -B | -B ✓ |
+```lean
+/-- Non-vacuity: closed form at `explicitEuler`. -/
+example : elementaryWeightQ_phi
+            ((Quotient.mk PhiEquivalent.setoidSigma
+              ⟨_, RKTableau.explicitEuler⟩)⁻¹)
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.cherry, RootedTree.cherry]) = ?_value := by
+  rw [elementaryWeightQ_phi_inv_mkCherryCherry]
+  -- All Φ_{explicitEuler}(t) = 1 (cycle 187 witness) → closed form
+  -- evaluates to a concrete numeric constant.
+  simp [explicitEuler_elementaryWeight]   -- or analogous simp set
+  norm_num                                -- if needed
 
-**Do not "fix" the sign — it is right.**
+/-- Non-vacuity: reflexive m=0 witness. -/
+example : True := by
+  have := powRep_sum_eq_of_agreement_at_mkCherryCherry_zero
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨_, RKTableau.explicitEuler⟩)
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨_, RKTableau.explicitEuler⟩)
+    rfl rfl rfl rfl  -- N hypotheses, all by rfl
+  trivial
+```
 
-## E. Verification checklist
+(The first example's exact numerical value depends on which closed
+form lands — worker fills in by computing each term at v=c=b'=m=C=1
+for `explicitEuler`.)
 
-Per cycle 380 / 381 precedent:
+## What NOT to do this cycle
 
-* `lake env lean OpenMath/Chapter4/Section422.lean` → exit 0.
-* `lake env lean OpenMath/Chapter4.lean` (aggregator) → exit 0.
-* `grep -c sorry OpenMath/Chapter4/Section422.lean` → **5**
-  (unchanged: 4 docstring references + 1 grandfathered code sorry
-  at line 2272).
-* `#print axioms` on each of the 4 new theorems (`broomTree_one`,
-  `_two`, `_three`, plus the 4 closed-form theorems) → must show
-  `[propext, Classical.choice, Quot.sound]` only. `broomTree` and
-  `inversePolyBroom` definitions: ditto via `#print axioms` on
-  any consumer.
-* Existing cycle 367/368/370 closed-form theorems
-  (`elementaryWeightQ_phi_inv_cherry`, `_broom₃`, `_bushy`) — must
-  remain axiom-clean. Spot-check via `lake env lean` exit 0 alone;
-  do not edit these.
-* Tautology scanner regex
-  `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$` over
-  Section422.lean → 0 hits.
+1. **Do NOT extend `inversePolynomial`'s pattern-match** with a 9th
+   `else if t = mk [cherry, cherry]` branch. Cycle 372 worker
+   explicitly recommended **scoping over extending the pattern-match
+   ladder**; this cycle's purpose is closed-form data acquisition
+   (P1), not pattern-match extension. The migration of
+   `mk [cherry, cherry]` into `inversePolynomial` is deferred to
+   cycle 385+ as part of the unified Family C helper definition.
 
-## F. What NOT to do this cycle
+2. **Do NOT touch `inversePolynomial`, `inversePolyChain`,
+   `inversePolyBroom`, or their bridge theorems**. These are cycle
+   380–383 deliverables; modifying them risks breaking the Phase γ
+   `inversePolynomial_eq_of_subtree_agreement` proof.
 
-1. **Do NOT migrate Family B branches in `inversePolynomial`.**
-   The four Family B/C branches (`broom₃`, `bushy`, `mk [broom₃]`,
-   `mk [vertex, cherry]`) stay as explicit `if-then-else` polynomial
-   bodies. Migration is cycle 383+ work (parallel to cycle 380 → 381
-   for Family A).
-2. **Do NOT touch the cycle 365 grandfathered sorry** at
-   `Section422.lean:2272`. That's Phase α'.4 territory (multi-cycle).
-3. **Do NOT define Family C helpers** (`mk [broom₃]`, `mk [vertex,
-   cherry]`). Family C is structurally different (heterogeneous
-   children) and needs its own scoping. Cycle 384+ if at all.
-4. **Do NOT submit Aristotle batches.** No pending results, and this
-   work is mechanical (parallel to cycle 380); manual is faster.
-5. **Do NOT write a scoping doc** in `.prover-state/issues/`. Cycle
-   379's scoping-doc-only ship scored 1 then 0 (OFF-STRATEGY). This
-   cycle ships Lean code primary.
-6. **Do NOT try the formula `Σⱼ C(k,j) · v^(k-j) · (-1)^j · wⱼ`**
-   (cycle 379 §4 attempt — wrong signs at `k = 2`). Use
-   `(-1)^(k+1+j)` per §D above. The sign verification table in §D
-   confirms the formula matches all 4 closed forms exactly.
-7. **Do NOT add new tree aliases to Section310.lean.** `vertex`,
-   `cherry`, `broom₃`, `bushy` all already exist there (verified
-   lines 108–118). Reference them as
-   `RootedTree.vertex` / `RootedTree.cherry` etc.
-8. **Do NOT touch `chainTree` / `inversePolyChain` / Family A**.
-   Those are cycle 380/381 territory.
-9. **Do NOT bump `lean_status.json` for `def:422B`** — it stays
-   `partial`. The `inversePolyBroom` helper is internal
-   infrastructure, not a textbook entity closure. Plan.md row
-   `[~] def:422B` likewise unchanged.
-10. **Do NOT raise `maxHeartbeats`**. If a closed-form proof stalls,
-    decompose with explicit `show (-1 : ℝ)^n = ...; norm_num`
-    pre-rewrites before retrying.
+3. **Do NOT attempt the cycle 365 grandfathered sorry**
+   (`powRep_sum_eq_of_strict_subtree_agreement` at line 2279).
+   Multi-cycle work, gated on the unified `inversePolyTree` recursion
+   that doesn't exist yet.
 
-## G. LOC budget
+4. **Do NOT submit Aristotle batches** for P1. Closed-form
+   derivation + cycle 372 template port is one-cycle manual work.
+   Aristotle adds latency without value.
 
-Total ~80–120 LOC including docstrings (parallel to cycle 380's
-~75 LOC `inversePolyChain` ship):
+5. **Do NOT do scoping-doc-only work**. Cycle 379 scored 0 for
+   shipping a 903-line markdown doc with no Lean code. The
+   supervisor wants Lean per cycle. If P1+P2+P3 ship under budget,
+   an optional one-paragraph appendix to
+   `def_422B_phase_alpha_prime_scoping.md` §4 (Family C analysis)
+   is permitted but NOT a substitute for the Lean ship.
 
-* `broomTree` def + docstring: ~10 LOC
-* 3 name-equality theorems: ~10 LOC
-* `inversePolyBroom` def + docstring: ~25 LOC
-* 4 closed-form theorems with docstrings: ~50–70 LOC (each
-  ~12–18 LOC including docstring)
+6. **Do NOT use `simp [recursive-def, name-eq-thm, …]`** patterns
+   on `derivativeWeightWithSrcProd` or its helpers. Per memory
+   `feedback_simp_recursive_def_overunfolds.md`: simp over-unfolds
+   recursive defs before name theorems can fold back. Use targeted
+   `rw [name-eq-thm-1, name-eq-thm-2, …]` then `simp [arithmetic]; ring`.
 
-If the worker hits 150 LOC, something has gone wrong — stop and
-re-verify the sign convention against §D's verification table.
+7. **Do NOT rename `h_<name>` → `h<name>`** cosmetically to dodge the
+   tautology scanner. The cycle 371/372 helpers all use
+   `h_inv_v, h_vertex, h_dw_cherry, h_cherry, h_dws_cherry, h_dw_broom₃,
+   h_broom₃, h_inv_cherry, h_dw_mkCherry, h_mkCherry, h_dw_mkCherryCherry,
+   h_mkCherryCherry, h_dws_mkCherryCherry` etc. without scanner hits
+   (these are sub-proof intermediates that the scanner doesn't flag).
 
-## H. Build budget
+## Faithfulness check (worker fills in during proof)
 
-Section422.lean cold rebuild was ~270–360 s in recent cycles (270 s
-in cycle 364, 352 s in cycle 365, ~160 s warm in cycle 366). Budget
-~6 minutes per `lake env lean` invocation. Plan for at most
-**3 compile cycles**: (1) after defining `broomTree` + 3 names,
-(2) after defining `inversePolyBroom` + the four closed forms,
-(3) after axiom-clean verification on a scratch file.
+For `elementaryWeightQ_phi_inv_mkCherryCherry`:
 
-## I. Graceful degradation
+* **Entity ID**: not a textbook entity. Internal Lean housekeeping
+  (9th tree in inverse-polynomial closed-form ladder, analogue of
+  cycles 367/368/369/370/371/372/378).
+* **Textbook statement quote**: the underlying object
+  `Φ_{η⁻¹}(mk [cherry, cherry])` is the §383 group-inverse evaluated
+  at a specific rooted tree — Butcher §383 / §387 provide the
+  framework; no explicit closed form printed.
+* **Lean statement captures**: same content as the symbolic
+  derivation from cycle 358's `elementaryWeightQ_phi_inv_mk` applied
+  to the cycle 269 `mk [cherry, cherry]` tree shape (σ=2, γ=20). The
+  worker must compute the RHS step-by-step and verify
+  symbolically before committing the proof body.
+* **Hypothesis strength check**: no hypotheses beyond `η_q :
+  Quotient PhiEquivalent.setoidSigma`. Faithful to cycle 367–372
+  pattern.
+* **Absent theorem check**: P1 + P2 + P3 examples must all land
+  axiom-clean in the same cycle (no cross-cycle promises).
 
-If only `broomTree`, `inversePolyBroom`, and 2 of the 4 closed-form
-theorems compile cleanly within budget, ship them and defer
-`inversePolyBroom_two`/`_three` to cycle 383. **Do not commit any
-`sorry`-bearing scaffolds** (cycle 200/201, 149/150 rollback
-precedents) — the helper definition is fine on its own but every
-closed-form theorem must be axiom-clean.
+For `powRep_sum_eq_of_agreement_at_mkCherryCherry_zero`:
 
-If even `broomTree_two` / `_three` fail `rfl`/`decide`, ship them
-via `by simp [broomTree, List.replicate, RootedTree.broom₃,
-RootedTree.bushy]` (these are explicit definitions, so simp closure
-is guaranteed).
+* Lists the elementary-weight agreement hypotheses exactly matching
+  the RHS of P1's closed form (NO extras). Faithful to cycle 378
+  worker's discovery.
 
-## J. Order of operations
+## Pre-flight checklist
 
-1. Read cycle 380's `inversePolyChain` block (Section422.lean:~4659–
-   4760) for the proof-recipe template. The cycle 380 closure
-   pattern (`rw [inversePolyChain, Fin.sum_univ_X]; show ...; rw
-   [...inductive eqs...]; ring`) is the model.
-2. Insert the new Phase α'.3 block immediately after cycle 380's
-   `inversePolyChain_three` and before cycle 381's
-   `inversePolyChain_zero_eq_inversePolynomial` bridge block.
-3. Write `broomTree` + 3 name theorems. Run
-   `lake env lean OpenMath/Chapter4/Section422.lean` to verify
-   `rfl` works for all three.
-4. Write `inversePolyBroom` def. Compile.
-5. Write `inversePolyBroom_zero`. Compile + axiom-check.
-6. Write `inversePolyBroom_one`. Compile + axiom-check.
-7. Write `inversePolyBroom_two`. Compile + axiom-check.
-8. Write `inversePolyBroom_three`. Compile + axiom-check.
-9. Final aggregator build: `lake env lean OpenMath/Chapter4.lean`.
+Before any code edit, run:
 
-## K. Cycle 383+ outlook
+```bash
+git log -1 --format='%H %s'                    # confirm HEAD = 091f6f3
+wc -l OpenMath/Chapter4/Section422.lean        # confirm ~5999 LOC
+grep -c sorry OpenMath/Chapter4/Section422.lean # confirm 5
+```
 
-After cycle 382's Family B helper ships:
+After P1+P2+P3 ship:
 
-* **Cycle 383**: Family B bridge migration (parallel to cycle 381).
-  Replace the explicit polynomial bodies in `inversePolynomial`'s
-  `broom₃` and `bushy` branches with `inversePolyBroom 2 f` and
-  `inversePolyBroom 3 f` respectively. Update the matching cycle
-  368/370 Phase β bridges + the Phase γ subtree-agreement theorem
-  + add 2 bridge theorems `inversePolyBroom_{two,three}_eq_inversePolynomial`.
-* **Cycle 384+**: Family C scoping + helper. The two Family C trees
-  (`mk [broom₃]`, `mk [vertex, cherry]`) have heterogeneous children
-  and won't fit into a single integer-parametrised helper. Likely
-  needs a separate `inversePolyFamilyC` helper indexed by tree
-  shape, or per-tree closed forms without an umbrella helper.
-* **Cycle 385+**: Phase α'.4 closure of cycle 365 grandfathered
-  sorry. Requires Family A + B + C closed forms via a full
-  recursive `inversePolynomial` covering arbitrary `t`, plus the
-  global bridge `elementaryWeightQ_phi_inv_eq_inversePolynomial`.
+```bash
+lake env lean OpenMath/Chapter4/Section422.lean
+# exit 0 with single warning at line 2279
+grep -c sorry OpenMath/Chapter4/Section422.lean
+# confirm still 5 (unchanged)
+```
 
-This cycle is one step in the chain; ship it cleanly and move on.
+Then `#print axioms` on the 2 new public theorems
+(`elementaryWeightQ_phi_inv_mkCherryCherry`,
+`powRep_sum_eq_of_agreement_at_mkCherryCherry_zero`) — both must
+return `[propext, Classical.choice, Quot.sound]` only.
+
+## Graceful degradation (if P1 stalls past 60 min)
+
+If symbolic derivation of the P1 closed form gets stuck:
+
+1. **Step back**: literally copy-paste cycle 372's
+   `elementaryWeightQ_phi_inv_mkVertexCherry` proof body
+   (`Section422.lean:3798–4135`). Substitute identifiers:
+   `mkVertexCherry → mkCherryCherry`; replace the cycle 372
+   "vertex factor" helper with a second cycle 367-style cherry
+   factor; the per-row factorization becomes
+   `(M.derivativeWeightWithSrc M.inverse i cherry)²` (squared,
+   symmetric) instead of cycle 372's
+   `(M.derivativeWeightWithSrc M.inverse i vertex) ·
+   (M.derivativeWeightWithSrc M.inverse i cherry)` (mixed).
+
+2. **If still stuck**: extract just the new `h_dw_mkCherryCherry +
+   h_mkCherryCherry + h_dws_mkCherryCherry` helpers (the 3 new
+   pieces) and the closed-form polynomial computation (the
+   `h_sum` block) as a focused sub-deliverable. Ship the P1 theorem
+   with `unfold + rfl`-or-substitution placeholder if the per-term
+   substitution arithmetic blows up. **Do NOT introduce a sorry
+   without escalating** — file a cycle 385 entry-point issue
+   instead.
+
+3. **Last-resort fallback** (acceptable for streak preservation):
+   ship a **weaker version** of P1 — instead of the full quotient-
+   level closed form, ship `M.inverse.elementaryWeight (mk
+   [cherry, cherry]) = (closed form in M.elementaryWeight values)`
+   at the representative level only, without the
+   `elementaryWeightQ_phi (η_q⁻¹)` quotient lift. This still gives
+   a Family C data point but skips one layer of abstraction.
+
+## Cycle 385+ outlook (after cycle 384 lands)
+
+With 9 closed-form witnesses spanning 5 trees of order ≤ 4 and 4
+trees of order 5 (after this cycle: vertex, cherry, broom₃, mk
+[cherry], bushy, mk [broom₃], mk [vertex, cherry], mk [mk [cherry]],
+mk [cherry, cherry]):
+
+* **Cycle 385**: Family C scoping doc. With 3 Family C data points
+  (`mk [broom₃]`, `mk [vertex, cherry]`, `mk [cherry, cherry]`),
+  the structural rule for heterogeneous-children closed forms should
+  be derivable. Write the Phase α'.4 plan (unified
+  `inversePolyTree : RT → (RT → ℝ) → ℝ` recursion).
+
+* **Cycle 386+**: ship the unified `inversePolyTree` definition that
+  dispatches by children-list pattern matching. Migrate
+  `inversePolynomial`'s remaining branches.
+
+* **Cycle 387+**: ship the global bridge
+  `elementaryWeightQ_phi_inv_eq_inversePolynomial` over all `t : RT`,
+  closing the cycle 365 grandfathered sorry at line 2279.
+
+The 9-witness data set unblocks cycle 385's scoping work. Without
+this cycle's P1 ship, cycle 385 would still need this empirical data
+point first — so we ship it now.
