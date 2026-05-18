@@ -1044,6 +1044,66 @@ this is the convention already used at line 2774 onwards in the
 file. The `RT` abbrev does NOT help here because dot notation on
 `RT` would still resolve to whatever Lean picks for `RootedTree`.
 
+### §10.4 Cycle 375 update — Phase β.1 (four per-tree bridges) shipped
+
+**Design chosen**: per-tree bridge lemmas, one for each tree in the
+four-tree ladder matched by Phase α.1's `inversePolynomial`. Each
+bridge reduces by `unfold inversePolynomial; rw [if_*]; exact
+elementaryWeightQ_phi_inv_<tree>` to the cycle 341 / 367 / 368 / 369
+closed-form theorem. Also shipped: an aggregator lemma
+`elementaryWeightQ_phi_inv_eq_inversePolynomial_on_ladder` packaging
+the four cases under a single disjunction hypothesis, for downstream
+Phase γ / δ / ε consumers.
+
+**Theorems shipped (5 total)**:
+
+- `elementaryWeightQ_phi_inv_eq_inversePolynomial_vertex` —
+  reduces to cycle 341 `elementaryWeightQ_phi_inv_vertex`.
+- `elementaryWeightQ_phi_inv_eq_inversePolynomial_cherry` —
+  reduces to cycle 367 `elementaryWeightQ_phi_inv_cherry`.
+- `elementaryWeightQ_phi_inv_eq_inversePolynomial_broom₃` —
+  reduces to cycle 368 `elementaryWeightQ_phi_inv_broom₃`.
+- `elementaryWeightQ_phi_inv_eq_inversePolynomial_mkCherry` —
+  reduces to cycle 369 `elementaryWeightQ_phi_inv_mkCherry`.
+- `elementaryWeightQ_phi_inv_eq_inversePolynomial_on_ladder` —
+  aggregator (η_q : Quotient PhiEquivalent.setoidSigma) (t : RT)
+  (ht : t = vertex ∨ t = cherry ∨ t = broom₃ ∨ t = mk [cherry])
+  → bridge. Closes by `rcases ht with h | h | h | h <;> subst h`
+  and four `exact` applications.
+
+**Axiom-clean confirmation**: `#print axioms` on each of the 5 new
+theorems returns `[propext, Classical.choice, Quot.sound]`. The §422
+axiom-clean streak (39 substantive + 1 doc through cycle 374)
+advances to **40 substantive + 1 doc**.
+
+**Sorry count unchanged**: still `1` actual sorry at line 2279 (the
+cycle 365 grandfathered Sub-lemma A body). The cycle 375 ship adds
+0 new sorries.
+
+**`lean_status.json` for `def:422B`**: stays `partial`. Phase β.1
+closes one further piece of the multi-phase Sub-lemma A → Sub-lemma B
+→ `def:422B` chain but does not promote the overall status.
+
+**`by decide` discharge worked uniformly**: each `t ≠ vertex / cherry
+/ broom₃` inequality at the four matched trees was discharged by
+`by decide`, matching the cycle 374 calibration witnesses' pattern.
+No fallback to `injection` / `cases h` (memory
+`feedback_indexed_inductive_cases_disjoint.md`) was needed.
+
+**Pattern for downstream phases**: the `unfold + rw [if_*] + exact`
+recipe is now established as the canonical pattern for Phase β.x
+bridges. If cycle 376 ships Phase α.2 (3 more `else if` branches in
+`inversePolynomial` for `bushy`, `mk [broom₃]`, `mk [vertex, cherry]`
+per cycles 370–372), the corresponding three Phase β.2 bridges
+follow the same recipe verbatim.
+
+**Phase γ outlook**: the cycle 376 planner's Phase γ candidate
+(`inversePolynomial_eq_of_subtree_agreement`) is now well-positioned:
+with `inversePolynomial` being a pattern match (not a recursion),
+agreement-of-strict-subtrees reduces to four trivial case splits
+(each RHS depends only on `f` at strict subtrees of the matched
+tree, by inspection of the four matched closed forms).
+
 ### §10.2 Memory references
 
 - `project_butcher_D_operator.md` — `D` operator is §385b 1-stage

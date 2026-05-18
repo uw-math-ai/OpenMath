@@ -4307,4 +4307,118 @@ example (f : RT → ℝ) :
             ≠ RootedTree.broom₃),
       if_pos rfl]
 
+/-! ### Phase β.1 (cycle 375) — per-tree bridges between `elementaryWeightQ_phi η_q⁻¹` and `inversePolynomial`
+
+For each tree `t` in the four-tree ladder
+`{vertex, cherry, broom₃, mk [cherry]}` matched by Phase α.1's
+`inversePolynomial`, this section ships the bridge lemma
+
+`elementaryWeightQ_phi η_q⁻¹ t = inversePolynomial t (elementaryWeightQ_phi η_q)`
+
+reducing each case to the cycle 341 / 367 / 368 / 369 closed-form
+theorem via `unfold inversePolynomial` + `if_*` rewrites.
+
+This is the Phase β.1 deliverable promised by the cycle 374 Phase α.1
+docstring (lines 4231–4233) and the cycle 373 / 374 scoping
+documentation in
+`.prover-state/issues/def_422B_subLemmaA_inductive_plan.md`. -/
+
+/-- *Phase β.1 (cycle 375) — vertex bridge.*
+
+At `t = vertex`, `elementaryWeightQ_phi η_q⁻¹ t` agrees with the
+closed-form polynomial `inversePolynomial t (elementaryWeightQ_phi η_q)`.
+Reduces to cycle 341's `elementaryWeightQ_phi_inv_vertex` after a
+single `if_pos rfl` unfold of `inversePolynomial`. -/
+theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_vertex
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi η_q⁻¹ RootedTree.vertex
+      = inversePolynomial RootedTree.vertex (elementaryWeightQ_phi η_q) := by
+  unfold inversePolynomial
+  rw [if_pos rfl]
+  exact elementaryWeightQ_phi_inv_vertex η_q
+
+/-- *Phase β.1 (cycle 375) — cherry bridge.*
+
+At `t = cherry`, `elementaryWeightQ_phi η_q⁻¹ t` agrees with the
+closed-form polynomial `inversePolynomial t (elementaryWeightQ_phi η_q)`.
+Reduces to cycle 367's `elementaryWeightQ_phi_inv_cherry` after one
+`if_neg` (cherry ≠ vertex) and `if_pos rfl`. -/
+theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_cherry
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi η_q⁻¹ RootedTree.cherry
+      = inversePolynomial RootedTree.cherry (elementaryWeightQ_phi η_q) := by
+  unfold inversePolynomial
+  rw [if_neg (by decide : RootedTree.cherry ≠ RootedTree.vertex),
+      if_pos rfl]
+  exact elementaryWeightQ_phi_inv_cherry η_q
+
+/-- *Phase β.1 (cycle 375) — broom₃ bridge.*
+
+At `t = broom₃`, `elementaryWeightQ_phi η_q⁻¹ t` agrees with the
+closed-form polynomial `inversePolynomial t (elementaryWeightQ_phi η_q)`.
+Reduces to cycle 368's `elementaryWeightQ_phi_inv_broom₃` after two
+`if_neg` discharges and `if_pos rfl`. -/
+theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_broom₃
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi η_q⁻¹ RootedTree.broom₃
+      = inversePolynomial RootedTree.broom₃ (elementaryWeightQ_phi η_q) := by
+  unfold inversePolynomial
+  rw [if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.vertex),
+      if_neg (by decide : RootedTree.broom₃ ≠ RootedTree.cherry),
+      if_pos rfl]
+  exact elementaryWeightQ_phi_inv_broom₃ η_q
+
+/-- *Phase β.1 (cycle 375) — `mk [cherry]` bridge.*
+
+At `t = mk [cherry]`, `elementaryWeightQ_phi η_q⁻¹ t` agrees with the
+closed-form polynomial `inversePolynomial t (elementaryWeightQ_phi η_q)`.
+Reduces to cycle 369's `elementaryWeightQ_phi_inv_mkCherry` after three
+`if_neg` discharges and `if_pos rfl`. Per cycle 374 Discovery #1, the
+`mk [cherry]` literal must be fully qualified as
+`OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]` to
+avoid resolution to Mathlib's `_root_.RootedTree`. -/
+theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_mkCherry
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi η_q⁻¹
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+      = inversePolynomial
+          (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+          (elementaryWeightQ_phi η_q) := by
+  unfold inversePolynomial
+  rw [if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.vertex),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.cherry),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.broom₃),
+      if_pos rfl]
+  exact elementaryWeightQ_phi_inv_mkCherry η_q
+
+/-- *Phase β.1 (cycle 375) — aggregated bridge on the matched ladder.*
+
+Packages the four per-tree bridges
+(`_vertex`, `_cherry`, `_broom₃`, `_mkCherry`) as a single named
+theorem for downstream consumers of Phase β.1. Cycle 376's Phase β.2 /
+γ work can quote this lemma instead of branching on the four cases
+manually. -/
+theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_on_ladder
+    (η_q : Quotient PhiEquivalent.setoidSigma) (t : RT)
+    (ht : t = RootedTree.vertex ∨ t = RootedTree.cherry
+        ∨ t = RootedTree.broom₃
+        ∨ t = OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.cherry]) :
+    elementaryWeightQ_phi η_q⁻¹ t
+      = inversePolynomial t (elementaryWeightQ_phi η_q) := by
+  rcases ht with h | h | h | h <;> subst h
+  · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_vertex η_q
+  · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_cherry η_q
+  · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_broom₃ η_q
+  · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_mkCherry η_q
+
 end OpenMath.Chapter4.Section422
