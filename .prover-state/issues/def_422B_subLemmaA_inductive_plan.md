@@ -1104,6 +1104,65 @@ agreement-of-strict-subtrees reduces to four trivial case splits
 (each RHS depends only on `f` at strict subtrees of the matched
 tree, by inspection of the four matched closed forms).
 
+### §10.5 Cycle 376 update — Phase γ (closed-subtree agreement) shipped
+
+**Design chosen**: a single public theorem
+`inversePolynomial_eq_of_subtree_agreement` taking a closed-subtree
+agreement hypothesis (`∀ s : RT, s.order ≤ t.order → f s = g s`) and
+concluding `inversePolynomial t f = inversePolynomial t g`. Proof is
+a four-way `by_cases` on `t` matching the four branches of the cycle
+374 pattern-match definition, plus a default branch (`0 = 0` after
+`if_neg` discharges). Each matched branch's RHS is identified between
+`f` and `g` via per-tree `rw` invocations sourced from `h_closed`.
+
+**Theorem shipped (1 total)**:
+
+- `inversePolynomial_eq_of_subtree_agreement` —
+  signature `(t : RT) (f g : RT → ℝ)
+  (h_closed : ∀ s : RT, s.order ≤ t.order → f s = g s) :
+  inversePolynomial t f = inversePolynomial t g`.
+
+**Axiom-clean confirmation**: `#print axioms
+inversePolynomial_eq_of_subtree_agreement` returns
+`[propext, Classical.choice, Quot.sound]` — no `sorryAx`. The §422
+axiom-clean streak (40 substantive + 1 doc through cycle 375)
+advances to **41 substantive + 1 doc**.
+
+**Sorry count unchanged**: still `1` actual sorry at line 2279 (the
+cycle 365 grandfathered Sub-lemma A body). The cycle 376 ship adds
+0 new sorries.
+
+**`lean_status.json` for `def:422B`**: stays `partial`. Phase γ
+closes the closed-subtree-agreement piece of the Sub-lemma A chain;
+no overall status promotion until Phase ε.
+
+**Proof recipe confirmed**: cycle 375 Discovery #3's prediction —
+that Phase γ would reduce to four trivial case splits given the
+cycle 374 pattern-match shape — held verbatim. Each matched-tree
+branch needed one `by_cases h_tree`, one `subst`, a chain of
+`if_neg ... if_pos rfl` rewrites (twice, once per side of the
+equation), and the per-tree `h_closed` applications.
+
+**Closed-subtree vs strict-subtree**: the shipped form is the closed
+form (`s.order ≤ t.order`) per the §6.3 scoping doc update. This is
+the form needed by downstream Phase D.3.d consumers — the matched
+closed forms reference `f t` itself (e.g. `-f cherry` in the cherry
+branch), making strict-subtree agreement insufficient.
+
+**Discovery — `by decide` lifts `RootedTree.order` comparisons**:
+all per-tree order-comparison side conditions (e.g.
+`RootedTree.vertex.order ≤ RootedTree.cherry.order`) discharged by
+`by decide` thanks to the cycle 343 `RootedTree.order` infrastructure
+being structurally recursive. Same-tree order comparisons used
+`le_refl _` (avoiding the `decide` reflexivity overhead).
+
+**Phase δ outlook**: with Phases α.1, β.1, and γ all shipped axiom-
+clean across cycles 374–376, cycle 377+ work can either extend the
+ladder (Phase α.2 / β.2 for the cycle 370–372 trees) or — if the
+four-tree ladder suffices for Phase ε — proceed directly to Phase δ
+(extension to general `m` via `powRep`) and then Phase ε (closing
+the cycle 365 grandfathered sorry).
+
 ### §10.2 Memory references
 
 - `project_butcher_D_operator.md` — `D` operator is §385b 1-stage
