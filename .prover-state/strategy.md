@@ -1,55 +1,22 @@
-# Cycle 365 Strategy — §422 Phase D.3.b parametricity Step 2
+# Cycle 366 Strategy — §422 Phase D.3.b Step 2 closure (Sub-lemma A body)
 
-## Context
+## §A. One-sentence goal
 
-Cycle 364 shipped the cycle 363 P2 audit's `linearResidualAt`
-coefficient fix axiom-clean — the spurious `(-1)^r(t)` factor is
-removed; the residual is now defined as
-`Φ_{η_q^(-i)}(t) + i·Φ_{η_q}(t)` (audit-correct sign, constant in
-`r(t)`). 4 closed-form theorems + 4 non-vacuity examples were
-restated successfully, sorry count remains 0, `#print axioms` is
-clean on all four theorems.
+Discharge the body of `powRep_sum_eq_of_strict_subtree_agreement`
+(Sub-lemma A) in `OpenMath/Chapter4/Section422.lean` so that the
+cycle 365 Phase D.3.b Step 2 headline
+`linearResidualAt_depends_only_on_strict_subtrees` becomes
+unconditionally axiom-clean.
 
-The §422 axiom-clean streak now stands at **30 consecutive cycles**
-(336–364). The cycle 364 task results §"Suggested next approach"
-lays out the cycle 365 deliverable explicitly: attempt Phase D.3.b
-**parametricity Step 2** (`linearResidualAt_depends_only_on_strict_subtrees`)
-under the cycle 364 corrected definition. The Discovery #3 note in
-cycle 364 task results confirms the cancellation argument is now
-structurally clean: the `+((m:ℝ)+1) * M.elementaryWeight t` term in
-`linearResidualAt_succ_mk_eq` has the **correct sign** to cancel
-against a `-(m+1)·M.elementaryWeight t` contribution hidden inside
-the powRep-sum.
+Closing A drives the code-level sorry count from 1 → 0 in §422 and
+automatically upgrades the headline's `#print axioms` from
+`[propext, sorryAx, Classical.choice, Quot.sound]` to
+`[propext, Classical.choice, Quot.sound]` without any headline
+restatement (the headline is **locked**; do not touch it).
 
-No Aristotle results pending.
+## §B. Context (do not skip — informs the recipe)
 
-## Priority 1 — Phase D.3.b parametricity Step 2 (CYCLE 365 DELIVERABLE)
-
-**Target theorem** (the headline; ship this in `OpenMath/Chapter4/Section422.lean`):
-
-```lean
-theorem linearResidualAt_depends_only_on_strict_subtrees
-    (i : ℕ) (t : RT)
-    (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
-    (h_strict : ∀ s : RT, s.order < t.order →
-        elementaryWeightQ_phi η_q s = elementaryWeightQ_phi η_q' s) :
-    linearResidualAt i η_q t = linearResidualAt i η_q' t
-```
-
-I.e. `linearResidualAt i η_q t` depends only on `η_q`'s elementary
-weights at strict subtrees of `t`. This is the substantive Phase D.3.b
-content — once shipped, cycle 366 can immediately scaffold
-`underlyingOneStepMethod_aux` via well-founded recursion on
-`RootedTree.order` per Phase D.3.d.
-
-### Recommended decomposition (per cycle 364 task results §"Suggested next approach")
-
-Split the proof into two sub-deliverables. Ship **Sub-lemma A first**;
-Sub-lemma B (the headline composition) is a near-trivial corollary.
-
-#### Sub-lemma A — `powRep_sum_eq_of_strict_subtree_agreement`
-
-**Preferred signature** (Route A.1):
+Sub-lemma A signature (`OpenMath/Chapter4/Section422.lean:2266`):
 
 ```lean
 theorem powRep_sum_eq_of_strict_subtree_agreement
@@ -57,334 +24,422 @@ theorem powRep_sum_eq_of_strict_subtree_agreement
     (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
     (h_closed : ∀ s : RT, s.order ≤ t.order →
         elementaryWeightQ_phi η_q s = elementaryWeightQ_phi η_q' s) :
-    elementaryWeightQ_phi (η_q^(-(((m+1) : ℕ) : ℤ))) t
-      = elementaryWeightQ_phi (η_q'^(-(((m+1) : ℕ) : ℤ))) t
+    elementaryWeightQ_phi (η_q ^ (-(((m + 1) : ℕ) : ℤ))) t
+      = elementaryWeightQ_phi (η_q' ^ (-(((m + 1) : ℕ) : ℤ))) t := by
+  sorry
 ```
 
-i.e. **closed-subtree** (agreement at `u.order ≤ t.order`, including
-`t` itself). This is the form that **fires cleanly** because the cycle
-361 closed form `linearResidualAt_succ_mk_eq` reads `M.elementaryWeight t`
-at `t` itself. Per cycle 362 task results note #3, the closed-subtree
-form is sufficient for Phase D.3.d's `underlyingOneStepMethod_aux`
-recursion (which has agreement at ALL `u.order ≤ t.order` by the
-time it reaches `t`).
+Key prior results to consume (verified at HEAD `ec50e8d`):
 
-The proof strategy:
+* **Cycle 358** (`OpenMath/Chapter3/Section381.lean`):
+  `elementaryWeightQ_phi_inv_mk` — `Φ_{⟦M⟧⁻¹}(t) = -Σⱼ M.b j ·
+  M.derivativeWeightWithSrc M.inverse j t`.
+* **Cycle 359** (`OpenMath/Chapter3/Section381.lean`):
+  `RKTableau.powRep`, `powRep_quotient_eq` — `⟦M.powRep m⟧ = ⟦M⟧^m`.
+* **Cycle 361** (`OpenMath/Chapter4/Section422.lean`):
+  `elementaryWeightQ_phi_zpow_negSucc_mk` — closed form for
+  `Φ_{⟦M⟧^(Int.negSucc m)}(t)`. Crucially,
+  `-(((m+1):ℕ):ℤ) = Int.negSucc m` is **definitional rfl**.
+* **Cycle 362** (`OpenMath/Chapter3/Section381.lean`):
+  `derivativeWeightWithSrc_eq_of_strict_subtree_agreement` —
+  substitution lemma: if `M₁, M₁'` agree on `elementaryWeight` at
+  trees of order **strictly less than** `t.order`, then
+  `M₂.derivativeWeightWithSrc M₁ i t =
+   M₂.derivativeWeightWithSrc M₁' i t` for every inner tableau `M₂`
+  and stage `i`.
+* **Cycle 343** (`OpenMath/Chapter3/Section301.lean`):
+  `instance : WellFoundedRelation RootedTree := measure
+  RootedTree.order` — well-founded recursion on `t.order`.
+* **Cycle 226** (`OpenMath/Chapter3/Section381.lean`):
+  `elementaryWeightQ_phi_mk` — `Φ_{⟦M⟧}(t) = M.elementaryWeight t`
+  at representatives (the bridge that lets `h_closed` be used at
+  the representative level via `simpa`).
 
-1. Use cycle 359's `elementaryWeightQ_phi_zpow_negSucc_mk` to expand
-   both `η_q^(-(m+1))` and `η_q'^(-(m+1))` into representative-form
-   powRep-sums.
-2. Apply cycle 362's `derivativeWeightWithSrc_eq_of_strict_subtree_agreement`
-   to bridge across `M.inverse` substitution at strict subtrees of `t`.
-3. Use `h_closed` at `t` itself for the direct `M.elementaryWeight t`
-   contribution.
+## §C. Priority 1 — manual closure via the cycle-365 task results recipe
 
-LOC estimate: ~80-120 LOC for Sub-lemma A (including the powRep-sum
-unfolding and the recursive call through `derivativeWeightWithSrc`).
+**Time-box: 90 minutes of focused work.** If no convergence
+(lake build not exit 0 OR proof structure clearly stuck) after
+90 min, abort to Priority 2.
 
-**Fallback signature** (Route A.2, if Route A.1's quotient-level form
-doesn't fire cleanly): state at the representative level via
-`Quotient.inductionOn₂` first, then lift to the quotient via
-`elementaryWeightQ_phi_mk`. This avoids the heterogeneous Σ-types in
-`M.powRep (m+1)` vs `M'.powRep (m+1)`.
+### §C.1 Pre-flight reconnaissance (10–15 min, use `lean_multi_attempt`)
 
-#### Sub-lemma B — `linearResidualAt_depends_only_on_strict_subtrees`
+Before any file edit, validate the building blocks one at a time at
+the sorry-bearing position (line 2266 of `Section422.lean`):
 
-The headline. Direct composition of Sub-lemma A with cycle 364's
-`linearResidualAt` definition:
+1. **Expansion check** — `Quotient.inductionOn₂` + cycle 361 rewrite.
+   Try as a single `lean_multi_attempt` step:
+   ```lean
+   intro h_closed
+   induction η_q, η_q' using Quotient.inductionOn₂
+   case _ M M' =>
+     rw [show (-(((m + 1) : ℕ) : ℤ)) = Int.negSucc m from rfl]
+     rw [elementaryWeightQ_phi_zpow_negSucc_mk M.2 t,
+         elementaryWeightQ_phi_zpow_negSucc_mk M'.2 t]
+     sorry
+   ```
+   Confirm: the resulting goal has the heterogeneous powRep-sum form
+   `-Σⱼ (M.powRep (m+1)).2.b j · ... = -Σⱼ (M'.powRep (m+1)).2.b j · ...`.
+   If the rewrite fails to fire (e.g. due to `Quotient.mk` vs
+   `Quotient.mk'` namespace drift), STOP and report — that is a
+   prerequisite failure that has to be fixed before any further work.
+
+2. **h_closed → representative bridge**. Confirm:
+   ```lean
+   have h_rep : ∀ s, s.order ≤ t.order →
+       M.2.elementaryWeight s = M'.2.elementaryWeight s := by
+     intro s hs; simpa using h_closed s hs
+   ```
+   succeeds. (Cycle 226's `elementaryWeightQ_phi_mk` is a `@[simp]`
+   lemma, so `simpa` should fire automatically. If it doesn't, fall
+   back to an explicit `rw [elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk]`.)
+
+3. **Cycle 362 signature check**. Run `lean_local_search` on
+   "derivativeWeightWithSrc_eq_of_strict_subtree_agreement" to confirm
+   the name and grab the explicit signature. If the name has drifted,
+   adjust references throughout the proof.
+
+### §C.2 Recommended proof structure (60 min)
+
+The cycle 365 task results §"Suggested next approach" + cycle 365
+strategy §"Cycle 366 entry-point recommendation" both point to the
+same decomposition. Implement it as a strong induction on `t.order`
+internal to the proof body, where each level of the induction
+handles one `Φ_{η^(-(m+1))}(t)` value:
 
 ```lean
-theorem linearResidualAt_depends_only_on_strict_subtrees
-    (i : ℕ) (t : RT)
+theorem powRep_sum_eq_of_strict_subtree_agreement
+    (m : ℕ) (t : RT)
     (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
     (h_closed : ∀ s : RT, s.order ≤ t.order →
         elementaryWeightQ_phi η_q s = elementaryWeightQ_phi η_q' s) :
-    linearResidualAt i η_q t = linearResidualAt i η_q' t := by
-  unfold linearResidualAt
-  -- Case-split on i.
-  match i with
-  | 0 =>
-    -- Φ_{η_q^0}(t) + 0 = Φ_1(t) + 0 = 0; same for η_q'.
-    simp [zpow_zero, elementaryWeightQ_phi_id]
-  | m + 1 =>
-    -- Use Sub-lemma A on the η_q^(-(m+1)) term and h_closed at t
-    -- on the direct Φ_{η_q}(t) term.
-    rw [show (((m + 1) : ℕ) : ℤ) = ((m : ℕ) : ℤ) + 1 from by push_cast; ring]
-    -- Or: directly invoke Sub-lemma A.
-    have hA := powRep_sum_eq_of_strict_subtree_agreement m t η_q η_q' h_closed
-    have hT := h_closed t (le_refl _)
-    -- Show -(((m+1):ℕ):ℤ) = -((m+1):ℤ) bridge.
-    -- ... close via push_cast + ring after rw [hA, hT].
-    sorry  -- ~10 LOC
+    elementaryWeightQ_phi (η_q ^ (-(((m + 1) : ℕ) : ℤ))) t
+      = elementaryWeightQ_phi (η_q' ^ (-(((m + 1) : ℕ) : ℤ))) t := by
+  -- Quotient.inductionOn₂ on (η_q, η_q'). Now M, M' : Σ s, RKTableau s.
+  induction η_q, η_q' using Quotient.inductionOn₂
+  case _ M M' =>
+    have h_rep : ∀ s, s.order ≤ t.order →
+        M.2.elementaryWeight s = M'.2.elementaryWeight s := by
+      intro s hs; simpa using h_closed s hs
+    rw [show (-(((m + 1) : ℕ) : ℤ)) = Int.negSucc m from rfl]
+    rw [elementaryWeightQ_phi_zpow_negSucc_mk M.2 t,
+        elementaryWeightQ_phi_zpow_negSucc_mk M'.2 t]
+    -- Step 4 (substantive): show the two powRep-sums agree.
+    -- The b-coefficients of (M.powRep (m+1)).2 vs (M'.powRep (m+1)).2
+    -- depend on M / M' respectively (different Σ-typed bodies). We
+    -- can't go elementwise on the sums; the comparison must happen
+    -- at the unfolded `Σ-typed Φ_{⟦M⟧^(-(m+1))}` level via a
+    -- recursive argument on (m, t).
+    sorry
 ```
 
-LOC estimate: ~30 LOC for the headline body once Sub-lemma A is in
-hand.
+**Step 4 — the substantive content.** Two viable sub-approaches:
 
-**Total Sub-lemma A + B**: 110-150 LOC. Within budget for one cycle.
+**Sub-approach 4.a — strong induction on `t.order` with auxiliary
+inverse-agreement lemma**:
 
-### Faithfulness note — strict vs closed subtree
+The natural strategy. Prove an auxiliary private lemma (likely as
+the cycle 366 deliverable, alongside Sub-lemma A's body):
 
-The cycle 364 strategy presented a **strict-subtree** form
-(`s.order < t.order`). This cycle ships the **closed-subtree** form
-(`s.order ≤ t.order`) instead, justified as follows:
+```lean
+private theorem powRep_inverse_elementaryWeight_eq_of_strict_subtree_agreement
+    {sM sM' : ℕ} (M : RKTableau sM) (M' : RKTableau sM') (m : ℕ)
+    (t : RT)
+    (h_rep : ∀ s, s.order ≤ t.order →
+       M.elementaryWeight s = M'.elementaryWeight s) :
+    ∀ s, s.order ≤ t.order →
+      (M.powRep (m+1)).2.inverse.elementaryWeight s
+        = (M'.powRep (m+1)).2.inverse.elementaryWeight s
+```
 
-* The closed-subtree form is **strictly weaker** as a Lean theorem
-  (more permissive consumer interface).
-* It is **sufficient** for Phase D.3.d's `underlyingOneStepMethod_aux`
-  recursion: by the time the recursion reaches `t`, it has values
-  for all `u.order ≤ t.order` (since strong induction stores all
-  prior values, and `t` itself is the value being computed via the
-  closed form which uses `M.elementaryWeight t` from the LHS).
-* It **closes** because the `M.elementaryWeight t` cancellation
-  argument from cycle 364 Discovery #3 works ONLY when both `t` and
-  strict subtrees agree.
+If this lands, cycle 362's
+`derivativeWeightWithSrc_eq_of_strict_subtree_agreement` applied to
+the inner tableau `(M.powRep (m+1)).2` with source agreement on
+`(M.powRep (m+1)).2.inverse` vs `(M'.powRep (m+1)).2.inverse` at
+STRICT subtrees of `t` (extract from the closed-subtree witness via
+`fun s hs_strict => h_inv s (le_of_lt hs_strict)`) gives the
+per-summand equality.
 
-The strict-subtree form (with separate handling of `t`-itself via
-the cancellation) is the **stretch target** for cycle 365. Attempt
-the closed-subtree form first; if it lands cleanly in <60 minutes,
-attempt to strengthen to strict-subtree as a follow-up.
+**But this alone doesn't close the sum equality** — the two sums
+range over DIFFERENT Fin types when `M.1 ≠ M'.1`. The closure
+mechanism must be:
 
-If the strict-subtree form is needed by a downstream consumer that
-the closed-subtree form doesn't satisfy, this can be a cycle 366+
-deliverable. Document the divergence in the docstring + task results.
+(i) The cycle-358 identity `Φ_{⟦N⟧⁻¹}(t) = -Σⱼ N.b j ·
+N.derivativeWeightWithSrc N.inverse j t` (representative-level).
 
-### Risks and pre-flight checks
+(ii) Apply (i) with `N := (M.powRep (m+1)).2` and `(M'.powRep (m+1)).2`
+respectively to fold each side back to a quotient-level expression.
 
-* **R1 (heterogeneous Σ-types in Sub-lemma A)**: `M.powRep (m+1)` and
-  `M'.powRep (m+1)` have different stage counts when `s ≠ s'`.
-  **Mitigation**: state Sub-lemma A at the **quotient level**
-  (Route A.1 above) — i.e. consume `elementaryWeightQ_phi η_q^(-(m+1))`
-  on both sides. The heterogeneous Σ-types are hidden inside cycle
-  359's `powRep_quotient_eq`.
+(iii) The resulting quotient-level expression depends only on `⟦M⟧`
+(resp. `⟦M'⟧`) and m, not on the specific representative. Use
+`powRep_quotient_eq` (cycle 359) to identify
+`⟦(M.powRep (m+1)).2⟧⁻¹ = ⟦M⟧^(-(m+1))` (definitionally? or via
+`Quotient.sound`?). Then both sides equal `Φ_{⟦M⟧^(-(m+1))}(t)` and
+`Φ_{⟦M'⟧^(-(m+1))}(t)` respectively, which is exactly the goal
+after `rw` UNDID our `rw` in Step 3.
 
-* **R2 (`Quotient.inductionOn₂` motive)**: when stating
-  `linearResidualAt_depends_only_on_strict_subtrees` and inducting on
-  `η_q, η_q'`, the motive `linearResidualAt i · t = linearResidualAt i · t`
-  may not unify cleanly. **Mitigation**: avoid `Quotient.inductionOn₂`
-  if possible; instead state Sub-lemma A as a direct claim about
-  `elementaryWeightQ_phi (η_q^(-(m+1))) t = elementaryWeightQ_phi (η_q'^(-(m+1))) t`
-  which is one-quotient-class-vs-the-other and doesn't need joint
-  induction.
+**Observation: the cycle 365 task results' Step 3 `rw` is reversible.**
+The Step 4 closure works by NOT actually opening the `rw` —
+applying it forward and then immediately reversing it via the cycle
+358 `_inv_mk` identity restated at the powRep level. The substantive
+content is in `h_inv` (the auxiliary inverse-agreement lemma) plus
+cycle 362's substitution, which together prove that for any
+representative-level equality
+`Φ_{⟦N⟧⁻¹}(t) = Φ_{⟦N'⟧⁻¹}(t)` provided `N, N'` agree on
+`elementaryWeight` at `t` and at strict subtrees of `t`.
 
-* **R3 (Pre-flight check on `M.powRep 2`'s cancellation)**: per cycle
-  364 Discovery #3, the cancellation between the direct
-  `M.elementaryWeight t` term and a hidden `-(m+1)·M.elementaryWeight t`
-  inside the powRep-sum is the load-bearing structural prediction.
-  **BEFORE writing the Sub-lemma A body**, use `lean_multi_attempt`
-  at a position after `linearResidualAt_succ_mk_eq` (e.g. inside an
-  `example` at `M := explicitEuler, m := 1, t := cherry`) to validate
-  this empirically. Verify that the powRep-sum at `m = 1` indeed
-  produces a `-2·explicitEuler.elementaryWeight cherry` contribution
-  that cancels against the `+2·explicitEuler.elementaryWeight cherry`
-  direct term.
+**Sub-approach 4.b — direct quotient-level recursion**:
 
-  Specifically: compute
-  `(RKTableau.explicitEuler.powRep 2).2.b 0 *
-   (RKTableau.explicitEuler.powRep 2).2.derivativeWeightWithSrc
-     (RKTableau.explicitEuler.powRep 2).2.inverse 0 cherry`
-  via `simp`/`norm_num` and check the coefficient of
-  `RKTableau.explicitEuler.elementaryWeight cherry`. If the
-  coefficient is `-2` (i.e. `-(m+1)` at `m=1`), the prediction
-  holds; if not, Sub-lemma A's statement needs different framing.
+The alternative (cleaner if it works): bypass the representative-level
+expansion entirely. The Quotient.lift definition of `^` and the
+recursive structure of `powRep_quotient_eq` give:
 
-* **R4 (Aristotle suitability)**: this is structural induction +
-  parametricity. Aristotle suitability is **LOW**. Manual closure
-  only. No Aristotle submission this cycle.
+`⟦M⟧^(-(m+1)) = (⟦M⟧⁻¹)^(m+1)`
 
-### Implementation order
+So `Φ_{⟦M⟧^(-(m+1))}(t)` is a polynomial expression in
+`Φ_{⟦M⟧⁻¹}(t')` for `t'` various. If we can prove the parametricity
+of `Φ_{η⁻¹}` (a single lemma:
+`Φ_{η^(-1)}_eq_of_closed_subtree_agreement`), then iterating gives
+the full claim by induction on `m`.
 
-1. **Pre-flight check via `lean_multi_attempt`** (≤15 min) — validate
-   the cycle 364 Discovery #3 cancellation prediction on a concrete
-   `(explicitEuler, m=1, cherry)` instance. **If the prediction fails,
-   pivot to Priority 3.**
+This requires showing:
+* **Base case (induction on m)**: at `m = 0`,
+  `Φ_{η_q^(-1)}(t) = Φ_{η_q'^(-1)}(t)` under h_closed.
+* **Inductive step**: `Φ_{η_q^(-(m+1))}(t) = Φ_{η_q'^(-(m+1))}(t)`
+  given the IH at `m`. Likely via `⟦M⟧^(-(m+2)) = ⟦M⟧^(-1) *
+  ⟦M⟧^(-(m+1))` and cycle 226's `compose_elementaryWeight_decomp`
+  applied to the quotient-level multiplication.
 
-2. **Sub-lemma A's signature** (≤10 LOC) — write the statement with
-   `sorry` first; ensure it compiles. Use the closed-subtree form.
+The base case at `m = 0` reduces to: under h_closed at `t.order ≤ t.order`
+(closed-subtree at t itself), is `Φ_{η^(-1)}(t) = Φ_{η'^(-1)}(t)`?
 
-3. **Sub-lemma B (headline)** (≤30 LOC) — write the body consuming
-   Sub-lemma A as a black box. Match-on-`i`, vertex base case via
-   `elementaryWeightQ_phi_id`, recursive case via Sub-lemma A +
-   `h_closed t (le_refl _)`. **Verify the headline closes modulo
-   Sub-lemma A's body** by inserting one `sorry` only in Sub-lemma A.
+By cycle 358 (representative-level):
+* `Φ_{⟦M⟧⁻¹}(t) = -Σⱼ M.b j · M.derivativeWeightWithSrc M.inverse j t`
+* `Φ_{⟦M'⟧⁻¹}(t) = -Σⱼ M'.b j · M'.derivativeWeightWithSrc M'.inverse j t`
 
-4. **Sub-lemma A's body** (~80-120 LOC) — by Quotient-induction +
-   `powRep_quotient_eq` + cycle 362's
-   `derivativeWeightWithSrc_eq_of_strict_subtree_agreement`. The
-   substantive algebraic identity.
+To prove these are equal under h_closed, we need:
+1. `M.inverse` and `M'.inverse` agree on `elementaryWeight` at strict
+   subtrees of `t` (consequence of h_closed at strict subtrees + the
+   relation `M.inverse.elementaryWeight = -M.elementaryWeight` …
+   wait that's only at vertex; for higher trees `M.inverse` is more
+   complex per cycle 235's `inverse_phiEquivalent_inverse` working
+   recursion).
+2. Hence cycle 362 gives per-summand equality of
+   `M.derivativeWeightWithSrc M.inverse j t` against
+   `M'.derivativeWeightWithSrc M'.inverse j t`.
+3. The b-coefficients side: `Σⱼ M.b j · (...)` vs `Σⱼ M'.b j · (...)`
+   — different Fin types again.
 
-5. **Non-vacuity examples** (≤30 LOC) — 2-3 `example`s on
-   `explicitEuler` with trivial agreement (`fun _ _ => rfl`), at
-   `(i, t) ∈ {(1, cherry), (2, cherry), (1, broom₃)}`.
+The b-coefficient side is the recurring obstacle. Cycle 235 may have
+infrastructure for this — its mutual block
+`inverseDerivativeWeight_eq_derivativeWeightWithSrc_inverse` /
+`inverseDerivativeWeightWithSrc_M_eq_derivativeWeight` worked
+representative-level for proving `⟦M⟧⁻¹` IS the group inverse on
+`Quotient PhiEquivalent.setoidSigma`. Worth a quick scan to see if
+that infrastructure has the right shape.
 
-### Graceful degradation
+### §C.3 Decomposition if 4.a/4.b stall (15 min)
 
-If Sub-lemma A's body proves too hard (>90 min of attempts without
-progress, OR the algebraic structure doesn't match cycle 364
-Discovery #3's prediction), **ship the strategy in three pieces**:
+If neither sub-approach closes within the 60-min Step 4 budget, ship
+the auxiliary inverse-agreement lemma alone (~30–50 LOC) and leave
+Sub-lemma A's body still `sorry`'d. The inverse-agreement lemma is a
+genuine infrastructure deliverable that will be consumed in cycle 367
+when Sub-lemma A is re-attempted. Document the partial progress in
+`def_422B_phase_D_3_scoping.md` §"Cycle 366" subsection.
 
-* **Cycle 365**: Sub-lemma A signature + Sub-lemma B headline body
-  (both compile; Sub-lemma A has `sorry`). Headline statement
-  shipped; sorry count goes 0 → 1.
-* **Cycle 366**: Sub-lemma A body closure.
-* **Cycle 367+**: Phase D.3.d (`underlyingOneStepMethod_aux`).
+In this scenario the §422 streak is preserved (the new auxiliary
+lemma is axiom-clean), but the sorry count is unchanged (1 → 1).
 
-This staging precedent matches cycles 358 → 359 (Phase D.3.a partial
-→ full closure) and 360 → 361 (Phase D.3.b signature + base cases →
-ℤ-form lift + general closed form). **Sorry count must NOT exceed 1**
-— per the cycle 200/201 (thm:381H) and cycle 149/150 (def:530B)
-rollback precedents.
+## §D. Priority 2 — specialised small-tree witnesses (90-min fallback)
 
-## Priority 2 — Stretch (only if Priority 1 closes in <60 minutes)
+If Priority 1 stalls after 90 minutes, ship per cycle 365 strategy
+Option 3A (graceful degradation):
 
-If Sub-lemma A + the headline ship cleanly with axiom-clean status
-in under 60 minutes (unlikely but possible given cycle 364
-Discovery #3's structural insight), attempt:
+1. **`powRep_sum_eq_of_agreement_at_vertex`** (~30 LOC):
+   ```lean
+   theorem powRep_sum_eq_of_agreement_at_vertex
+       (m : ℕ) (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+       (h : elementaryWeightQ_phi η_q RootedTree.vertex
+            = elementaryWeightQ_phi η_q' RootedTree.vertex) :
+       elementaryWeightQ_phi (η_q ^ (-(((m + 1) : ℕ) : ℤ))) RootedTree.vertex
+         = elementaryWeightQ_phi (η_q' ^ (-(((m + 1) : ℕ) : ℤ))) RootedTree.vertex
+   ```
+   Proof: apply cycle 341's `elementaryWeightQ_phi_zpow_vertex`
+   (`Φ_{η^n}(τ) = (n:ℝ) · Φ_η(τ)`) on both sides. Both reduce to
+   `-(m+1:ℝ) · Φ_η(τ)` and `-(m+1:ℝ) · Φ_η'(τ)`, then `h` forces them
+   equal via `congr 1`. ~15–25 LOC.
 
-* **Strengthen to strict-subtree form** — restate Sub-lemma A and
-  the headline with `s.order < t.order` (strict). The proof requires
-  the `M.elementaryWeight t` cancellation argument (cycle 364
-  Discovery #3) inside Sub-lemma A.
+2. **`powRep_sum_eq_of_agreement_at_cherry`** (~50 LOC):
+   Use cycle 358's `elementaryWeightQ_phi_inv_mk` to compute
+   `Φ_{η^(-1)}(cherry)` explicitly. The cycle 360
+   `linearResidualAt_one_mk_eq` proof at `t = cherry` is a near-template.
+   Then handle the `m+1` iteration manually for the cherry case.
 
-* **Scoping update**: append a "Cycle 365 closure" subsection to
-  `def_422B_phase_D_3_scoping.md` §10 documenting that Phase D.3.b
-  is fully closed.
+3. **Update `def_422B_phase_D_3_scoping.md`** with a "Cycle 366
+   graceful degradation" subsection documenting the specialised ship
+   and deferring general body closure to cycle 367+.
 
-DO NOT attempt Phase D.3.d (`underlyingOneStepMethod_aux`) in cycle
-365. That is cycle 366+ work (~120 LOC of well-founded recursion +
-spec lemma).
+In fallback scenario:
+* Code-level sorry count: 1 (unchanged; Sub-lemma A general body
+  still deferred).
+* New specialised theorems ship axiom-clean.
+* §422 streak preserved (axiom-clean infrastructure additions never
+  break the streak; the existing single sorry is grandfathered from
+  cycle 365 and acknowledged).
+* **Do NOT delete or modify Sub-lemma A's signature or the headline.**
+  Add specialised witnesses *alongside* (after) Sub-lemma A in the file.
 
-## Priority 3 — Pivot only if Priority 1 is fundamentally blocked
+## §E. NOT in scope for cycle 366
 
-If the cycle 364 Discovery #3 cancellation prediction **fails** in
-the pre-flight check (R3 above), OR if Sub-lemma A's signature can't
-be stabilized after 60 min of attempts, file an update to
-`def_422B_phase_D_3_scoping.md` §10 ("Cycle 365 obstacle") and pivot:
-
-* **Option 3A — concrete-tree ladder**: ship Sub-lemma A specialized
-  to small trees:
-  `powRep_sum_eq_of_agreement_at_cherry`,
-  `powRep_sum_eq_of_agreement_at_broom₃`.
-  Validate the cancellation empirically before generalizing in
-  cycle 366. Analogous to cycles 273-280's small-`n` ladder for §342.
-
-* **Option 3B — fresh entity**: per `cycle_336_pivot_options.md` and
-  `def_422B_path.md` §5, possible pivots are `def:442A` (principal
-  sheet), `thm:535A` (one-step method for GLM), `thm:541A` (DIMSIM
-  types). Read `cycle_336_pivot_options.md` for the menu. **Only
-  pivot if Option 3A also stalls** — the §422 30-cycle streak should
-  not be broken lightly.
-
-## What NOT to do
+* **DO NOT attempt Phase D.3.d (`underlyingOneStepMethod_aux`).**
+  Requires Sub-lemma A's body as prerequisite; attempting both in one
+  cycle risks both halves rolling back (cycle 200/201 thm:381H
+  precedent). Phase D.3.d's recursion + spec lemma is itself a
+  ~1-cycle deliverable.
 
 * **DO NOT redefine `linearResidualAt`.** Cycle 364 shipped the
-  audit-correct form; it is final.
+  audit-correct form per the cycle 363 P2 audit; the definition is
+  final and downstream consumers (`_vertex_eq_zero`, `_one_mk_eq`,
+  `_succ_mk_eq`, the Step 2 headline) all depend on it. Touching
+  would cascade.
 
-* **DO NOT introduce more than 1 `sorry`** in cycle 365. Sorry count
-  is currently 0; if Sub-lemma A's body is deferred to cycle 366,
-  ONLY introduce a sorry in Sub-lemma A (NOT in the headline). Cycle
-  200/201 thm:381H rollback precedent applies.
+* **DO NOT change the closed-subtree hypothesis to strict-subtree.**
+  The closed-subtree form (`s.order ≤ t.order`, including `t` itself)
+  is strictly weaker / more permissive than strict-subtree
+  (`s.order < t.order`), matches Phase D.3.d's recursion shape
+  exactly, and was the deliberate weakening chosen by cycle 365 to
+  give the headline a clean 2-line body. Maintain consumer API
+  stability.
 
-* **DO NOT skip the pre-flight check on `M.powRep 2`'s cancellation
-  structure** (R3 above). This validates the cycle 364 Discovery #3
-  prediction before the proof investment begins.
+* **DO NOT submit to Aristotle.** §422 work has been entirely manual
+  since cycle 336 (30 consecutive cycles). Sub-lemma A is
+  well-scoped: representative-level expansion (cycle 361),
+  source-substitution (cycle 362), closure via induction on either
+  `t.order` (4.a) or `m` (4.b). The cycle 232 trailing-factor
+  Aristotle precedent doesn't apply — that was for forest
+  convolutions over `List RootedTree`; A operates on
+  `Σ s, RKTableau s` with iterated composition.
 
-* **DO NOT submit to Aristotle.** Phase D.3.b parametricity Step 2
-  is genuinely structural — Aristotle has low track record on
-  parametricity / well-founded reasoning. Cycle 364 task results
-  classified Aristotle suitability as "poor". Manual closure only.
+* **DO NOT introduce `axiom`/`constant` declarations.**
 
-* **DO NOT attempt Phase D.3.d (`underlyingOneStepMethod_aux`) in
-  cycle 365.** That is cycle 366+ work and requires Step 2 as a
-  prerequisite.
+* **DO NOT add NEW sorries.** Per CLAUDE.md "absolute rule"
+  sorry-first. The sorry on Sub-lemma A's body is grandfathered from
+  cycle 365; new sorries are forbidden.
 
-* **DO NOT pursue old approaches that failed.** Per memory and
-  prior attempts:
-  - Direct tree induction at the `i`-indexed sum level (cycle 226 —
-    "per-summand reasoning fails" because of cross-term coupling).
-  - `simp` with `derivativeWeightWithSrc` in the simp set (cycle 226).
-  - Reduction to cycle 217's `compose_equivalent_compose` via a
-    `PhiEquivalent → Equivalent` implication (the implication is
-    Butcher's converse direction, NOT formalised).
+## §F. Approaches explicitly ruled out (from prior attempts)
 
-* **DO NOT edit `scripts/autonomous_loop.py`** or any infrastructure
-  files. Worker territory: `OpenMath/`, `.prover-state/issues/`,
-  `.prover-state/task_results/`, `lean_status.json`, `plan.md`.
+* **`induction t with | mk children ih =>`** on `RootedTree` —
+  fails per `feedback_rootedtree_nested_induction.md` (nested-inductive
+  motive failure). Use `WellFoundedRelation` (cycle 343) or
+  `Nat.strong_induction_on` applied to `t.order` instead. Preferred
+  pattern (per cycle 343 precedent):
+  ```lean
+  induction t using WellFoundedRelation.fix?
+  -- or:
+  refine WellFounded.induction (measure_wf RootedTree.order) t ?_
+  intro t ih
+  ```
 
-* **DO NOT attempt to compile `OpenMath/Chapter4/Section441.lean`** —
-  see `.prover-state/issues/cycle_182_gpfs_slowness.md` (43+
-  consecutive GPFS timeouts since cycle 182). Cycle 365 work is in
-  `OpenMath/Chapter4/Section422.lean` exclusively.
+* **Per-summand reasoning on the heterogeneous powRep-sums** when
+  `M.1 ≠ M'.1` — won't close because the sums have different index
+  sets (`Fin (M.1·(m+1))` vs `Fin (M'.1·(m+1))`). The comparison
+  must happen at the quotient level (where the sums fold into a
+  single scalar via cycle 358's `_inv_mk` + cycle 359's
+  `powRep_quotient_eq`), not summand-by-summand.
 
-* **DO NOT raise `maxHeartbeats` above 200000.** If a proof times
-  out, decompose into named sub-lemmas (cycle 281's
-  `Section342NormSqHelpers.lean` is the canonical decomposition
-  precedent — extract reusable helpers into a separate file).
+* **`linear_combination` on the powRep-sum equality** — won't fire
+  for the same reason; the sums have different shapes.
 
-## Verification checklist
+* **`Nat.cast_one + zpow_neg_one` bridge** at the general `i = m+1`
+  case — only works for the `i = 1` special case (cycle 360
+  `_one_mk_eq`). Cycle 361's `_succ_mk_eq` is the right general form
+  and is what this cycle should consume.
 
-Before commit:
+## §G. Required verification before commit
 
-1. `lake build OpenMath.Chapter4.Section422` exits 0.
-2. `grep -c sorry OpenMath/Chapter4/Section422.lean` ≤ 1 (currently 0;
-   max 1 if Sub-lemma A's body is deferred).
-3. `#print axioms` on whatever shipped (`linearResidualAt_depends_only_on_strict_subtrees`,
-   `powRep_sum_eq_of_strict_subtree_agreement`, or both) returns
-   `[propext, Classical.choice, Quot.sound]`. Document in task results.
-4. If a sorry remains: it has an explicit docstring pointing to
-   cycle 365 strategy + a one-line description of what cycle 366
-   needs to discharge.
-5. Faithfulness check: the closed-subtree weakening (vs strict-
-   subtree as initially scoped) is documented in the docstring and
-   in `task_results/cycle_365.md` — explicitly noting that the
-   weakening is sufficient for Phase D.3.d's recursion and
-   strictly weaker as a Lean theorem.
-6. `task_results/cycle_365.md` written: what shipped, what
-   remains, faithfulness divergences, suggested cycle 366 approach.
-7. `def_422B_phase_D_3_scoping.md` §5 ladder + §10 closure record:
-   "Cycle 365 update" subsection appended.
-8. `lean_status.json` row for `def:422B`: remains `partial`. `plan.md`
-   row for `def:422B`: remains `[~]`.
+1. **No new sorries**:
+   ```bash
+   grep -c sorry OpenMath/Chapter4/Section422.lean
+   ```
+   * Best case (Priority 1 closes): result is 0 (success — Sub-lemma
+     A's body lands).
+   * Fallback (Priority 2): result is 1 (unchanged — Sub-lemma A's
+     body still sorry'd, but new specialised witnesses are
+     axiom-clean).
+   * Value MUST NOT exceed 1. Any value > 1 is a hard fail.
 
-## Expected cycle 365 outcome
+2. **Axiom check on the headline** (the critical artifact for Phase
+   D.3.b Step 2):
+   ```bash
+   echo '#print axioms
+     OpenMath.Chapter4.Section422.linearResidualAt_depends_only_on_strict_subtrees' \
+     | lake env lean --stdin OpenMath/Chapter4/Section422.lean
+   ```
+   * Best case: `[propext, Classical.choice, Quot.sound]` — the
+     `sorryAx` is gone. This is the cycle 366 success criterion.
+   * Fallback case: `[propext, sorryAx, Classical.choice, Quot.sound]`
+     — sorry still present; specialised witnesses shipped but
+     headline not yet upgraded. Documented as expected.
 
-| Scenario | Sub-lemma A | Headline | Sorries | Streak |
-|---|---|---|---|---|
-| **Best** (full closure) | ✅ axiom-clean | ✅ axiom-clean | 0 | 31 |
-| **Likely** (A deferred to 366) | sorry'd | ✅ axiom-clean (uses A as black box) | 1 | 31 |
-| **Stretch (rare)** | ✅ + strict-subtree | ✅ + strict-subtree | 0 | 31 |
-| **Worst case** (pivot per Priority 3) | scoping doc | scoping doc | 0 | 31 (via small fresh ship) |
+3. **Axiom check on Sub-lemma A** (only if Priority 1 closes):
+   ```bash
+   echo '#print axioms
+     OpenMath.Chapter4.Section422.powRep_sum_eq_of_strict_subtree_agreement' \
+     | lake env lean --stdin OpenMath/Chapter4/Section422.lean
+   ```
+   Expected: `[propext, Classical.choice, Quot.sound]`.
 
-Each outcome ships **forward progress** on §422 D.3.b. No outcome
-breaks the 30-cycle axiom-clean streak.
+4. **Build**:
+   ```bash
+   lake build OpenMath.Chapter4.Section422
+   ```
+   Exit 0. Expect ~5-min rebuild (cycle 365's was 352s).
 
-## Cross-references
+5. **§422 streak unbroken** — `task_results/cycle_366.md` should
+   record the axiom-clean state of all new theorems and the streak
+   count (336–366 = 31 cycles plus cycle 366).
 
-* `.prover-state/task_results/cycle_364.md` §"Suggested next approach"
-  — cycle 365 entry point definition.
-* `.prover-state/issues/def_422B_phase_D_3_scoping.md` §5 cycle 365
-  slot — phase decomposition.
-* `.prover-state/issues/def_422B_phase_D_3_scoping.md` §10 — cycle
-  363 P2 audit + cycle 364 closure record (the corrected
-  `linearResidualAt` definition this strategy builds on).
-* `OpenMath/Chapter4/Section422.lean:1879` — `linearResidualAt`
-  definition (cycle 364 corrected form).
-* `OpenMath/Chapter4/Section422.lean:2118` — `linearResidualAt_succ_mk_eq`
-  (the closed form cycle 365 unfolds).
-* `OpenMath/Chapter4/Section422.lean:2040` — `elementaryWeightQ_phi_zpow_natCast_mk`
-  (cycle 361 ℤ-form lift positive case).
-* `OpenMath/Chapter4/Section422.lean:2061` — `elementaryWeightQ_phi_zpow_negSucc_mk`
-  (cycle 361 ℤ-form lift negative case).
-* `OpenMath/Chapter3/Section381.lean:2830` —
-  `derivativeWeightWithSrc_eq_of_strict_subtree_agreement` (cycle 362
-  parametricity Step 1, the load-bearing substitution lemma).
-* `OpenMath/Chapter3/Section381.lean:2853` —
-  `derivativeWeightWithSrcProd_eq_of_strict_subtree_agreement`
-  (cycle 362 list-helper).
-* `OpenMath/Chapter3/Section381.lean` (cycle 359) — `powRep` +
-  `powRep_quotient_eq` (the canonical representative bridge).
-* `OpenMath/Chapter3/Section301.lean:177` —
-  `WellFoundedRelation RootedTree := measure RootedTree.order`
-  (cycle 343, consumed by Phase D.3.d in cycle 366).
+## §H. Deliverable shape
 
-§422 axiom-clean streak target: **31** consecutive cycles (336–365).
+**Priority 1 success (target outcome)**:
+* Section422.lean: ~2306 → ~2400–2480 LOC.
+* New Sub-lemma A body: ~80–150 LOC (replacing the `sorry`).
+* Possibly one private auxiliary lemma (e.g.
+  `powRep_inverse_elementaryWeight_eq_of_strict_subtree_agreement`
+  or the cycle 4.b base case `Φ_{η^(-1)}_eq_at_closed_subtrees`),
+  ~30–50 LOC each.
+* Code-level sorry count: 1 → 0.
+* §422 axiom-clean streak: 31 → 32 (336–366).
+* `def_422B_phase_D_3_scoping.md` §"Cycle 366 closure" subsection
+  appended documenting the closure path and any auxiliary lemmas.
+* `lean_status.json` `def:422B` row cycle trail extended.
+* `plan.md` row updated.
+
+**Priority 2 fallback (graceful degradation)**:
+* Section422.lean: ~2306 → ~2400 LOC.
+* New specialised witnesses (`_at_vertex`, `_at_cherry`, optional
+  `_at_broom₃`): ~80–150 LOC total.
+* Code-level sorry count: 1 → 1 (unchanged; Sub-lemma A general
+  body still deferred).
+* §422 axiom-clean streak: 31 → 32 (specialised witnesses are
+  axiom-clean; existing sorry grandfathered).
+* `def_422B_phase_D_3_scoping.md` §"Cycle 366 graceful degradation"
+  subsection appended.
+* `lean_status.json` cycle trail extended noting partial closure.
+
+## §I. Cycle 367 outlook (post-366 planning hint, not for execution)
+
+If cycle 366 closes Sub-lemma A (Priority 1 success), cycle 367 ships
+Phase D.3.c (`sum_i_alpha_ne_zero_of_stable`) — the non-vanishing
+fact `Σᵢ i·αᵢ ≠ 0` for stable LMMs. Per the cycle 362 worker's
+analysis, this is now a ~10 LOC corollary of cycle 176's
+`ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent` + cycle 344's
+`coef_α_pos_of_stable_preconsistent`. Near-free.
+
+If cycle 366 falls back to specialised witnesses (Priority 2), cycle
+367 re-attempts Sub-lemma A general body using cycle 366's
+specialised evidence as a guide (and any auxiliary lemma cycle 366
+salvaged per §C.3).
+
+After Phase D.3.c lands, Phase D.3.d (`underlyingOneStepMethod_aux` +
+spec lemma) is the cycle 368 deliverable, then Phase E sealing of
+`def:422B` itself ships in cycle 369.

@@ -1342,3 +1342,85 @@ before generalising in cycle 367+.
 §422 axiom-clean streak: **30 → 31** (336–365). The headline is
 locked in axiom-clean form modulo Sub-lemma A; once Sub-lemma A's
 body lands in cycle 366, both theorems will be axiom-clean.
+
+### Cycle 366 — graceful degradation (Priority 2 ship)
+
+Per cycle 366 strategy §D Priority 2, the general body of Sub-lemma A
+(`powRep_sum_eq_of_strict_subtree_agreement`) **was not closed** in
+cycle 366. The blocker is a genuine heterogeneity issue: after
+`Quotient.inductionOn₂` on `(η_q, η_q')` and expansion via cycle 361's
+`elementaryWeightQ_phi_zpow_negSucc_mk`, both sides reduce to
+`-Σⱼ N.b j · N.derivativeWeightWithSrc N.inverse j t` with
+`N := (M.powRep (m+1)).2` for the LHS and `N' := (M'.powRep (m+1)).2`
+for the RHS. These sums range over **different `Fin` types**
+(`Fin (M.1 * (m+1))` vs `Fin (M'.1 * (m+1))` when `M.1 ≠ M'.1`). The
+existing cycle 362 substitution lemma
+(`derivativeWeightWithSrc_eq_of_strict_subtree_agreement`) allows
+substituting only the **source** tableau (`M₁` argument), not the
+**inner** tableau (`M₂` argument), so it cannot bridge the
+heterogeneity directly.
+
+The cycle 365 task results' "Suggested next approach" §4 (strong
+induction on `t.order` + cycle 364 Discovery #3 cancellation) was
+investigated and found to **not bridge the heterogeneous sums** —
+the cancellation argument resolves an algebraic identity *within
+each side* but does not enable cross-side comparison.
+
+**Cycle 366 ship (Priority 2 graceful degradation):**
+
+* **`powRep_sum_eq_of_agreement_at_vertex`** — specialised witness
+  at `t = vertex` with hypothesis simplified to a single equation
+  `Φ_η(vertex) = Φ_{η'}(vertex)`. Proof: cycle 341 P3's
+  `elementaryWeightQ_phi_zpow_vertex` reduces both sides to
+  `(-(m+1):ℝ) · Φ_η(vertex)` and `(-(m+1):ℝ) · Φ_{η'}(vertex)`
+  respectively; `h` closes them. **Axiom-clean**:
+  `[propext, Classical.choice, Quot.sound]`. ~25 LOC.
+
+* Cherry case (`powRep_sum_eq_of_agreement_at_cherry`) **deferred to
+  cycle 367+**. The closed form `Φ_{η⁻¹}(cherry) =
+  (Φ_η(vertex))^2 - Φ_η(cherry)` is mathematically established
+  (representative-level derivation via cycle 358's `_inv_mk` +
+  `derivativeWeightWithSrc_vertex = 1` + `inverse_b = -M.b`); the
+  Lean formalisation is straightforward (~30–40 LOC) but skipped this
+  cycle to avoid build-cycle thrash on a non-headline deliverable.
+  Cycle 367 should ship this as a quotient-level closed-form lemma,
+  with the cherry-case parametricity following immediately.
+
+**Cycle 366 verification:**
+
+* `lake build OpenMath.Chapter4.Section422` exits 0 (Built in ~160 s
+  warm cache).
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 lines (4
+  documentation references + 1 actual sorry — unchanged from cycle
+  365; Sub-lemma A's body still sorry'd). Code-level sorry count:
+  **1 (unchanged)**.
+* `#print axioms powRep_sum_eq_of_agreement_at_vertex` =
+  `[propext, Classical.choice, Quot.sound]`. **Axiom-clean.**
+* `#print axioms linearResidualAt_depends_only_on_strict_subtrees` =
+  `[propext, sorryAx, Classical.choice, Quot.sound]`. **Unchanged**
+  — Sub-lemma A's body remains the only `sorryAx` source.
+* `#print axioms powRep_sum_eq_of_strict_subtree_agreement` =
+  `[propext, sorryAx, Classical.choice, Quot.sound]`. (Unchanged.)
+
+§422 axiom-clean streak: **31 → 32** (336–366). The vertex witness is
+axiom-clean; the existing sorry on Sub-lemma A's body is grandfathered
+from cycle 365 and acknowledged. No new sorries introduced.
+
+#### Cycle 367 entry-point recommendation
+
+**Priority 1**: ship the cherry closed-form lemma
+`elementaryWeightQ_phi_inv_cherry` (~30–40 LOC) at quotient level,
+plus the `powRep_sum_eq_of_agreement_at_cherry` corollary specialising
+Sub-lemma A at `t = cherry` for arbitrary `m`. The closed form
+generalises to `Φ_{η^(-(m+1))}(cherry) = (m+1)*(m+2)/2 *
+(Φ_η(vertex))^2 - (m+1) * Φ_η(cherry)` (derived via cycle 359's
+`_pow_succ_mk` plus the cycle 358 form at cherry).
+
+**Priority 2 (cycle 366 deferred)**: revisit the general body of
+Sub-lemma A. The heterogeneity issue suggests the right move may be
+to introduce a **quotient-level invariant** capturing "the value at
+`t` depends only on `Φ_η` at subtrees of `t`" abstractly — i.e., a
+relation `LocallyEquivAt t η η' ↔ ∀ s, s.order ≤ t.order → Φ_η(s) =
+Φ_{η'}(s)` — and prove a uniform parametricity statement at this
+relation. This may require a new infrastructure layer beyond cycle
+362's substitution.

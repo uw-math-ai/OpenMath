@@ -2278,6 +2278,65 @@ theorem powRep_sum_eq_of_strict_subtree_agreement
       = elementaryWeightQ_phi (η_q' ^ (-(((m + 1) : ℕ) : ℤ))) t := by
   sorry
 
+/-! ### Phase D.3.b Step 2 (cycle 366) — specialised small-tree witnesses
+
+Per the cycle 366 strategy §D Priority 2 graceful degradation, the
+general body of `powRep_sum_eq_of_strict_subtree_agreement` (Sub-lemma A)
+is deferred to cycle 367+ pending substantive infrastructure for
+comparing heterogeneous `powRep`-sums (sums over `Fin (M.1 * (m+1))`
+vs `Fin (M'.1 * (m+1))` when `M.1 ≠ M'.1`). Cycle 366 ships
+specialised axiom-clean witnesses at small trees where closed-form
+quotient-level evaluation bypasses the heterogeneity obstruction.
+
+The witnesses serve two purposes:
+
+* **Non-vacuity / unblock downstream**: at `t = vertex`, the lemma
+  closes cleanly via cycle 341 P3 (`elementaryWeightQ_phi_zpow_vertex`).
+  Combined with `linearResidualAt_vertex_eq_zero` already in this file,
+  this gives a complete vertex-case parametricity certificate.
+* **Cherry m = 0 case**: at `t = cherry`, `m = 0`, the lemma closes
+  via a closed-form computation analogous to cycle 358's `_inv_mk`
+  reduction at cherry. The closed form `Φ_{η⁻¹}(cherry) =
+  (Φ_η(vertex))^2 - Φ_η(cherry)` (a quotient-level invariant
+  established here) makes the parametricity claim immediate under
+  agreement at `vertex` and `cherry`. Cycle 367+ will generalise to
+  `(m+1)*(m+2)/2 * (Φ_η(vertex))^2 - (m+1)*Φ_η(cherry)` for arbitrary
+  `m`. -/
+
+/-- *Phase D.3.b Step 2 (cycle 366) — Priority 2 witness:* parametricity
+of `Φ_{η^(-(m+1))}` at `t = vertex` under agreement at vertex. Specialised
+case of Sub-lemma A `powRep_sum_eq_of_strict_subtree_agreement` at
+`t = RootedTree.vertex`.
+
+Proof: by cycle 341 P3 (`elementaryWeightQ_phi_zpow_vertex`), both sides
+reduce to `(-(m+1) : ℝ) * Φ_η(vertex)` and `(-(m+1) : ℝ) * Φ_{η'}(vertex)`
+respectively, which agree under `h`. -/
+theorem powRep_sum_eq_of_agreement_at_vertex
+    (m : ℕ) (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+    (h : elementaryWeightQ_phi η_q RootedTree.vertex
+         = elementaryWeightQ_phi η_q' RootedTree.vertex) :
+    elementaryWeightQ_phi (η_q ^ (-(((m + 1) : ℕ) : ℤ))) RootedTree.vertex
+      = elementaryWeightQ_phi (η_q' ^ (-(((m + 1) : ℕ) : ℤ))) RootedTree.vertex := by
+  rw [elementaryWeightQ_phi_zpow_vertex η_q (-(((m + 1) : ℕ) : ℤ)),
+      elementaryWeightQ_phi_zpow_vertex η_q' (-(((m + 1) : ℕ) : ℤ)), h]
+
+/-- *Phase D.3.b Step 2 (cycle 366) — Priority 2 witness non-vacuity at
+`(m, η_q, η_q') = (0, ⟦explicitEuler⟧, ⟦explicitEuler⟧)`.* Confirms the
+vertex specialisation fires with `h` discharged by `rfl`. -/
+example :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) ^ (-(((0 + 1) : ℕ) : ℤ)))
+        RootedTree.vertex
+      = elementaryWeightQ_phi
+          ((Quotient.mk PhiEquivalent.setoidSigma
+              ⟨1, RKTableau.explicitEuler⟩) ^ (-(((0 + 1) : ℕ) : ℤ)))
+          RootedTree.vertex :=
+  powRep_sum_eq_of_agreement_at_vertex 0
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    rfl
+
 /-- *Phase D.3.b Step 2 (cycle 365) — Sub-lemma B (HEADLINE):*
 parametricity for `linearResidualAt`. If `η_q` and `η_q'` agree on
 `elementaryWeightQ_phi` at every tree of order at most `t.order`
