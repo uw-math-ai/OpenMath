@@ -6198,6 +6198,127 @@ theorem inversePolyBroom_three (f : RT → ℝ) :
   simp [Nat.choose]
   ring
 
+/-! ### Phase α'.4.1 (cycle 387) — Family C recursive `inversePolyTree`
+
+Phase α'.4.1 ships the unified recursive `inversePolyTree` definition
+that handles **heterogeneous-children trees** (Family C of the cycle
+385 scoping doc
+`.prover-state/issues/def_422B_phase_alpha_prime_family_C_scoping.md`).
+
+The design pattern:
+
+* The 0-children case (`mk []` = `vertex`) returns `-f vertex`.
+* The 1-child case (`mk [c]`) computes `-(v · inversePolyTree c f) - f (mk [c])`
+  via a one-step "single-child collapse" matching cycle 380's
+  `inversePolyChain` recurrence at depth 1.
+* The 2-children case (`mk [c₁, c₂]`) delegates to `bichildPolynomial`,
+  the binary-children polynomial helper.
+* The `k ≥ 3` case currently returns `0`; this is the Phase α'.5
+  territory (see scoping doc §4.3) and is **deliberately deferred**.
+
+The auxiliary `bichildCrossTerm t₁ t₂ f` packages the Block (4)
+bilinear contribution per scoping doc §3.2. The Phase α'.4.1 ship
+provides only the `0` default for `bichildCrossTerm`; the per-pair
+cases (`(cherry, cherry)`, `(broom₃, cherry)`, …) are filled in by
+subsequent cycles consuming the cycle 384 / 386 closed-form anchors.
+
+Termination is via Lean's default `sizeOf` measure on `RootedTree`.
+The strict-subtree descent in each recursive call is automatic for
+the literal pattern matches `[c]` and `[c₁, c₂]`. -/
+
+/-- *Phase α'.4.1 (cycle 387) — Block (4) bilinear cross-term placeholder.*
+
+For a binary-children tree `mk [t₁, t₂]`, this helper packages the
+bilinear cross-term contribution from §3.2 Block (4) of the cycle 385
+scoping doc. The cycle 387 ship returns `0` as a placeholder; cycle
+388+ work will refine this to the per-pair closed-form contributions
+empirically pinned by cycles 384 (`(cherry, cherry)`) and 386
+(`(broom₃, cherry)`). -/
+noncomputable def bichildCrossTerm (_t₁ _t₂ : RT) (_f : RT → ℝ) : ℝ := 0
+
+/-- *Phase α'.4.1 (cycle 387) — binary-children polynomial helper.*
+
+Given two subtrees `t₁ t₂ : RT`, their recursively-known
+`inversePolyTree` values `inv₁, inv₂ : ℝ`, and an elementary-weight
+function `f : RT → ℝ`, `bichildPolynomial t₁ t₂ inv₁ inv₂ f` is the
+closed-form polynomial-in-`f` that (after the cycle 388+ cross-term
+refinement) will reproduce `Φ_{η⁻¹}(mk [t₁, t₂])`'s value under
+`f = Φ_η`.
+
+The shape is the §3.2 four-block decomposition reorganised:
+
+* `-(v · inv₁ · inv₂)` — Block (1) (pure subtree-inverse product),
+  with a leading negation matching cycle 380's `inversePolyChain`
+  recurrence sign convention.
+* `-(inv₁ · f (mk [t₂]))` — Block (2) contribution.
+* `-(inv₂ · f (mk [t₁]))` — Block (3) (symmetric to Block (2)).
+* `+ bichildCrossTerm t₁ t₂ f` — Block (4) bilinear cross-term.
+* `- f (mk [t₁, t₂])` — the self-term (sign `-1` uniform across all
+  cycles 371/372/384/386 witnesses). -/
+noncomputable def bichildPolynomial
+    (t₁ t₂ : RT) (inv₁ inv₂ : ℝ) (f : RT → ℝ) : ℝ :=
+  -(f RootedTree.vertex * inv₁ * inv₂)
+    - inv₁ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₂])
+    - inv₂ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁])
+    + bichildCrossTerm t₁ t₂ f
+    - f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁, t₂])
+
+/-- *Phase α'.4.1 (cycle 387) — recursive inverse-polynomial on rooted trees.*
+
+For any rooted tree `t` and elementary-weight function `f : RT → ℝ`,
+`inversePolyTree t f` is the recursive closed-form polynomial in `f`
+that (after the cycle 388+ cross-term and migration work) reproduces
+`Φ_{η⁻¹}(t)` under `f = Φ_η`.
+
+Dispatch by children-list shape:
+
+* `mk []` (vertex): returns `-f vertex` (cycle 341 closed form).
+* `mk [c]` (single-child): returns `-(v · inversePolyTree c f) - f (mk [c])`
+  matching the one-step bichild collapse for single-child trees
+  (parametrising cycles 367/369/378's Family A chain closed forms).
+* `mk [c₁, c₂]` (binary): delegates to `bichildPolynomial`.
+* `mk (c :: c :: c :: _)` (k ≥ 3): returns `0` (deferred to Phase α'.5).
+
+Termination via Lean's default `sizeOf` measure: each recursive call
+is on a strict subtree (a `List.get` of the children list). -/
+noncomputable def inversePolyTree : RT → (RT → ℝ) → ℝ
+  | OpenMath.Chapter3.Section310.RootedTree.mk [], f =>
+      -f RootedTree.vertex
+  | OpenMath.Chapter3.Section310.RootedTree.mk [c], f =>
+      -(f RootedTree.vertex * inversePolyTree c f)
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk [c])
+  | OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂], f =>
+      bichildPolynomial c₁ c₂
+        (inversePolyTree c₁ f) (inversePolyTree c₂ f) f
+  | OpenMath.Chapter3.Section310.RootedTree.mk (_ :: _ :: _ :: _), _ =>
+      0
+
+/-- *Phase α'.4.1 (cycle 387) — vertex calibration witness.*
+
+`inversePolyTree vertex f = -f vertex` by direct unfold of the
+0-children branch. Matches cycle 341's `elementaryWeightQ_phi_zpow_vertex`
+at `n = -1`. -/
+theorem inversePolyTree_vertex (f : RT → ℝ) :
+    inversePolyTree RootedTree.vertex f = -f RootedTree.vertex := by
+  rfl
+
+/-- *Phase α'.4.1 (cycle 387) — cherry calibration witness.*
+
+`inversePolyTree cherry f = (f vertex)² - f cherry` matches cycle
+367's `elementaryWeightQ_phi_inv_cherry`. The proof unfolds the
+single-child branch (since `cherry = mk [vertex]`), reducing to the
+recursion `inversePolyTree vertex f = -f vertex` by `inversePolyTree_vertex`. -/
+theorem inversePolyTree_cherry (f : RT → ℝ) :
+    inversePolyTree RootedTree.cherry f
+      = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry := by
+  show inversePolyTree
+      (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.vertex]) f
+        = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry
+  rw [inversePolyTree, inversePolyTree_vertex]
+  show -(f RootedTree.vertex * -f RootedTree.vertex) - f RootedTree.cherry
+        = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry
+  ring
+
 /-! ### Phase α.1 (cycle 374) — `inversePolynomial` pattern-match definition
 
 `inversePolynomial t f` is the closed-form polynomial in the elementary

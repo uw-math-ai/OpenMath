@@ -786,3 +786,109 @@ or `mk [broom₃, broom₃]` = symmetric two-broom order-7).
   Section422.lean:2272 (multi-cycle ahead).
 * Did NOT touch `inversePolynomial` (Phase α'.4.2 work).
 * Did NOT submit to Aristotle (pure manual closure cycle).
+
+## §11 Cycle 387 update (Phase α'.4.1 P1+P2 ship)
+
+Cycle 387 shipped Phase α'.4.1's **P1+P2 deliverables** per the
+strategy doc §C.1–C.3:
+
+### §11.1 What shipped
+
+* `bichildCrossTerm : RT → RT → (RT → ℝ) → ℝ` — Block (4) bilinear
+  cross-term **placeholder** returning `0` uniformly. Cycle 388+
+  refines per-pair (matching cycle 384's `(cherry, cherry)` and
+  cycle 386's `(broom₃, cherry)` anchors).
+* `bichildPolynomial : RT → RT → ℝ → ℝ → (RT → ℝ) → ℝ` — binary
+  helper of shape
+  `-(v · inv₁ · inv₂) - inv₁ · f (mk [t₂]) - inv₂ · f (mk [t₁])
+   + bichildCrossTerm t₁ t₂ f - f (mk [t₁, t₂])`.
+  The leading-`-` sign convention matches cycle 380's
+  `inversePolyChain` recurrence and the uniform `-f(mk [t₁, t₂])`
+  self-term across all four Family C witnesses (cycles 371/372/384/386).
+* `inversePolyTree : RT → (RT → ℝ) → ℝ` — recursive 4-way dispatch
+  on the children list:
+  - `[]` → `-f vertex` (Family A vertex; cycle 341).
+  - `[c]` → `-(v · inversePolyTree c f) - f (mk [c])` (single-child
+    bichild collapse; matches Family A chain at depth 1).
+  - `[c₁, c₂]` → `bichildPolynomial c₁ c₂ (inversePolyTree c₁ f)
+                                          (inversePolyTree c₂ f) f`.
+  - `(_ :: _ :: _ :: _)` → `0` (k ≥ 3 deferred to Phase α'.5).
+* `inversePolyTree_vertex` and `inversePolyTree_cherry` —
+  calibration witnesses closing by `rfl` and `rw + ring` respectively.
+
+### §11.2 Why the strategy's `bichildPolynomial` shape was revised
+
+The strategy's strawman §C.1 had a *positive*-leading shape:
+`+ v · inv₁ · inv₂ + inv₁ · f (mk [t₂]) + …`. Empirical check against
+cycle 384's closed form revealed this would require a very large
+`bichildCrossTerm cherry cherry f` correction. The cycle 387 ship
+uses the *negated* shape:
+`-(v · inv₁ · inv₂) - inv₁ · f (mk [t₂]) - inv₂ · f (mk [t₁]) + …`.
+
+Justification: the cherry calibration P2 witness (single-child case
+`mk [vertex]`) needs `inversePolyTree cherry f = v² - c`. With the
+single-child recursion `-(v · inversePolyTree c f) - f (mk [c])` at
+`c = vertex` this becomes `-(v · (-v)) - cherry = v² - cherry` ✓.
+
+The sign convention is now consistent with `inversePolyChain (n+1)`'s
+leading `-(Σ_p inversePolyChain (n-p) f · f (chainTree p))` from
+cycle 380, and matches the uniform self-term sign across cycles
+371/372/384/386.
+
+### §11.3 LOC delta
+
+* Section422.lean: 7321 → 7442 LOC (+121 LOC), well within the
+  strategy's hard 500 LOC ceiling for cycle 387.
+* P1 ship (3 `noncomputable def`s): ~75 LOC.
+* P2 ship (2 calibration witnesses): ~25 LOC.
+* Docstrings + section header: ~20 LOC.
+
+### §11.4 Faithfulness check
+
+* Entity ID: `def:422B` (continuing the §422 underlying one-step-method
+  work track via Phase α' infrastructure).
+* Lean statements capture: **same content** as the §C.1–C.3 strawmen
+  modulo the §11.2 sign revision.
+* Definition smuggling: PASS — three new `noncomputable def`s are
+  pure computational helpers; their `Prop`-content is delivered by
+  the two calibration `theorem`s (`inversePolyTree_vertex`,
+  `inversePolyTree_cherry`).
+* Tautology check: PASS — both calibration theorems' RHSs (`-f vertex`,
+  `(f vertex)² - f cherry`) involve `f`-applications at trees
+  distinct from the LHS argument.
+* Identity check: PASS — `inversePolyTree_vertex` is `rfl` (a
+  *definitional* unfold, not a hypothesis re-export); the cherry
+  proof is `rw [inversePolyTree, inversePolyTree_vertex] + ring`.
+* Hypothesis strength: PASS — both theorems have only the
+  function-argument `f : RT → ℝ` as hypothesis, matching cycle
+  380/382 precedents.
+
+### §11.5 What this cycle deliberately did NOT do
+
+* Did NOT refine `bichildCrossTerm` beyond the `0` placeholder.
+  Cycle 388+ work; the cycle 384/386 closed-form anchors are the
+  natural inputs for the per-pair table.
+* Did NOT ship P3 stretch (`inversePolyTree_mkCherryCherry` /
+  `inversePolyTree_mkBroomCherry` calibration witnesses). These
+  require `bichildCrossTerm` refinement first; deferred to cycle 388.
+* Did NOT migrate `inversePolynomial`'s Family C branches (Phase
+  α'.4.2 work; see §5.3).
+* Did NOT close the cycle 365 grandfathered sorry at
+  Section422.lean:2272 (multi-cycle Phase β/γ extension).
+* Did NOT submit to Aristotle (pure manual closure cycle — the new
+  definitions are by-design simple unfolds, no `sorry`'s to mine).
+
+### §11.6 Cycle 388 entry point (Phase α'.4.1 P3 / Phase α'.4.2 prep)
+
+* **Primary candidate**: refine `bichildCrossTerm` for the
+  `(cherry, cherry)` and `(broom₃, cherry)` pairs to make
+  `inversePolyTree (mk [cherry, cherry]) f` evaluate to cycle 384's
+  closed form (the P3 stretch from cycle 387 strategy §C.4).
+  Estimated ~150 LOC for both witnesses plus the per-pair
+  `bichildCrossTerm` body.
+* **Stretch**: also ship `inversePolyTree_mkBroomCherry` calibration,
+  exercising the asymmetric branch of `bichildCrossTerm`.
+* **Phase α'.4.2 entry point** (cycle 389+): once cycle 388 lands
+  the cross-term refinement, the Family C branches of
+  `inversePolynomial` can dispatch to `inversePolyTree` via three
+  bridge theorems (parallel to cycles 381/383 for Families A/B).
