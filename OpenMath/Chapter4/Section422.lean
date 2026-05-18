@@ -2974,6 +2974,294 @@ example :
     (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
     rfl rfl rfl
 
+/-- *Phase D.3.b Step 2 (cycle 370) — `bushy` (order-4 broom) closed form for Φ_{η_q⁻¹}.*
+At the order-4 broom tree `bushy = mk [vertex, vertex, vertex]`, the
+quotient-level elementary weight of the §383 inverse class admits the
+closed form
+  `Φ_{η_q⁻¹}(bushy) = (Φ_η(vertex))^4
+                     − 3 · (Φ_η(vertex))^2 · Φ_η(cherry)
+                     + 3 · Φ_η(vertex) · Φ_η(broom₃)
+                     − Φ_η(bushy)`.
+
+Fifth data point in the cycle 366 §G Route B hypothesis ladder
+(vertex, cherry, broom₃, mk [cherry], bushy). At order-4, the binomial
+expansion of `(Aᵢ − v)^3` introduces a new 4-term polynomial structure
+in `Φ_η(vertex), Φ_η(cherry), Φ_η(broom₃), Φ_η(bushy)`, confirming
+cycle 368's `(Aᵢ − v)^k` Discovery hypothesis at depth 3.
+
+Proof outline (mirrors cycle 368's `broom₃` recipe with one extra
+cons-case unfold layer for the third child):
+
+1. Reduce to a representative `⟨s, M⟩` via `Quotient.inductionOn`.
+2. Reuse cycle 367/368 helpers `h_inv_v`, `h_vertex`, `h_dw_cherry`,
+   `h_cherry`, `h_dw_broom₃`, `h_broom₃`.
+3. Add three new helpers for the bushy three-child structure:
+   - `h_dw_bushy` : `M.derivativeWeight i bushy = (∑ⱼ M.A i j)^3`
+     (three-layer cons-case unfold extending `h_dw_broom₃`).
+   - `h_bushy` : `M.elementaryWeight bushy = ∑ᵢ M.b i · (∑ⱼ M.A i j)^3`
+     (one `Finset.sum_congr` on `h_dw_bushy`).
+   - `h_dws_bushy` : `M.derivativeWeightWithSrc M.inverse i bushy
+                      = (M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j)^3`
+     (three-layer cons-case unfold of `derivativeWeightWithSrcProd`).
+4. After `_inv_mk`, `_mk` × 4 rewrites, substitute the closed form,
+   expand the cube per-summand via `ring`, distribute the sum via
+   `Finset.sum_sub_distrib`, `Finset.sum_add_distrib`, factor out
+   constants via `← Finset.mul_sum` (three applications), then close
+   with `ring`. -/
+theorem elementaryWeightQ_phi_inv_bushy
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi (η_q⁻¹) RootedTree.bushy
+      = (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 4
+        - 3 * (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 2
+            * elementaryWeightQ_phi η_q RootedTree.cherry
+        + 3 * elementaryWeightQ_phi η_q RootedTree.vertex
+            * elementaryWeightQ_phi η_q RootedTree.broom₃
+        - elementaryWeightQ_phi η_q RootedTree.bushy := by
+  refine Quotient.inductionOn η_q ?_
+  rintro ⟨s, M⟩
+  -- Cycle 367 helpers (reused verbatim).
+  have h_inv_v : M.inverse.elementaryWeight RootedTree.vertex
+      = -M.elementaryWeight RootedTree.vertex := by
+    show ∑ j : Fin s, M.inverse.b j * M.inverse.derivativeWeight j RootedTree.vertex
+          = -(∑ j : Fin s, M.b j * M.derivativeWeight j RootedTree.vertex)
+    rw [← Finset.sum_neg_distrib]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [RKTableau.inverse_b, RKTableau.derivativeWeight_vertex,
+        RKTableau.derivativeWeight_vertex, neg_mul]
+  have h_vertex : M.elementaryWeight RootedTree.vertex = ∑ j : Fin s, M.b j := by
+    show ∑ j : Fin s, M.b j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.b j
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [RKTableau.derivativeWeight_vertex, mul_one]
+  have h_dw_cherry : ∀ i : Fin s,
+      M.derivativeWeight i RootedTree.cherry = ∑ j : Fin s, M.A i j := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [] = ∑ j : Fin s, M.A i j
+    rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [RKTableau.derivativeWeight_vertex, mul_one]
+  have h_cherry : M.elementaryWeight RootedTree.cherry
+      = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j := by
+    show ∑ i : Fin s, M.b i * M.derivativeWeight i RootedTree.cherry
+          = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_cherry i]
+  -- Cycle 368 helpers (reused verbatim).
+  have h_dw_broom₃ : ∀ i : Fin s,
+      M.derivativeWeight i RootedTree.broom₃ = (∑ j : Fin s, M.A i j) ^ 2 := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [RootedTree.vertex]
+        = (∑ j : Fin s, M.A i j) ^ 2
+    have h_inner_sum :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeight_vertex, mul_one]
+    have h_prod_step :
+        M.derivativeWeightProd i [RootedTree.vertex] = ∑ j : Fin s, M.A i j := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+            * M.derivativeWeightProd i [] = ∑ j : Fin s, M.A i j
+      rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one, h_inner_sum]
+    rw [h_inner_sum, h_prod_step]; ring
+  have h_broom₃ : M.elementaryWeight RootedTree.broom₃
+      = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 2 := by
+    show ∑ i : Fin s, M.b i * M.derivativeWeight i RootedTree.broom₃
+          = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 2
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_broom₃ i]
+  -- New cycle 370 helpers for the bushy three-child structure.
+  have h_dw_bushy : ∀ i : Fin s,
+      M.derivativeWeight i RootedTree.bushy = (∑ j : Fin s, M.A i j) ^ 3 := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [RootedTree.vertex, RootedTree.vertex]
+        = (∑ j : Fin s, M.A i j) ^ 3
+    have h_inner_sum :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeight_vertex, mul_one]
+    have h_prod_step_1 :
+        M.derivativeWeightProd i [RootedTree.vertex] = ∑ j : Fin s, M.A i j := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+            * M.derivativeWeightProd i [] = ∑ j : Fin s, M.A i j
+      rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one, h_inner_sum]
+    have h_prod_step_2 :
+        M.derivativeWeightProd i [RootedTree.vertex, RootedTree.vertex]
+          = (∑ j : Fin s, M.A i j) ^ 2 := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+            * M.derivativeWeightProd i [RootedTree.vertex]
+          = (∑ j : Fin s, M.A i j) ^ 2
+      rw [h_inner_sum, h_prod_step_1]; ring
+    rw [h_inner_sum, h_prod_step_2]; ring
+  have h_bushy : M.elementaryWeight RootedTree.bushy
+      = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 3 := by
+    show ∑ i : Fin s, M.b i * M.derivativeWeight i RootedTree.bushy
+          = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 3
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_bushy i]
+  have h_dws_bushy : ∀ i : Fin s,
+      M.derivativeWeightWithSrc M.inverse i RootedTree.bushy
+        = (M.inverse.elementaryWeight RootedTree.vertex + ∑ j : Fin s, M.A i j) ^ 3 := by
+    intro i
+    show (M.inverse.elementaryWeight RootedTree.vertex
+            + ∑ j : Fin s, M.A i j
+                * M.derivativeWeightWithSrc M.inverse j RootedTree.vertex)
+          * M.derivativeWeightWithSrcProd M.inverse i
+              [RootedTree.vertex, RootedTree.vertex]
+        = (M.inverse.elementaryWeight RootedTree.vertex + ∑ j : Fin s, M.A i j) ^ 3
+    have h_inner_sum :
+        ∑ j : Fin s, M.A i j * M.derivativeWeightWithSrc M.inverse j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeightWithSrc_vertex, mul_one]
+    have h_prod_step_1 :
+        M.derivativeWeightWithSrcProd M.inverse i [RootedTree.vertex]
+          = M.inverse.elementaryWeight RootedTree.vertex + ∑ j : Fin s, M.A i j := by
+      show (M.inverse.elementaryWeight RootedTree.vertex
+              + ∑ j : Fin s, M.A i j
+                  * M.derivativeWeightWithSrc M.inverse j RootedTree.vertex)
+            * M.derivativeWeightWithSrcProd M.inverse i []
+          = M.inverse.elementaryWeight RootedTree.vertex + ∑ j : Fin s, M.A i j
+      rw [show M.derivativeWeightWithSrcProd M.inverse i [] = 1 from rfl, mul_one,
+          h_inner_sum]
+    have h_prod_step_2 :
+        M.derivativeWeightWithSrcProd M.inverse i
+            [RootedTree.vertex, RootedTree.vertex]
+          = (M.inverse.elementaryWeight RootedTree.vertex + ∑ j : Fin s, M.A i j) ^ 2 := by
+      show (M.inverse.elementaryWeight RootedTree.vertex
+              + ∑ j : Fin s, M.A i j
+                  * M.derivativeWeightWithSrc M.inverse j RootedTree.vertex)
+            * M.derivativeWeightWithSrcProd M.inverse i [RootedTree.vertex]
+          = (M.inverse.elementaryWeight RootedTree.vertex + ∑ j : Fin s, M.A i j) ^ 2
+      rw [h_inner_sum, h_prod_step_1]; ring
+    rw [h_inner_sum, h_prod_step_2]; ring
+  -- Main computation: assemble closed form via _inv_mk + _mk × 4 + sum algebra.
+  rw [elementaryWeightQ_phi_inv_mk M RootedTree.bushy,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk]
+  have h_sum :
+      (∑ i : Fin s, M.b i * M.derivativeWeightWithSrc M.inverse i RootedTree.bushy)
+        = M.elementaryWeight RootedTree.bushy
+          - 3 * M.elementaryWeight RootedTree.vertex
+              * M.elementaryWeight RootedTree.broom₃
+          + 3 * M.elementaryWeight RootedTree.vertex ^ 2
+              * M.elementaryWeight RootedTree.cherry
+          - M.elementaryWeight RootedTree.vertex ^ 4 := by
+    have h_subst :
+        (∑ i : Fin s, M.b i * M.derivativeWeightWithSrc M.inverse i RootedTree.bushy)
+          = ∑ i : Fin s,
+            (M.b i * (∑ j : Fin s, M.A i j) ^ 3
+              - 3 * M.elementaryWeight RootedTree.vertex
+                  * (M.b i * (∑ j : Fin s, M.A i j) ^ 2)
+              + 3 * M.elementaryWeight RootedTree.vertex ^ 2
+                  * (M.b i * ∑ j : Fin s, M.A i j)
+              - M.elementaryWeight RootedTree.vertex ^ 3 * M.b i) := by
+      refine Finset.sum_congr rfl (fun i _ => ?_)
+      rw [h_dws_bushy i, h_inv_v]; ring
+    rw [h_subst, Finset.sum_sub_distrib, Finset.sum_add_distrib,
+        Finset.sum_sub_distrib,
+        ← Finset.mul_sum, ← Finset.mul_sum, ← Finset.mul_sum,
+        ← h_bushy, ← h_broom₃, ← h_cherry, ← h_vertex]
+    ring
+  rw [h_sum]; ring
+
+/-- *Phase D.3.b Step 2 (cycle 370) — bushy closed form non-vacuity at
+`η_q = ⟦explicitEuler⟧`.* The expected value is
+`Φ_{⟦explicitEuler⟧⁻¹}(bushy) = 1^4 − 3·1²·0 + 3·1·0 − 0 = 1`, since for
+explicit Euler `Σ b = 1` (so `Φ_η(vertex) = 1`) and `A = 0` (so
+`Φ_η(cherry) = 0`, `Φ_η(broom₃) = 0`, `Φ_η(bushy) = 0`). -/
+example :
+    elementaryWeightQ_phi
+      ((Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩))⁻¹ RootedTree.bushy = 1 := by
+  rw [elementaryWeightQ_phi_inv_bushy, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk]
+  have h_vertex : RKTableau.explicitEuler.elementaryWeight RootedTree.vertex = 1 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.vertex = 1
+    simp [RKTableau.explicitEuler, RKTableau.derivativeWeight_vertex]
+  have h_cherry_zero :
+      RKTableau.explicitEuler.derivativeWeight 0 RootedTree.cherry = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [] = 0
+    simp [RKTableau.explicitEuler]
+  have h_cherry : RKTableau.explicitEuler.elementaryWeight RootedTree.cherry = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.cherry = 0
+    simp [h_cherry_zero]
+  have h_broom₃_zero :
+      RKTableau.explicitEuler.derivativeWeight 0 RootedTree.broom₃ = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [RootedTree.vertex] = 0
+    simp [RKTableau.explicitEuler]
+  have h_broom₃ : RKTableau.explicitEuler.elementaryWeight RootedTree.broom₃ = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.broom₃ = 0
+    simp [h_broom₃_zero]
+  have h_bushy_zero :
+      RKTableau.explicitEuler.derivativeWeight 0 RootedTree.bushy = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0
+                [RootedTree.vertex, RootedTree.vertex] = 0
+    simp [RKTableau.explicitEuler]
+  have h_bushy : RKTableau.explicitEuler.elementaryWeight RootedTree.bushy = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.bushy = 0
+    simp [h_bushy_zero]
+  rw [h_vertex, h_cherry, h_broom₃, h_bushy]; ring
+
+/-- *Phase D.3.b Step 2 (cycle 370) — Priority 2 bushy m=0 witness:*
+specialisation of Sub-lemma A `powRep_sum_eq_of_strict_subtree_agreement`
+at `t = bushy, m = 0`. Under agreement at `vertex`, `cherry`, `broom₃`,
+and `bushy` (four subtrees corresponding to the closed-form factors),
+the `η_q^(-1)` images at `bushy` coincide.
+
+Proof: reduce `η_q ^ (-(((0 + 1 : ℕ) : ℤ)))` to `η_q⁻¹` via
+`Nat.cast_one` + `zpow_neg_one`, apply cycle 370's
+`elementaryWeightQ_phi_inv_bushy` on both sides, then substitute
+`h_vertex`, `h_cherry`, `h_broom₃`, and `h_bushy`. -/
+theorem powRep_sum_eq_of_agreement_at_bushy_zero
+    (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+    (h_vertex : elementaryWeightQ_phi η_q RootedTree.vertex
+              = elementaryWeightQ_phi η_q' RootedTree.vertex)
+    (h_cherry : elementaryWeightQ_phi η_q RootedTree.cherry
+              = elementaryWeightQ_phi η_q' RootedTree.cherry)
+    (h_broom₃ : elementaryWeightQ_phi η_q RootedTree.broom₃
+              = elementaryWeightQ_phi η_q' RootedTree.broom₃)
+    (h_bushy : elementaryWeightQ_phi η_q RootedTree.bushy
+              = elementaryWeightQ_phi η_q' RootedTree.bushy) :
+    elementaryWeightQ_phi (η_q ^ (-(((0 + 1 : ℕ) : ℤ)))) RootedTree.bushy
+      = elementaryWeightQ_phi (η_q' ^ (-(((0 + 1 : ℕ) : ℤ)))) RootedTree.bushy := by
+  have h_pow : ∀ ζ : Quotient PhiEquivalent.setoidSigma,
+      ζ ^ (-(((0 + 1 : ℕ) : ℤ))) = ζ⁻¹ := by
+    intro ζ; rw [zero_add, Nat.cast_one]; exact zpow_neg_one _
+  rw [h_pow η_q, h_pow η_q',
+      elementaryWeightQ_phi_inv_bushy, elementaryWeightQ_phi_inv_bushy,
+      h_vertex, h_cherry, h_broom₃, h_bushy]
+
+/-- *Phase D.3.b Step 2 (cycle 370) — bushy m=0 witness non-vacuity at
+`η_q = η_q' = ⟦explicitEuler⟧`.* Discharges the four agreement
+hypotheses by `rfl`. -/
+example :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) ^ (-(((0 + 1 : ℕ) : ℤ))))
+        RootedTree.bushy
+      = elementaryWeightQ_phi
+          ((Quotient.mk PhiEquivalent.setoidSigma
+              ⟨1, RKTableau.explicitEuler⟩) ^ (-(((0 + 1 : ℕ) : ℤ))))
+          RootedTree.bushy :=
+  powRep_sum_eq_of_agreement_at_bushy_zero
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    rfl rfl rfl rfl
+
 /-- *Phase D.3.b Step 2 (cycle 365) — Sub-lemma B (HEADLINE):*
 parametricity for `linearResidualAt`. If `η_q` and `η_q'` agree on
 `elementaryWeightQ_phi` at every tree of order at most `t.order`

@@ -1,408 +1,312 @@
-# Cycle 369 strategy
+# Cycle 370 Strategy — §422 Phase D.3.b Step 2: `bushy` (order-4 broom) closed form
 
-## Context and current state
+## TL;DR
 
-Cycle 368 shipped `elementaryWeightQ_phi_inv_broom₃` (closed form for
-`Φ_{η⁻¹}` at the order-3 tree `broom₃ = mk [vertex, vertex]`) plus the
-`powRep_sum_eq_of_agreement_at_broom₃_zero` m=0 corollary, both
-axiom-clean. **§422 streak: 34 consecutive axiom-clean cycles (336–368).**
+Ship the order-4 broom `bushy = mk [vertex, vertex, vertex]` closed form for
+`Φ_{η_q⁻¹}(bushy)` plus its m=0 corollary. **This is Option B from the cycle
+369 task results' "Suggested next approach"**, chosen because it (1) tests
+the cycle 368 Discovery hypothesis `(Aᵢ − v)^k` for broom-of-k, (2) is
+mechanical extension of cycle 368's broom₃ recipe (one extra child), (3) is
+single-cycle and low-risk, (4) maintains the 35-cycle axiom-clean streak.
 
-The Route B Hypothesis (closed-form-per-tree witness ladder) is now
-supported by three data points:
-- **vertex** (cycle 366): `Φ_{η⁻¹}(τ) = −Φ_η(τ)` (trivial via cycle 341 P2).
-- **cherry** (cycle 367): `Φ_{η⁻¹}(cherry) = Φ_η(τ)² − Φ_η(cherry)`.
-- **broom₃** (cycle 368): `Φ_{η⁻¹}(broom₃) = −Φ_η(τ)³ + 2·Φ_η(τ)·Φ_η(cherry) − Φ_η(broom₃)`.
+## §A — Priority 0: no Aristotle results to incorporate
 
-Sub-lemma A's general body (`powRep_sum_eq_of_strict_subtree_agreement`
-at `OpenMath/Chapter4/Section422.lean:2272`) remains the only sorry
-(grandfathered from cycle 365). Cycle 368 task results recommend
-**Option A**: attempt the inductive `t.order` formulation of Sub-lemma A.
+The task results report no Aristotle submissions are in flight. Skip
+Aristotle work this cycle.
 
-## Priority 1 — Option A: m=0 inductive Sub-lemma A scaffold (PRIMARY)
+## §B — Target deliverables
 
-**Target deliverable**: a new public theorem at the **m=0 specialization**
-(no `powRep` heterogeneity), proved by **strong induction on `t.order`**:
+### B.1 — Primary: `elementaryWeightQ_phi_inv_bushy` (closed form)
+
+**Statement** (derived in §B.2 below, NOT trusted to a hypothesis):
 
 ```lean
-theorem elementaryWeightQ_phi_inv_eq_of_closed_subtree_agreement
-    (t : RT) (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
-    (h_closed : ∀ s : RT, s.order ≤ t.order →
-        elementaryWeightQ_phi η_q s = elementaryWeightQ_phi η_q' s) :
-    elementaryWeightQ_phi η_q⁻¹ t = elementaryWeightQ_phi η_q'⁻¹ t
+theorem elementaryWeightQ_phi_inv_bushy
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi η_q⁻¹ bushy =
+      (elementaryWeightQ_phi η_q vertex)^4
+        − 3 · (elementaryWeightQ_phi η_q vertex)^2 · elementaryWeightQ_phi η_q cherry
+        + 3 · elementaryWeightQ_phi η_q vertex · elementaryWeightQ_phi η_q broom₃
+        − elementaryWeightQ_phi η_q bushy
 ```
 
-This is precisely Sub-lemma A specialised at `m = 0` (so the exponent
-`-(((m+1):ℕ):ℤ) = -1` reduces to plain inverse, sidestepping `powRep`'s
-heterogeneous-stage obstacle that blocked cycle 365's general body).
+The worker MUST verify this closed form on paper (§B.2) before any Lean
+coding, and MUST cross-check on `explicitEuler` (§B.3) before opening
+the Lean editor.
 
-**Why this works at m=0 where the general case fails**: per cycle 365 /
-cycle 366 task results, the heterogeneity obstacle is specifically that
-`Quotient.inductionOn₂ η_q η_q'` followed by cycle 361's `_zpow_negSucc_mk`
-expansion exposes `(M.powRep (m+1)).2` and `(M'.powRep (m+1)).2` —
-different stage counts when `M.1 ≠ M'.1`. At **m=0**, `η_q^(-1) = η_q⁻¹`
-expands directly via cycle 358's `elementaryWeightQ_phi_inv_mk` (no
-`powRep` involved); the representatives `M` and `M'` each have their own
-fixed stage count and the substitution is per-representative.
+### B.2 — Paper derivation (MANDATORY before any Lean coding)
 
-### Recipe (strategy §B)
+`bushy = mk [vertex, vertex, vertex]`. The
+`derivativeWeightWithSrcProd` recursion at `[vertex, vertex, vertex]` is
+a 3-layer cons-case unfold. At each leaf (vertex),
+`derivativeWeightWithSrc M.inverse j vertex = 1` (cycle 366
+`derivativeWeightWithSrc_vertex`).
 
-1. **Setup**: `Quotient.inductionOn₂` on `η_q` and `η_q'` produces
-   representatives `⟨s, M⟩` and `⟨s', M'⟩`. Translate `h_closed` via
-   cycle 239's `elementaryWeightQ_phi_mk` to a per-representative form:
-   `∀ u, u.order ≤ t.order → M.elementaryWeight u = M'.elementaryWeight u`.
-
-2. **Reduce to a representative-level lemma**: state and prove
-
-   ```lean
-   theorem inverse_elementaryWeight_eq_of_closed_subtree_agreement
-       {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') (t : RT)
-       (h : ∀ u, u.order ≤ t.order → M.elementaryWeight u = M'.elementaryWeight u) :
-       M.inverse.elementaryWeight t = M'.inverse.elementaryWeight t
-   ```
-
-   This is the workhorse. Prove by **strong induction on `t.order`**
-   using `(measure RootedTree.order).wf.induction` or the
-   `WellFoundedRelation RootedTree := measure RootedTree.order` instance
-   from cycle 343 (`OpenMath/Chapter3/Section301.lean:177`).
-
-3. **Inductive step** for `t = mk children`. Goal:
-   `M.inverse.elementaryWeight (mk children) = M'.inverse.elementaryWeight (mk children)`.
-
-   The cycle 366/367/368 closed forms suggest the cleanest path:
-   - Unfold via `elementaryWeight` + `derivativeWeight` definitions, OR
-   - Note `Φ_{⟦M⟧⁻¹}(t) = M.inverse.elementaryWeight t` (cycle 239 `_mk`),
-     so the goal coincides with cycle 358's
-     `elementaryWeightQ_phi_inv_mk` representative formula:
-     ```
-     M.inverse.elementaryWeight t = −∑ᵢ M.b i · M.derivativeWeightWithSrc M.inverse i t
-     ```
-     and analogously for `M'`.
-
-   **Substantive step**: show that the RHS depends only on
-   `M.elementaryWeight u` for `u.order ≤ t.order`. This factors as:
-   (a) reduce `M.derivativeWeightWithSrc M.inverse i t` to a polynomial in
-       `M.inverse.elementaryWeight (children)` plus `M.A i j` row-sums;
-   (b) `M.inverse.elementaryWeight c` for `c ∈ children` is bridged by the
-       **inductive hypothesis** (since `c.order < t.order`);
-   (c) the `M.A i j` row-sums and `M.b i` weights are encoded inside
-       `M.elementaryWeight` at appropriate trees (e.g.
-       `M.elementaryWeight (mk children) = ∑ᵢ M.b i · ∏_c M.derivativeWeight i c`).
-
-   **Key realization**: the cycle 366/367/368 closed forms ARE this
-   per-tree polynomial expression. So the inductive step at `t = mk children`
-   essentially says:
-   `M.inverse.elementaryWeight (mk children) = P(M.elementaryWeight at subtrees)`
-   where `P` is some polynomial. By the IH applied to each child and
-   `h` applied at `t` itself, both `M` and `M'` evaluate `P` at the same
-   arguments, so they coincide.
-
-4. **Concrete inductive step pattern** (per the cycle 368 `broom₃` recipe
-   generalized):
-
-```lean
-intro t IH
-induction t with
-| mk children =>
-  -- IH : ∀ s, s.order < (mk children).order → ... → ... = ...
-  -- (This won't work directly because RootedTree's recursor isn't
-  --  structural-on-order. Use the WellFoundedRelation approach instead.)
-  sorry
-```
-
-The **`induction t` won't fire structurally** because `RootedTree` has
-a list-of-RootedTree constructor, NOT a structural induction on order.
-Use `(measure RootedTree.order).wf.induction t` explicitly, OR cycle 343's
-explicit `WellFoundedRelation`.
-
-5. **Cycle 362's substitution lemma DOES NOT directly apply**:
-   `derivativeWeightWithSrc_eq_of_strict_subtree_agreement` substitutes
-   the *source* tableau (M₁) while keeping the *inner* tableau (M₂)
-   fixed. Our induction varies BOTH (M and M' have different inner
-   tableaux). So cycle 362 is a corollary at best, not the bridge.
-
-   The clean way: at each step, expand `M.derivativeWeightWithSrc M.inverse
-   i t` recursively via the `derivativeWeightWithSrcProd` cons-case. Each
-   layer of recursion produces:
-   - `M.inverse.elementaryWeight child` (apply IH since `child.order < t.order`).
-   - `M.A i j · (recursive call at next child)`.
-
-   The `M.A i j` weights appear via `M.derivativeWeight i child` and
-   `M.elementaryWeight (... involving child ...)`. Both can be bridged
-   through `h` at appropriate subtrees.
-
-### LOC budget for P1
-
-~120–180 LOC. Composed of:
-- Representative-level lemma statement (~10 LOC).
-- Strong-induction setup via `WellFoundedRelation` (~15 LOC).
-- Inductive step: tree unfold + IH application + closed-form computation
-  (~70–120 LOC, mirroring the cycle 368 broom₃ recipe structure).
-- Quotient-level wrapper via `Quotient.inductionOn₂` (~15 LOC).
-- One non-vacuity `example` (~15 LOC).
-
-### Time-box for P1
-
-**60 minutes** of focused effort. If after that the inductive step's
-algebraic identity hasn't compiled cleanly, **pivot to P2** without
-attempting further. Do NOT leave a sorry behind — either ship cleanly
-or pivot. **Streak preservation is the dominant constraint.**
-
-### Risk assessment for P1
-
-**HIGH**. The inductive step needs to expose
-`M.inverse.elementaryWeight t` as a polynomial in subtree elementary
-weights via a uniform algebraic argument. The cycle 367/368 closed
-forms were tree-specific algebraic identities; abstracting them into a
-single inductive proof requires either:
-(a) An auxiliary `derivativeWeightWithSrc_inverse_eq_polynomial` lemma
-    capturing the per-tree expansion uniformly, OR
-(b) A clever induction whose IH consumes "subtree elementary weights
-    agree" directly.
-
-If (a) doesn't shape up in ~30 min, the proof is multi-cycle. **Pivot
-fast.**
-
-## Priority 2 — Option B fallback: `mk [cherry]` closed form
-
-If P1 stalls within the time-box, ship the fourth tree-witness:
-
-### Target deliverables
-
-1. `elementaryWeightQ_phi_inv_mkCherry` — closed form for
-   `Φ_{η⁻¹}(mk [cherry])` where `mk [cherry]` is the order-3 tree with
-   a single child that is itself `cherry`.
-
-2. `powRep_sum_eq_of_agreement_at_mkCherry_zero` — m=0 corollary.
-
-3. Two non-vacuity `example`s on `explicitEuler` (closed-form witness +
-   reflexive m=0 witness).
-
-### Derivation of the `mk [cherry]` closed form
-
-`mk [cherry] = mk [mk [vertex]]` is order-3 (root + cherry-child of 2
-vertices). Per cycle 358's `_inv_mk`:
-```
-Φ_{⟦M⟧⁻¹}(mk [cherry]) = −∑ᵢ M.b i · M.derivativeWeightWithSrc M.inverse i (mk [cherry])
-```
-
-Two-layer unfold of `derivativeWeightWithSrcProd M.inverse i [cherry]`:
-- Outer (cons-case at `cherry :: []`): yields
-  `M.inverse.elementaryWeight cherry + ∑ⱼ M.A i j · M.derivativeWeightWithSrc M.inverse j cherry`
-  multiplied by `derivativeWeightWithSrcProd M.inverse i [] = 1`.
-- Inner (`derivativeWeightWithSrc M.inverse j cherry`): from cycle 367
-  `h_dws_cherry`: `M.inverse.elementaryWeight vertex + ∑ₖ M.A j k`.
-
-Substitute cycle 367 results:
-- `M.inverse.elementaryWeight vertex = −M.elementaryWeight vertex` (cycle 367 `h_inv_v`, equivalently cycle 341 P2 at representative level).
-- `M.inverse.elementaryWeight cherry = (M.elementaryWeight vertex)² − M.elementaryWeight cherry` (cycle 367 main theorem at representative level via cycle 239 `_mk`).
-
-Let `v := M.elementaryWeight vertex`, `c := M.elementaryWeight cherry`,
-`w := M.elementaryWeight (mk [cherry])`, `Aᵢ := ∑ⱼ M.A i j`.
-
-Paper derivation (DO THIS IN SCRATCH BEFORE CODING):
+Using cycle 368's per-leaf factor
+`M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j · 1 = -v + Aᵢ`
+where `v := M.elementaryWeight vertex`, `Aᵢ := ∑ⱼ M.A i j`:
 
 ```
-M.derivativeWeightWithSrc M.inverse i (mk [cherry])
-  = (v² − c) + ∑ⱼ M.A i j · (−v + Aⱼ)
-  = v² − c − v · Aᵢ + ∑ⱼ M.A i j · Aⱼ
+M.derivativeWeightWithSrc M.inverse i bushy = (-v + Aᵢ)^3 = (Aᵢ − v)^3
 
-−Φ_{η⁻¹}(mk [cherry]) = ∑ᵢ M.b i · (v² − c − v · Aᵢ + ∑ⱼ M.A i j · Aⱼ)
-                      = v² · v − c · v − v · c + w
-                                              [using v = ∑ⱼ M.b j, c = ∑ᵢ M.b i · Aᵢ, w = ∑ᵢ M.b i · ∑ⱼ M.A i j · Aⱼ]
-                      = v³ − 2vc + w
-
-Φ_{η⁻¹}(mk [cherry]) = −v³ + 2vc − w
+Φ_{⟦M⟧⁻¹}(bushy) = −∑ᵢ M.b i · (Aᵢ − v)^3
 ```
 
-**Claimed closed form**:
+Expand `(Aᵢ − v)^3 = Aᵢ^3 − 3·Aᵢ^2·v + 3·Aᵢ·v^2 − v^3`:
+
 ```
-Φ_{η_q⁻¹}(mk [cherry]) = −(Φ_η(τ))³ + 2·Φ_η(τ)·Φ_η(cherry) − Φ_η(mk [cherry])
+Φ_{⟦M⟧⁻¹}(bushy)
+  = −∑ᵢ M.b i · (Aᵢ^3 − 3·Aᵢ^2·v + 3·Aᵢ·v^2 − v^3)
+  = −∑ᵢ M.b i · Aᵢ^3 + 3v · ∑ᵢ M.b i · Aᵢ^2 − 3v^2 · ∑ᵢ M.b i · Aᵢ + v^3 · ∑ᵢ M.b i
 ```
 
-**Note**: this is **structurally identical** to cycle 368's broom₃
-closed form (both order-3, both involve v³, vc, and Φ_η(t) itself).
-This is mildly surprising but consistent with the Connes-Kreimer Hopf
-algebra structure: `broom₃` and `mk [cherry]` are different rooted
-trees but have isomorphic skeletons modulo orientation, so their
-inverse-coproduct contributions coincide. **Verify the paper
-derivation independently before coding.** If the derivation differs
-from the claim above, ship whatever the correct closed form is.
+Identify each sum against elementary-weight closed forms:
+- `∑ᵢ M.b i · Aᵢ^3 = M.elementaryWeight bushy` (via §312
+  `elementaryWeight_eq + derivativeWeight_mk` recursion at
+  `bushy = mk [vertex, vertex, vertex]`).
+- `∑ᵢ M.b i · Aᵢ^2 = M.elementaryWeight broom₃` (cycle 368 internal
+  derivation — verify in cycle 368's proof body to confirm this naming
+  matches `RootedTree.broom₃ = mk [vertex, vertex]`).
+- `∑ᵢ M.b i · Aᵢ = M.elementaryWeight cherry` (cycle 367 closed form,
+  noting `cherry = mk [vertex]`).
+- `∑ᵢ M.b i = M.elementaryWeight vertex` (definitional: `vertex = mk []`).
 
-### Recipe for P2 (mirrors cycle 368 broom₃ recipe verbatim)
+So:
+```
+Φ_{⟦M⟧⁻¹}(bushy) = −w + 3v·b − 3v²·c + v³·v
+                  = v^4 − 3v²·c + 3v·b − w
+```
+where `v := Φ_η(vertex)`, `c := Φ_η(cherry)`, `b := Φ_η(broom₃)`,
+`w := Φ_η(bushy)`.
 
-1. Reuse cycle 367 helpers `h_inv_v`, `h_vertex`, `h_dws_cherry`,
-   `h_cherry`. Add cycle 367 `elementaryWeightQ_phi_inv_cherry` for
-   the inner-cherry expansion as `h_inv_cherry`.
-2. Add new helpers:
-   - `h_dws_mkCherry i :
-     M.derivativeWeightWithSrc M.inverse i (mk [cherry])
-       = (v² − c) + ∑ⱼ M.A i j · (Aⱼ − v)`
-     via two-layer `derivativeWeightWithSrcProd` unfold + cycle 367
-     `_inv_cherry` substitution + `derivativeWeightWithSrcProd []`
-     base case.
-   - `h_mkCherry : M.elementaryWeight (mk [cherry])
-       = ∑ᵢ M.b i · ∑ⱼ M.A i j · Aⱼ` via direct elementaryWeight unfold
-     (one layer of `derivativeWeightProd`).
-3. Per-summand `ring` expansion of `(v² − c) − v · Aᵢ + ∑ⱼ M.A i j · Aⱼ`,
-   sum-distribute via `Finset.sum_add_distrib` /
-   `Finset.sum_sub_distrib` + `← Finset.mul_sum`, back-substitute via
-   `← h_mkCherry, ← h_cherry, ← h_vertex`, then `ring`.
+### B.3 — Sanity check on `explicitEuler`
 
-### LOC budget for P2
+`explicitEuler : RKTableau 1` has `s = 1`, `b = ![1]`, `A = !![0]`.
+So `Aᵢ = ∑ⱼ M.A i j = 0` for the unique stage `i = 0`.
 
-~200–250 LOC including helpers, docstrings, and non-vacuity examples
-(slightly longer than cycle 368's broom₃ ship at ~220 LOC because of
-one additional inner-cherry layer).
+- `v = Φ_M(vertex) = ∑ᵢ M.b i = 1`.
+- `c = Φ_M(cherry) = ∑ᵢ M.b i · Aᵢ = 1 · 0 = 0`.
+- `b = Φ_M(broom₃) = ∑ᵢ M.b i · Aᵢ^2 = 1 · 0 = 0`.
+- `w = Φ_M(bushy) = ∑ᵢ M.b i · Aᵢ^3 = 1 · 0 = 0`.
+- RHS = `1^4 − 3·1^2·0 + 3·1·0 − 0 = 1`.
 
-### Time budget for P2
+Direct LHS via cycle 358 `_inv_mk`:
+```
+Φ_{⟦explicitEuler⟧⁻¹}(bushy) = −∑ᵢ M.b i · (Aᵢ − v)^3
+                              = −1 · (0 − 1)^3 = −(−1) = 1 ✓
+```
 
-90 minutes maximum. The recipe is mechanical (cycle 368 template); if
-it takes longer something is wrong with the paper derivation.
+**If the worker's `explicitEuler` calculation disagrees with this, STOP
+and re-derive on paper.** Do not proceed to Lean until the closed form
+is paper-verified.
 
-## What NOT to attempt this cycle
+### B.4 — Lean ship recipe
 
-1. **Do NOT attempt the original Sub-lemma A general body**
-   (`powRep_sum_eq_of_strict_subtree_agreement`, line 2272). Cycle 365
-   established the heterogeneous-`powRep`-stage obstacle; cycle 366
-   documented it as multi-cycle. The m=0 specialization (P1 above)
-   sidesteps this by avoiding `powRep` entirely. **Do NOT touch the
-   line 2272 sorry** — it is grandfathered and should remain.
+Mirror cycle 368's broom₃ recipe in `Section422.lean` with these changes:
 
-2. **Do NOT attempt general-m closed forms** (cycle 367 §C.2 stretch
-   target: `powRep_inv_cherry_closed_form` at all `m`). This requires
-   a `Φ_{η₁·η₂}(cherry)` decomposition lemma that is itself
-   multi-cycle.
+1. **`RootedTree.bushy` availability**: plan.md §"Cycle 269 update" of the
+   `RootedTree`-aliases section confirms `bushy := mk [vertex, vertex,
+   vertex]` was introduced as a `Section310` alias. Use it directly via
+   `RootedTree.bushy` qualification. Mathlib's `_root_.RootedTree`
+   namespace (per cycle 369 Discovery) has no `bushy` member, so no
+   collision is expected. **If compile fails on namespace resolution**,
+   use the fully-qualified `OpenMath.Chapter3.Section310.RootedTree.bushy`
+   form.
 
-3. **Do NOT pursue order-4 trees this cycle**. The four trees of order
-   ≤ 3 are: `vertex` (order 1), `cherry` (order 2), `broom₃` (order 3),
-   `mk [cherry]` (order 3). Order-4 (e.g. `bushy = mk [vertex, vertex,
-   vertex]`, `mk [vertex, cherry]`) is deferred to cycle 370+.
+2. **Helper lemmas** (in the `Quotient.inductionOn` body, modeled after
+   cycle 368 §C.4):
+   - `h_inv_v : M.inverse.elementaryWeight vertex = −M.elementaryWeight vertex`
+     (cycle 341 P2, reuse verbatim from cycle 367/368).
+   - `h_vertex : M.elementaryWeight vertex = ∑ᵢ M.b i` (reuse cycle 367/368
+     verbatim — definitional after `elementaryWeight_eq + derivativeWeight_mk
+     + Fin.sum_univ_zero`).
+   - `h_cherry : M.elementaryWeight cherry = ∑ᵢ M.b i · ∑ⱼ M.A i j`
+     (reuse cycle 367/368 verbatim).
+   - `h_broom₃ : M.elementaryWeight broom₃ = ∑ᵢ M.b i · (∑ⱼ M.A i j)^2`.
+     **WORKER: inspect cycle 368's `elementaryWeightQ_phi_inv_broom₃` proof
+     body to locate this derivation.** It will be either an inline `have`
+     or a private helper. Reuse if accessible; otherwise re-derive inline
+     via `elementaryWeight_eq + derivativeWeight_mk + h_dw_cherry`-style
+     two-layer unfold (note `broom₃ = mk [vertex, vertex]`, so
+     `derivativeWeightProd` at `[vertex, vertex]` reduces to
+     `(∑ⱼ M.A i j) · (∑ₖ M.A i k)` per the per-leaf product structure).
+   - `h_bushy : M.elementaryWeight bushy = ∑ᵢ M.b i · (∑ⱼ M.A i j)^3` (NEW,
+     three-layer unfold analogous to `h_broom₃` extended by one child).
+   - `h_dws_bushy i : M.derivativeWeightWithSrc M.inverse i bushy =
+     (M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j)^3`. **The key 3-fold
+     cons-case unfold via `derivativeWeightWithSrcProd`**. Three-step:
+     outer cons-case at `vertex :: [vertex, vertex]` yields per-leaf factor
+     `(M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j · 1)` times the
+     `derivativeWeightWithSrcProd` at `[vertex, vertex]`. The latter
+     unfolds similarly to yield the same factor squared. Combined: the
+     factor cubed.
 
-4. **Do NOT modify `scripts/autonomous_loop.py`** — supervisor /
-   prompt-builder issues are loop-maintainer territory per
-   `.prover-state/issues/tautology_scanner_false_positives.md`.
+3. **Main `h_sum` block**: expand `(M.inverse.elementaryWeight vertex + Aᵢ)^3`
+   via `h_inv_v` (which gives `(-v + Aᵢ)^3`) and `ring`. Then
+   sum-distribute via `Finset.sum_add_distrib + Finset.sum_sub_distrib`,
+   then `← Finset.mul_sum` (three applications: one each for the
+   `v^3`, `3v^2`, `3v` constants), then back-substitute via
+   `← h_bushy, ← h_broom₃, ← h_cherry, ← h_vertex`, then final `ring`.
 
-5. **Do NOT attempt to compile `Section441.lean`**. 43+ consecutive
-   GPFS timeouts per `cycle_182_gpfs_slowness.md`. Skip.
+   Structurally identical to cycle 368's `h_sum` block — broom₃ had 2
+   extractable constants for `(Aᵢ − v)^2` expansion; bushy has 3 for
+   `(Aᵢ − v)^3`.
 
-6. **Do NOT pivot to a fresh entity outside §422** this cycle. The
-   §422 streak is at 34 cycles and the witness ladder is making
-   concrete progress. Pivoting now (e.g. to `def:451A`,
-   `thm:535A`) interrupts that momentum. If P1 and P2 both fail
-   (which would be surprising), file an issue and pivot in cycle 370.
+4. **m=0 corollary** `powRep_sum_eq_of_agreement_at_bushy_zero`: 3-line
+   `rw` chain mirroring cycle 368's broom₃ corollary (the line near the
+   end of the broom₃ ship). Takes FOUR agreement hypotheses (vertex,
+   cherry, broom₃, bushy) matching the closed form's four factors.
 
-## Failed approaches recorded in attempts.md (DO NOT repeat)
+5. **Two `example` non-vacuity witnesses** on `explicitEuler`:
+   - Closed-form witness: `Φ_{⟦explicitEuler⟧⁻¹}(bushy) = 1` (per paper
+     verification in §B.3). Proof: `rw [elementaryWeightQ_phi_inv_bushy]`
+     then `simp [explicitEuler]` then `norm_num`.
+   - Reflexive m=0 witness with `η_q = η_q' = ⟦explicitEuler⟧`, agreement
+     hypotheses discharged by `rfl, rfl, rfl, rfl`.
 
-From cycles 365/366 task results, the following approaches to
-Sub-lemma A's general body DO NOT WORK and should not be retried:
+### B.5 — Estimated LOC delta
 
-- **Cycle 365 Sub-approach 4.a** (strong induction on `t.order` + cycle
-  362 substitution): cycle 362 substitutes only the source tableau M₁,
-  keeping inner tableau M₂ fixed; LHS/RHS of Sub-lemma A differ
-  precisely in the inner tableau, so the substitution cannot fire
-  cross-side.
-- **Cycle 365 Sub-approach 4.b** (induction on m at quotient level):
-  base case m=0 after `Quotient.inductionOn₂` + cycle 358 `_inv_mk`
-  expansion yields heterogeneous sums over Fin s vs Fin s' with
-  differing b-coefficients and inner-tableau arguments — same obstacle.
-- **Cycle 366 cross-cancellation** via `η^(m+1) · η^(-(m+1)) = 1`:
-  positive-power parametricity is itself open with the same
-  heterogeneity.
+Per cycle 368 precedent (broom₃ shipped at ~219 LOC delta), bushy should
+add ~250 LOC (one extra constant-extraction layer + the new `h_broom₃`
+helper if not reusable + new `h_bushy` helper + one extra
+back-substitution rewrite). Section422.lean: 3063 → ~3300 LOC.
 
-P1's m=0 specialization works around this by avoiding `powRep` entirely
-— at m=0, `η^(-1) = η⁻¹` expands per-representative without producing
-the heterogeneous-stage sums. **The representative-level inductive
-lemma `inverse_elementaryWeight_eq_of_closed_subtree_agreement` is
-genuinely a new approach not yet attempted.**
+## §C — Risk assessment
 
-## Verification protocol
+### R1 — `h_broom₃` availability (LOW–MEDIUM)
 
-After each ship:
-1. `lake env lean OpenMath/Chapter4/Section422.lean` — must exit 0.
-2. `grep -c sorry OpenMath/Chapter4/Section422.lean` — must remain 5
-   (4 docstring references + 1 grandfathered Sub-lemma A body).
-3. `#print axioms` on each new public theorem — must return
-   `[propext, Classical.choice, Quot.sound]` only (NO `sorryAx`).
-4. **Streak preservation**: §422 axiom-clean streak 34 → 35 if either
-   P1 or P2 closes; 34 → 33 (BROKEN) if either ships with a sorry or
-   fails to compile.
+Cycle 368's `Section422.lean` shipped `elementaryWeightQ_phi_inv_broom₃`
+which **internally** derived `M.elementaryWeight broom₃ = ∑ᵢ M.b i · Aᵢ^2`.
+**Worker must read cycle 368's proof body** to determine whether this is
+in a reusable form (a `have` block extractable by `extract_have` style)
+or needs inline re-derivation. **If reusable**, hoist to a top-level
+`private theorem` first, then reference in this cycle's bushy proof. **If
+not reusable** (e.g. uses tightly-bound locals), re-derive inline —
+mechanical 2-layer `Finset.sum_congr` over `[vertex, vertex]` via
+`derivativeWeightProd`.
 
-## Faithfulness checklist
+### R2 — `Aᵢ` notation (LOW)
 
-For each new theorem:
-- **Tautology check**: closed forms must not be trivially provable
-  (cycle 367 `elementaryWeightQ_phi_inv_cherry` is a real 3-variable
-  polynomial identity, not a tautology).
-- **Definition smuggling check**: the polynomial closed forms (or the
-  P1 inductive statement) are *consequences* of cycle 358 `_inv_mk`'s
-  representative formula plus the recursive structure of
-  `derivativeWeightWithSrcProd` — they are theorems about the
-  structure, not definitions of new named concepts. No
-  `lean_status.json` entries are claimed.
-- **Hypothesis strength check** for P1: `h_closed : ∀ s, s.order ≤
-  t.order → ...` is the closed-subtree (not strict-subtree) form per
-  cycle 365's choice. Confirmed correct per cycle 365 task results.
-- **Identity check** for P2: the closed form's RHS is a non-trivial
-  degree-3 polynomial in three variables; `exact` against any of the
-  cycle 358/362/366/367/368 helpers is impossible. No tautology risk.
+Cycle 367/368 used `∑ⱼ M.A i j` directly throughout (no `let Aᵢ := ...`
+binding). Continue this convention. Do NOT introduce a `let` for `Aᵢ` —
+Lean's `ring` tactic handles the nested `∑` notation without naming.
 
-## Cycle 370+ outlook (after cycle 369)
+### R3 — `(Aᵢ − v)^3` expansion (LOW)
 
-- **If P1 closes cleanly**: cycle 370+ can extend to **general `m`** via
-  a separate `powRep`-aware argument layered on the m=0 result, OR
-  attempt Phase D.3.d (`underlyingOneStepMethod_aux` recursion) using
-  the m=0 result as the inductive base. Big win: m=0 closure of
-  Sub-lemma A is sufficient for many `Eq422a` consumers.
-- **If P2 closes**: cycle 370 candidate is `bushy = mk [vertex, vertex,
-  vertex]` (the order-4 even-fan tree, parallel to broom₃ at one level
-  higher), OR `mk [broom₃]` (depth-2 broom). Both validate the
-  Route B closed-form pattern further. After 5 trees, the inductive
-  formulation should be much clearer.
-- **Sub-lemma A general body** (line 2272) remains grandfathered until
-  either a multi-cycle Route A infrastructure pass closes it, OR
-  Phase D.3.d is shown to require only the m=0 specialization (in
-  which case the general body can be retired and the sorry removed).
+`ring` should handle the cubic expansion directly. If it stalls (unlikely
+at this size), fall back to manual `pow_succ × 3 + mul_add + sub_mul`
+chain. Cycle 368 closed `(Aᵢ − v)^2` via `ring` in a single step; cubic
+case is structurally the same.
 
-## Reference cross-links
+### R4 — `RootedTree.bushy` namespace collision (LOW)
 
-- Cycle 368 closed form template (broom₃):
-  `OpenMath/Chapter4/Section422.lean:2538–2693` (theorem) and
-  `2695–2750` (m=0 corollary).
-- Cycle 367 cherry template (for P2's reuse):
-  `OpenMath/Chapter4/Section422.lean:2376–2476` (theorem).
-- Cycle 358 representative-level `_inv_mk`:
-  `OpenMath/Chapter4/Section422.lean:582` (signature).
-- Cycle 362 source-tableau substitution lemma:
-  `OpenMath/Chapter3/Section381.lean:2803+`
-  (`derivativeWeightWithSrc_eq_of_strict_subtree_agreement`).
-- Cycle 343 `WellFoundedRelation RootedTree`:
-  `OpenMath/Chapter3/Section301.lean:177`.
-- Sub-lemma A grandfathered sorry: line 2272 of Section422.lean.
-- Cycle 366 task results: rationale for Priority 2 graceful degradation
-  pattern (this cycle's P2 fallback).
-- `def_422B_phase_D_3_scoping.md` §A.0.2 — pinned `D` operator decision
-  (NOT affected by this cycle's work).
+Per cycle 369 Discovery, Mathlib's `_root_.RootedTree.mk` collides with
+our `OpenMath.Chapter3.Section310.RootedTree.mk`. But `RootedTree.bushy`
+is a constructor-less member of our namespace (cycle 269), and Mathlib's
+`RootedTree` namespace has no `bushy` member. So `RootedTree.bushy`
+should resolve correctly. **If compile fails**, use
+`OpenMath.Chapter3.Section310.RootedTree.bushy` explicitly.
 
-## Bottom line
+### R5 — `h_dws_bushy` three-layer unfold (LOW–MEDIUM)
 
-**Primary ship**: P1 Option A — representative-level inductive
-inverse-elementaryWeight parametricity at m=0 (~120–180 LOC,
-time-boxed 60 min, axiom-clean target).
+The 3-fold cons-case unfold of `derivativeWeightWithSrcProd` at
+`[vertex, vertex, vertex]` requires three sequential `show ... from
+derivativeWeightWithSrcProd_cons` rewrites (or equivalent). Cycle 368's
+broom₃ proof showed how 2-fold cons-case works; the 3-fold case is
+structurally identical with one extra wrap. **If the unfold pattern is
+unclear**, read cycle 368's `h_dws_broom₃` derivation and add one extra
+layer.
 
-**Fallback ship**: P2 Option B — `mk [cherry]` closed form + m=0
-witness (~200–250 LOC, mechanical port of cycle 368 broom₃ recipe).
+## §D — What NOT to attempt this cycle
 
-Either deliverable preserves the §422 streak at 35 consecutive
-axiom-clean cycles. **Do NOT ship both** — focus discipline matters;
-the cycle 369 worker picks one and executes cleanly. If P1 closes
-under time-box and there's time remaining, document the result in
-`def_422B_phase_D_3_scoping.md` cycle 369 update. Otherwise commit to
-P2 and pivot without remorse.
+1. **Do NOT retry Sub-lemma A's general inductive body** (the m=0 case
+   from cycle 365). Cycle 365/366/367/368/369 all deferred this; the
+   grandfathered sorry remains untouched. This is multi-cycle Phase
+   D.3.c work for later.
 
-**Risk note**: P1 is HIGH risk; if 30 min in there's no clear inductive
-shape, pivot to P2 immediately. The cycle 366 cherry-witness ship cost
-~40 min in retrospect; cycle 368 broom₃ cost ~60 min. P2's `mk [cherry]`
-is mechanically similar to broom₃ — budget similarly. Picking P2
-upfront is a perfectly acceptable strategic choice if the worker has
-any doubt about P1's tractability; the witness ladder remains useful
-infrastructure for cycle 370+.
+2. **Do NOT extend to `mk [broom₃]` or `mk [vertex, cherry]`** this cycle.
+   These are also order-4 trees and natural cycle 371+ targets. Pick ONE
+   order-4 tree per cycle to maintain single-cycle discipline and
+   preserve the axiom-clean streak.
+
+3. **Do NOT attempt Phase D.3.c** (`underlyingOneStepMethod_aux`). This
+   is the downstream consumer of the witness ladder, but requires
+   multi-cycle scoping. The cycle 369 task results suggest considering
+   it, but only AFTER the witness library is more mature. Five+ data
+   points is the minimum justified for re-attempting Sub-lemma A's
+   general body; even then a separate planning cycle should re-scope.
+
+4. **Do NOT introduce new `axiom` or `constant` declarations**.
+
+5. **Do NOT raise `maxHeartbeats` above 200000**. If the `ring` step on
+   `(Aᵢ − v)^3` expansion stalls, decompose into named intermediate
+   helpers (see R3 fallback).
+
+6. **Do NOT submit to Aristotle this cycle**. The proof is mechanical
+   extension of cycle 368's recipe; Aristotle adds latency without value.
+
+7. **Do NOT compile or modify `OpenMath/Chapter4/Section441.lean`**. The
+   43rd consecutive GPFS timeout is documented per
+   `.prover-state/issues/cycle_182_gpfs_slowness.md` — skip §441 entirely.
+
+8. **Do NOT use `RootedTree.mk [RootedTree.vertex, RootedTree.vertex,
+   RootedTree.vertex]` as the literal for `bushy`**. Use the existing
+   `RootedTree.bushy` alias (cycle 269) to avoid the Mathlib namespace
+   collision per cycle 369 Discovery.
+
+## §E — Acceptance criteria
+
+Cycle 370 ships successfully when ALL of the following hold:
+
+1. `lake env lean OpenMath/Chapter4/Section422.lean` exits 0.
+2. `grep -c sorry OpenMath/Chapter4/Section422.lean` returns 5 (4
+   docstring references + 1 grandfathered Sub-lemma A body sorry).
+   **Code-level sorry count = 1, unchanged from HEAD.**
+3. `#print axioms elementaryWeightQ_phi_inv_bushy` returns
+   `[propext, Classical.choice, Quot.sound]` (axiom-clean).
+4. `#print axioms powRep_sum_eq_of_agreement_at_bushy_zero` returns
+   `[propext, Classical.choice, Quot.sound]` (axiom-clean).
+5. Two non-vacuity `example`s on `explicitEuler` compile.
+6. Updated `.prover-state/issues/def_422B_phase_D_3_scoping.md` with a
+   "Cycle 370 update" subsection documenting:
+   - The bushy closed-form theorem statement.
+   - Update to the §422 streak counter (35 → **36** consecutive
+     axiom-clean cycles for 336–370).
+   - Confirmation/refinement of cycle 368's `(Aᵢ − v)^k` Discovery
+     hypothesis based on the bushy paper derivation. (Specifically: the
+     binomial expansion produces a polynomial in
+     `Φ_η(vertex), Φ_η(cherry), Φ_η(broom₃), Φ_η(bushy)`, validating
+     the Discovery as a per-row identity that lifts to a 4-term
+     elementary-weight closed form for broom-of-3.)
+
+## §F — Suggested cycle 371+ horizon
+
+After cycle 370 ships, the worker's task results should suggest:
+
+1. **`mk [broom₃]`** (vertical extension of broom₃, depth-2 ladder) —
+   tests cycle 369's depth-extension pattern beyond cherry.
+2. **`mk [vertex, cherry]`** (first asymmetric order-4 tree) — exercises
+   a genuinely NEW closed-form structure (mixed-child).
+3. After 6–7 clean witnesses, re-attempt Sub-lemma A's general inductive
+   body with a fresh multi-cycle scoping document.
+
+## §G — Cycle 370 worker entry point checklist
+
+1. Read this strategy fully.
+2. Read cycle 368's `elementaryWeightQ_phi_inv_broom₃` ship in
+   `OpenMath/Chapter4/Section422.lean` (the broom₃ block; locate via
+   grep for `elementaryWeightQ_phi_inv_broom₃`) as the primary recipe
+   template.
+3. **Paper-derive `Φ_{η⁻¹}(bushy)` closed form per §B.2** before opening
+   Lean. Cross-check on `explicitEuler` per §B.3.
+4. Confirm `RootedTree.bushy` is in the namespace (grep
+   `OpenMath/Chapter3/Section310.lean`).
+5. Inspect cycle 368's internal `h_broom₃`-style derivation — decide
+   whether to hoist to a public/private helper or re-derive inline.
+6. Write `elementaryWeightQ_phi_inv_bushy` per §B.4 recipe.
+7. Write `powRep_sum_eq_of_agreement_at_bushy_zero` m=0 corollary.
+8. Write two non-vacuity `example`s on `explicitEuler`.
+9. Verify via `lake env lean` and `#print axioms`.
+10. Update `def_422B_phase_D_3_scoping.md` per §E.6.
+11. Write `.prover-state/task_results/cycle_370.md` documenting the ship.
+12. Commit and push per CLAUDE.md.

@@ -1520,3 +1520,145 @@ order ≤ 2 now confirmed), not D.3.d unblock.
 Phase E sealing of `def:422B` projected for **cycle 370+** (revised
 down from earlier projections; depends critically on Sub-lemma A
 general body, which is the multi-cycle blocker).
+
+### Cycle 370 update — bushy (order-4 broom) closed form + m=0 witness ship
+
+Per cycle 370 strategy §B (Option B from cycle 369 task results),
+cycle 370 ships the order-4 broom tree `bushy = mk [vertex, vertex,
+vertex]` closed form plus its `m = 0` corollary. Fifth data point in
+the Route B hypothesis ladder (vertex, cherry, broom₃, mk [cherry],
+bushy).
+
+**Cycle 370 ship:**
+
+* **`elementaryWeightQ_phi_inv_bushy`** — quotient-level closed form
+  ```
+  Φ_{η_q⁻¹}(bushy) = (Φ_η(vertex))^4
+                    − 3 · (Φ_η(vertex))^2 · Φ_η(cherry)
+                    + 3 · Φ_η(vertex) · Φ_η(broom₃)
+                    − Φ_η(bushy)
+  ```
+  Proof: `Quotient.inductionOn` on `η_q` to obtain `⟨s, M⟩`; reuse
+  cycle 367/368 helpers `h_inv_v`, `h_vertex`, `h_dw_cherry`,
+  `h_cherry`, `h_dw_broom₃`, `h_broom₃`; add three new helpers for
+  the bushy three-child structure (`h_dw_bushy`, `h_bushy`,
+  `h_dws_bushy`), each requiring a three-layer `derivativeWeight(Prod)`
+  cons-case unfold extending broom₃'s two-layer recipe. Main h_sum
+  block: cycle 358 `_inv_mk` to expand the LHS; per-summand expansion
+  of `b · (-v + Aᵢ)^3` via `h_dws_bushy + h_inv_v + ring`; sum
+  distribution via `Finset.sum_sub_distrib + Finset.sum_add_distrib +
+  Finset.sum_sub_distrib`; three `← Finset.mul_sum` to factor the
+  constants `3v`, `3v²`, `v³`; back-substitute via `← h_bushy,
+  ← h_broom₃, ← h_cherry, ← h_vertex`; close with `ring`.
+  **Axiom-clean**: `[propext, Classical.choice, Quot.sound]`.
+
+* **`powRep_sum_eq_of_agreement_at_bushy_zero`** — `m = 0` bushy
+  specialisation of Sub-lemma A. Proof (4 lines):
+  `∀ ζ, ζ ^ (-(((0 + 1 : ℕ) : ℤ))) = ζ⁻¹` helper via `zero_add +
+  Nat.cast_one + zpow_neg_one`, then `elementaryWeightQ_phi_inv_bushy`
+  on both sides, then substitute the four agreement hypotheses
+  (`h_vertex, h_cherry, h_broom₃, h_bushy`). **Axiom-clean**:
+  `[propext, Classical.choice, Quot.sound]`.
+
+* Two non-vacuity `example`s on `explicitEuler`:
+  - Closed-form witness: `Φ_{⟦explicitEuler⟧⁻¹}(bushy) = 1` (computed
+    as `1^4 − 3·1²·0 + 3·1·0 − 0 = 1`).
+  - Bushy m=0 witness with `η_q = η_q' = ⟦explicitEuler⟧` and four
+    agreement hypotheses discharged by `rfl, rfl, rfl, rfl`.
+
+**Cycle 370 verification:**
+
+* `lake env lean OpenMath/Chapter4/Section422.lean` exits 0.
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 lines (4
+  documentation references + 1 actual sorry — unchanged from
+  cycles 366–369; Sub-lemma A's body still sorry'd). Code-level
+  sorry count: **1 (unchanged)**.
+* `#print axioms elementaryWeightQ_phi_inv_bushy` =
+  `[propext, Classical.choice, Quot.sound]`. **Axiom-clean.**
+* `#print axioms powRep_sum_eq_of_agreement_at_bushy_zero` =
+  `[propext, Classical.choice, Quot.sound]`. **Axiom-clean.**
+* `#print axioms linearResidualAt_depends_only_on_strict_subtrees` =
+  `[propext, sorryAx, Classical.choice, Quot.sound]`. **Unchanged**.
+* `#print axioms powRep_sum_eq_of_strict_subtree_agreement` =
+  `[propext, sorryAx, Classical.choice, Quot.sound]`. (Unchanged.)
+
+§422 axiom-clean streak: **35 → 36** (336–370). Both new theorems
+are axiom-clean; the grandfathered Sub-lemma A body sorry persists.
+
+**Discovery confirmation — `(Aᵢ − v)^k` per-row factor structure
+generalises:**
+
+Cycle 368 first observed (via broom₃) that the per-row factor
+appearing inside `M.derivativeWeightWithSrc M.inverse i (mk [vertex,
+…, vertex])` is `(M.inverse.elementaryWeight vertex + Σⱼ M.A i j)^k`,
+which under `h_inv_v` becomes `(Aᵢ − v)^k` (with `v = Σ b`, `Aᵢ = Σⱼ
+A i j`). Cycle 370's bushy paper derivation and Lean ship confirm
+the hypothesis at `k = 3`: the binomial expansion
+```
+(Aᵢ − v)^3 = Aᵢ^3 − 3 Aᵢ^2 v + 3 Aᵢ v^2 − v^3
+```
+sums termwise against `M.b i` to yield exactly the four-elementary-
+weight closed form
+```
+∑ b·(Aᵢ − v)^3 = M.elementaryWeight bushy − 3v · M.elementaryWeight broom₃
+                 + 3v² · M.elementaryWeight cherry − v⁴
+```
+which, after the `−` prefix from `_inv_mk`, gives the headline.
+
+**Generalised hypothesis (refined cycle 370):** For an order-(k+1)
+"broom" tree `broomₖ := mk [vertex, vertex, …, vertex]` (k vertex-
+children), the closed form is the binomial sum
+```
+Φ_{η_q⁻¹}(broomₖ) = ∑_{j=0}^{k} (-1)^j · C(k,j) · v^{k-j} · w_j
+```
+where `w_0 = v = Φ_η(vertex)`, `w_1 = Φ_η(cherry)`, `w_2 = Φ_η(broom₃)`,
+…, `w_k = Φ_η(broomₖ)`. Verified for k=0 (vertex), k=1 (cherry),
+k=2 (broom₃), and k=3 (bushy). Cycle 371+ may attempt a unified
+inductive formulation of this family, or extend to non-broom order-4
+trees (`mk [broom₃]`, `mk [vertex, cherry]`) to stress-test
+non-symmetric child structures.
+
+#### Cycle 371 entry-point recommendation
+
+Per cycle 370 strategy §F, cycle 371 should pick one of the following
+single-cycle targets:
+
+1. **`mk [broom₃]`** (depth-2 ladder of broom₃) — tests cycle 369's
+   `_mkCherry`-style nested closed form (an order-4 ladder structure)
+   at the next depth. Closed-form conjecture: structurally similar
+   to `_mkCherry` with an extra ladder layer, requiring
+   `h_inv_broom₃` as an auxiliary (lifted from cycle 368's quotient
+   theorem at ⟦M⟧, analogous to cycle 369's `h_inv_cherry`).
+
+2. **`mk [vertex, cherry]`** (first asymmetric order-4 tree) —
+   exercises a genuinely new closed-form structure where the two
+   children are distinct (one `vertex` leaf, one `cherry` subtree).
+   This tests whether the cycle 368 `(Aᵢ − v)^k` pattern generalises
+   from "k identical leaves" to "heterogeneous children", which is
+   the substantive structural step toward an inductive Sub-lemma A
+   proof.
+
+3. **Stretch**: attempt unified `broomₖ` inductive formulation. Five
+   verified data points (k = 0, 1, 2, 3) is the minimum justified;
+   a separate planning cycle should scope the induction structure
+   (likely on `k`, with the binomial expansion as the inductive step
+   and `h_inv_broomₖ` derived recursively).
+
+**Decision rule for cycle 372+**: if `mk [broom₃]` or `mk [vertex,
+cherry]` ships cleanly in 1 cycle, cycle 372 may attempt the
+inductive `broomₖ` formulation; otherwise continue accumulating
+single-tree witnesses (one per cycle) until 6–7 data points are
+available.
+
+**Phase D.3.d (`underlyingOneStepMethod_aux`) remains blocked** on
+Sub-lemma A's general body. The bushy m=0 witness is purely additive
+infrastructure for Sub-lemma A's specialised-witness library; it
+does not unblock D.3.d on its own. Cycle 370 ship targets continued
+Route B feasibility validation (five trees of order ≤ 4 now
+confirmed) and refinement of the `(Aᵢ − v)^k` Discovery.
+
+Phase E sealing of `def:422B` continues to be projected for **cycle
+370+** but more realistically in the 380s given Sub-lemma A's
+general body is the multi-cycle blocker. Current trajectory: continue
+accumulating closed-form witnesses (one per cycle) while planning
+the Sub-lemma A inductive attack.
