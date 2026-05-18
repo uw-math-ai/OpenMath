@@ -619,3 +619,170 @@ additional (the proof is identical modulo factor reordering).
 sole deliverable; standard bookkeeping (task results, heartbeat,
 history.jsonl) follows. No Lean code, no axioms, no sorry-count
 changes. Cycle 386 enters per §7 above.
+
+---
+
+## §10 Cycle 386 update — Phase α'.4.0 10th Family C witness ship
+
+### §10.1 What shipped
+
+* New public theorem
+  `OpenMath.Chapter4.Section422.elementaryWeightQ_phi_inv_mkBroomCherry`
+  at `OpenMath/Chapter4/Section422.lean`. Closed form for
+  `Φ_{η_q⁻¹}(mk [broom₃, cherry])` (order 6, σ = 1, asymmetric
+  two-non-leaf-children, 10th Family C data point).
+* New m=0 corollary
+  `powRep_sum_eq_of_agreement_at_mkBroomCherry_zero` specialising
+  Sub-lemma A `powRep_sum_eq_of_strict_subtree_agreement` at
+  `t = mk [broom₃, cherry], m = 0` with nine agreement hypotheses.
+* Two non-vacuity `example`s on `⟦explicitEuler⟧`: closed-form
+  pinning to `+1`, m=0 reflexive via nine `rfl`s.
+* Both new public theorems axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`).
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 (4 docstring
+  + 1 grandfathered code sorry from cycle 365 at line 2272).
+* §422 axiom-clean streak: 48 substantive + 2 doc (336–385) →
+  **49 substantive + 2 doc** (336–386).
+
+### §10.2 Closed form
+
+```
+Φ_{η_q⁻¹}(mk [broom₃, cherry])
+  = v⁶ − 5v⁴c + 5v²c² + 2v³b' − 2vb'c + 3v³m − 4vcm + b'm
+    − v²·M_broom₃ + c·M_broom₃
+    − 3v²·vc + 2v·cc + v·vb' − bc
+```
+
+where (matching the §2.2 paper-derivation legend):
+
+* `v = Φ_η(vertex)`, `c = Φ_η(cherry)`, `b' = Φ_η(broom₃)`
+* `m = Φ_η(mk [cherry])`, `M_broom₃ = Φ_η(mk [broom₃])`
+* `vc = Φ_η(mk [vertex, cherry])`, `cc = Φ_η(mk [cherry, cherry])`
+* **`vb' = Φ_η(mk [vertex, broom₃])`** — the NEW kernel surfaced
+  this cycle (Block (4) bilinear cross-term).
+* `bc = Φ_η(mk [broom₃, cherry])` — the self-kernel (appears with
+  coefficient `-1` per the §383-quotient inverse pattern).
+
+Total 9 kernels in the closed form, matching scoping doc §3.2's
+prediction for an asymmetric two-non-leaf-children tree.
+
+### §10.3 New kernels surfaced (§3.2 prediction confirmed)
+
+The Block (4) bilinear A-sum × A-sum cross term surfaced **two**
+kernels:
+
+* `cc = Φ_η(mk [cherry, cherry])` (known from cycle 384 —
+  symmetric two-cherry-children, order 5).
+* `vb' = Φ_η(mk [vertex, broom₃])` — **NEW** order-5 asymmetric
+  leaf + non-leaf two-children tree. This is the empirical
+  confirmation that the order-5 leaf-shifted kernel families
+  predicted by §3.2 exist and are required for Phase α'.4.1's
+  recursive `inversePolyTree` to accommodate.
+
+The non-vacuity example computation at explicit Euler (where v=1
+and all other Φ_η values = 0) cleanly evaluates to +1 = v⁶, in
+parity with cycles 371/372 (`+1`) and orthogonally to cycle 384
+(`-1`).
+
+### §10.4 Whether the predicted form matched empirical reality
+
+**Yes, with one elaboration.** The cycle 385 scoping doc §3.2
+predicted that Block (4) would surface either (i) a known order-5
+kernel (e.g., `Φ_η(mk [vertex, cherry])` from cycle 372 or
+`Φ_η(mk [cherry, cherry])` from cycle 384) and/or (ii) a new
+order-5 kernel. Cycle 386 confirms **both** are needed: `cc` (known)
+appears with coefficient `-2v` (Term IV summand `-2v·cc`), and
+`vb'` (NEW) appears with coefficient `+v` (Term IV summand
+`+v·vb'`).
+
+The general pattern for `mk [t₁, t₂]` Block (4) cross-term per
+the paper-derivation:
+
+```
+Block (4) = S²_t₁ · S¹_t₂   (where S^k_t = ∑_j A_{ij}·dws(j, t)^k)
+          = ... + ∑_i b_i · (∑_j A_{ij}·γ_{t₁}(j))·(∑_j A_{ij}·β_{t₂}(j)) + ...
+```
+
+surfaces (i) the symmetric kernel `mk [t₁, t₂]` itself (the
+self-kernel `bc`), and (ii) `mk [vertex, t₁]` shifted from `t₂`'s
+linear-in-A factor (here `vertex` shifted from cherry's `β_cherry =
+∑_j A_{ij}·∑_k A_{jk}` factor's outer `∑_j A_{ij}` arm, yielding
+`mk [vertex, broom₃]` when paired with broom₃'s `γ` factor).
+
+### §10.5 LOC delta
+
+Section422.lean: 6520 → 7321 LOC (**+801 LOC**).
+
+The 250 LOC budget was exceeded by ~3×, primarily due to:
+
+* Inline reuse of all helpers from cycles 367/368/369/371/372/384
+  rather than abstracting them into named lemmas (preserves the
+  cycle 384 template's local-helper style for proof clarity).
+* The 9-kernel closed-form non-vacuity example requires 18
+  explicit `have` blocks (one `_zero` and one `_<kernel>` per
+  kernel) at `⟦explicitEuler⟧`, expanding to ~140 LOC just for the
+  example (cycle 384's analogous example for 6 kernels was ~90 LOC).
+* Three new `_dw`/`_mk` helpers (mkVertexBroom₃, mkBroomCherry,
+  dws_mkBroomCherry) each ~50 LOC.
+
+This is consistent with cycles 371/372/384 LOC slopes — the
+non-vacuity example bloats roughly quadratically in the kernel
+count, which is the dominant cost as we approach Phase α'.4.1.
+The recursive `inversePolyTree` Variant V4 in Phase α'.4.1 is
+expected to amortise this cost: a single recursive proof per tree
+shape rather than a per-tree closed form.
+
+### §10.6 Cycle 387 outlook implications
+
+Cycle 386's confirmation of the `mk [vertex, broom₃]` order-5
+kernel pattern gives the Phase α'.4.1 recursive design enough data:
+
+* **Family A** kernels (single-child ladder): handled by cycle
+  380's `inversePolyChain` recursion (Phase α'.2).
+* **Family B** kernels (broom family — k-leaf bouquets at any
+  ladder depth): handled by cycle 382's `inversePolyBroom`
+  recursion (Phase α'.3).
+* **Family C** kernels (k ≥ 2 non-leaf children with any mix of
+  leaves + non-leaves): handled by the planned Phase α'.4.1
+  `inversePolyTree` recursion, which from cycle 386's data must:
+  - Distribute Block (1)/(2)/(3)/(4) per §3.2.
+  - Surface the bilinear cross-term using a `bichildPolynomial`
+    helper that takes two child trees `t₁, t₂` and produces the
+    polynomial in their Φ_η values plus the order-`(order t₁ +
+    order t₂ + 1)` self-kernel.
+  - Cycle 386's exact closed form pins the coefficient table for
+    `bichildPolynomial t₁ t₂` at `(broom₃, cherry)`.
+
+Per scoping doc §5.2, Phase α'.4.1 is the cycle 387+ entry point.
+The recursion ship is expected to span 2 cycles (387 + 388) given
+LOC budget; if Phase α'.4.1 stalls on shape ambiguity, cycle 387+
+can pivot to one more α'.4.0 data point (e.g., `mk [cherry,
+broom₃]` = Priority 2 reverse-pair stretch deferred this cycle,
+or `mk [broom₃, broom₃]` = symmetric two-broom order-7).
+
+### §10.7 Faithfulness check
+
+* Entity ID: `def:422B` (continuing the §422 underlying
+  one-step-method work track).
+* Lean statement captures: closed-form **same content** as the
+  paper-derivation (§10.2). Closed form is an algebraic identity
+  between `Φ_{η_q⁻¹}` at one named tree and a 14-term polynomial
+  in `Φ_η` at the 9 dependency kernels — no hypotheses, no smuggled
+  structure. Definition smuggling check: PASS (no new `def` or
+  `structure` introduced; `elementaryWeightQ_phi_inv_mkBroomCherry`
+  is a `theorem` over existing definitions). Tautology check: PASS
+  (LHS uses `Φ_{η_q⁻¹}`, RHS is a polynomial in `Φ_{η_q}` at
+  distinct trees). Hypothesis strength: PASS (the only hypothesis
+  is `η_q : Quotient PhiEquivalent.setoidSigma`; no extras).
+
+### §10.8 What this cycle deliberately did NOT do
+
+* Did NOT ship Priority 2 reverse-pair `mk [cherry, broom₃]`. The
+  strategy's stretch goal was deferred — Priority 1 took the full
+  cycle's substantive budget given the LOC blow-up.
+* Did NOT attempt Phase α'.4.1 recursive `inversePolyTree`. Per
+  scoping doc §5, α'.4.0's one-more-data-point precedes α'.4.1.
+* Did NOT close the cycle 365 grandfathered sorry at
+  Section422.lean:2272 (multi-cycle ahead).
+* Did NOT touch `inversePolynomial` (Phase α'.4.2 work).
+* Did NOT submit to Aristotle (pure manual closure cycle).

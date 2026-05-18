@@ -1,303 +1,302 @@
-# Cycle 385 strategy — §422 Phase α'.4 Family C scoping doc
+# Cycle 386 Strategy — §422 Phase α'.4.0: 10th Family C witness
 
 ## TL;DR
 
-Ship a markdown-only Family C scoping document
-`.prover-state/issues/def_422B_phase_alpha_prime_family_C_scoping.md`
-distilling the three Family C witnesses (cycles 371, 372, 384) into a
-concrete multi-cycle plan for a unified `inversePolyTree` recursion
-that handles heterogeneous-children trees. No Lean code this cycle.
+Ship the **10th Family C witness** `elementaryWeightQ_phi_inv_mkBroomCherry`
+in `OpenMath/Chapter4/Section422.lean` — the closed form for
+`Φ_{η_q⁻¹}(mk [broom₃, cherry])` (order 6, σ = 1, **asymmetric**
+two-non-leaf-children), plus the m=0 Sub-lemma A corollary. Cycle 386 is
+the Phase α'.4.0 entry point per the cycle 385 scoping doc §7
+(`.prover-state/issues/def_422B_phase_alpha_prime_family_C_scoping.md`).
 
-This follows the cycle 373 (Sub-lemma A inductive plan) and cycle 379
-(Phase α' recursive design) precedent: zero-Lean scoping cycles that
-directly drove subsequent multi-cycle ladder builds (cycles 374–378,
-380–384). The cycle 384 worker's "Suggested next approach" explicitly
-endorses this as the next move.
+**LOC budget**: ~250 LOC. **Streak**: 48 substantive + 2 doc cycles
+(336–385). Ship axiom-clean, 0 new sorries, preserve streak.
 
-## Status going in
+## Context
 
-- **§422 axiom-clean streak**: 48 substantive + 1 doc (cycles 336–384).
-- **Section422.lean**: ~6520 LOC, 1 grandfathered sorry at line 2272
-  (cycle 365 Sub-lemma A general body).
-- **Cycle 384 ship**: 9th-tree closed form `Φ_{η_q⁻¹}(mk [cherry,
-  cherry]) = −v⁵ + 4v³c − 3vc² − v²b' − 2v²m + 2cm + 2v·vc' − C`
-  (8 terms, 6 elementary-weight witnesses) + m=0 corollary, both
-  axiom-clean.
-- **Witness library**: 9 trees through order ≤ 5 covering Families
-  A (chain), B (multi-leaf brooms), and C (heterogeneous children).
-- **Cycle 384 worker discovery**: cross-tree-shape dependencies
-  surface at order ≥ 5 — `mk [cherry, cherry]`'s closed form depends
-  on `Φ_η(mk [vertex, cherry])`. The naive "recurse on each child"
-  approach won't capture cross-term contributions.
+* **No pending Aristotle results.** Do NOT submit to Aristotle this
+  cycle — the closed-form-witness proofs are pure manual closures of
+  the cycle 384 template; Aristotle has historically struggled with
+  the per-summand `ring` distribution + `← Finset.mul_sum` factoring
+  this proof requires.
+* **Single grandfathered sorry** at `Section422.lean:2279`
+  (`powRep_sum_eq_of_strict_subtree_agreement` general body, cycle 365).
+  Closure path: Phase α'.4 (cycles 386–388) + Phase β/γ extension.
+  Do NOT attempt to close this sorry — it is multi-cycle ahead.
+* **Cycle 385** shipped the Family C scoping doc (621 lines,
+  markdown-only). Cycle 386 executes its §7 entry point.
 
-## Priority 1 — DELIVERABLE: Family C scoping doc
+## Priority 1 — DELIVERABLE: `elementaryWeightQ_phi_inv_mkBroomCherry`
 
-**File**: `.prover-state/issues/def_422B_phase_alpha_prime_family_C_scoping.md`.
+### Target tree
 
-**Target length**: 400–600 lines markdown. Cycle 373's
-`def_422B_subLemmaA_inductive_plan.md` (1399 lines) is the gold
-standard; cycle 379's `def_422B_phase_alpha_prime_scoping.md`
-(~1080 lines) is the closer template. This doc can be shorter
-because the scope is narrower (Family C only, not the whole Phase α').
+`mk [broom₃, cherry]` — asymmetric two-non-leaf-children, order 6, σ = 1.
 
-**Required sections** (follow cycle 379's structure):
+* `broom₃ = mk [vertex, vertex]` (order 3, σ = 2)
+* `cherry = mk [vertex]` (order 2, σ = 1)
+* Parent order: `3 + 2 + 1 = 6`.
+* σ(parent): children are distinct (`broom₃ ≠ cherry`), so σ = 1.
 
-### §1 Status & blocker
+### Mandatory step: paper-derive the closed form BEFORE writing Lean
 
-- Phase α'.1 (Family A) shipped cycles 380–381 (`inversePolyChain`).
-- Phase α'.3 (Family B) shipped cycles 382–383 (`inversePolyBroom`).
-- Phase α'.4 (Family C, **this scope**) remains — the unified
-  recursion for heterogeneous-children trees.
-- Without Phase α'.4, `inversePolynomial` cannot evaluate correctly
-  on arbitrary heterogeneous-children trees outside the 9-tree
-  ladder, blocking cycle 365's grandfathered sorry closure.
+**Do not skip this step.** Cycle 384's surprise (`Φ_η(mk [vertex, cherry])`
+surfacing in the bilinear block) was unanticipated; cycle 386 has
+analogous risk. Spend 30–60 min on paper-derivation first.
 
-### §2 The three Family C witnesses (full catalog)
+Approach: apply cycle 358's `elementaryWeightQ_phi_inv_mk` formula:
 
-Tabulate explicitly with all elementary-weight names spelled out:
-
-| Cycle | Tree | Order | σ(t) | Closed form |
-|---|---|---|---|---|
-| 371 | `mk [broom₃]` | 4 | 2 | `v⁴ − 3v²c + vb' + 2vm − M` |
-| 372 | `mk [vertex, cherry]` | 4 | 1 | `v⁴ − 3v²c + c² + vb' + vm − V` |
-| 384 | `mk [cherry, cherry]` | 5 | 2 | `−v⁵ + 4v³c − 3vc² − v²b' − 2v²m + 2cm + 2v·vc' − C` |
-
-For each, list:
-- The children list `[t₁, …, tₖ]` and each child's `Φ_η` value name.
-- The number of distinct elementary-weight kernels on RHS.
-- The leading `(−1)^? · v^(order)` sign (parity-determined).
-- The `−Φ_η(t)` self-term sign (uniformly `−1`).
-- Cross-term coefficients (the substantive content).
-
-### §3 Structural observations (the analysis)
-
-Three sub-sections:
-
-#### §3.1 The `(Aᵢ − v)^k`-per-child pattern (from cycle 368/370 Discovery)
-
-For each child `c ∈ children`, the cycle 358 `_inv_mk` formula
-unrolls to contribute a factor `(M.inverse.elementaryWeight c + Σⱼ
-Aᵢⱼ · ?)`. Under `inv_v = −v`, this factor takes the shape
-`(−v + Σⱼ Aᵢⱼ · …)` at a leaf-child and `(closed_form_at_c + Σⱼ
-Aᵢⱼ · …)` at a non-leaf-child. The product across children, summed
-against `M.b i`, distributes into terms collecting elementary-weight
-kernels of:
-- Each individual child's elementary weights.
-- **Cross-products of children's elementary weights** (the
-  substantive Family C content).
-
-#### §3.2 Cross-term cataloging
-
-For `mk [t₁, t₂]` (binary case), the expansion of the two-factor
-product yields four blocks:
-
-1. Constant block: `inv(t₁) · inv(t₂)` evaluated.
-2. Linear-in-A block from `t₁`: `inv(t₁) · Σⱼ Aᵢⱼ · …(t₂)`.
-3. Linear-in-A block from `t₂`: `Σⱼ Aᵢⱼ · …(t₁) · inv(t₂)`.
-4. Bilinear-in-A block (cross-term): `(Σⱼ Aᵢⱼ · …(t₁)) · (Σⱼ Aᵢⱼ ·
-   …(t₂))` — the key new term Family C introduces.
-
-The bilinear block (4) is the one that introduces the
-"unexpected" elementary-weight witness in cycle 384's `mk
-[cherry, cherry]`: the `Σⱼ Aᵢⱼ · (Σₖ Aⱼₖ)` factor from each
-cherry child produces `Φ_η(mk [vertex, cherry])` via the
-cons-case unfold of `derivativeWeightWithSrcProd`.
-
-#### §3.3 Why Family A and Family B miss this
-
-- **Family A** (single-child chain): only block (1) and (2)
-  contribute (no second child). No cross-term.
-- **Family B** (k identical leaves): block (4) collapses by
-  binomial expansion because every leaf-factor is `(Aᵢ − v)`,
-  giving a clean `(Aᵢ − v)^k` expansion without distinct
-  cross-tree-shape contributions.
-- **Family C** is the **genuine multi-child heterogeneous case**
-  where block (4) produces new elementary-weight kernels not
-  matched by either Family A or B.
-
-### §4 Conjectured `inversePolyTree` recursion
-
-Propose Variant V4 (a new variant, extending §5 of cycle 379's
-scoping doc):
-
-```lean
-noncomputable def inversePolyTree (t : RT) (f : RT → ℝ) : ℝ :=
-  match t with
-  | RootedTree.mk children =>
-      -- Per-child Family A/B/C decomposition: recurse on each child,
-      -- track per-child "row-sum signature" σ_c aggregating
-      -- cross-product contributions.
-      sorry  -- design pending
+```
+Φ_{η_q⁻¹}(mk [broom₃, cherry])
+  = − Σⱼ b_j · (M.inverse.elementaryWeight broom₃ + Σₖ A_jk · F_broom₃(k))
+         · (M.inverse.elementaryWeight cherry + Σₖ A_jk · F_cherry(k))
 ```
 
-Document **what needs to be added** beyond Family A (cycle 380's
-`inversePolyChain`) and Family B (cycle 382's `inversePolyBroom`):
-- A **pairwise children-product helper** that captures the
-  bilinear-in-A cross-term contributions.
-- Conjecturally, the helper takes shape
-  `bichildPolynomial : (RT × RT) → (RT → ℝ) → ℝ` returning
-  `Φ_η(mk [t₁, t₂]) + (cross-correction)`.
+where:
+* `F_broom₃(k) = M.inverse.derivativeWeight k broom₃` — unfolds via
+  cycle 368's `h_dws_broom₃`.
+* `F_cherry(k) = M.inverse.derivativeWeight k cherry` — unfolds via
+  cycle 367's `h_dws_cherry`.
 
-Acknowledge the design is **not pinned** — Phase α'.4 needs more
-data points before the recursive shape can be locked. Two specific
-data points would close it:
+Distribute the product into four blocks (per scoping doc §3.2):
 
-1. `mk [broom₃, cherry]` (order 6): mixed-children with both
-   non-leaf children of different orders. Tests the bilinear
-   block at non-symmetric inputs.
-2. `mk [cherry, broom₃]` (order 6): symmetric to above by
-   commutativity — gives a redundancy check.
+* **Block (1)** const·const: `inv_broom₃ · inv_cherry · Σⱼ b_j`
+  = `(−v³ + 2vc − b') · (v² − c) · v`.
+* **Block (2)** const·A-sum: `inv_broom₃ · Σⱼ b_j · Σₖ A_jk · F_cherry(k)`
+  = `inv_broom₃ · Φ_η(mk [cherry])` = `(−v³ + 2vc − b') · m`.
+* **Block (3)** A-sum·const: `inv_cherry · Σⱼ b_j · Σₖ A_jk · F_broom₃(k)`
+  = `inv_cherry · Φ_η(mk [broom₃])` = `(v² − c) · M_broom₃`.
+  **NEW KERNEL** `M_broom₃ = Φ_η(mk [broom₃])`.
+* **Block (4)** A-sum·A-sum: bilinear cross-term — surfaces a kernel
+  combining the two child structures. Likely `Φ_η(mk [vertex, broom₃])`
+  (the order-5 asymmetric tree from the scoping doc's discussion) and/or
+  cycle 372's `Φ_η(mk [vertex, cherry])`. **Paper-derive this exactly
+  before writing Lean.**
+* **Self-term**: `−bc` where `bc = Φ_η(mk [broom₃, cherry])`.
 
-If both yield the same cross-term coefficient pattern (e.g. the
-order-mixing factor is symmetric `(order t₁) · (order t₂)`-style),
-the recursive recipe is constrained enough to ship in cycle 386+.
+Use `⟦explicitEuler⟧` (where every elementary weight equals 1) as a
+cross-check: the closed form must evaluate to a specific rational
+(predicted `1` by parity with cycles 371/372/384, but compute it).
 
-### §5 Phase decomposition
+### Lean proof recipe (cycle 384 template, asymmetric variant)
 
-Three sub-phases at 1–2 cycles each:
+Cycle 384's proof body lives at `Section422.lean:4655–4961`. Mirror it
+line-by-line with these changes:
 
-| Sub-phase | Cycles | Deliverable |
-|---|---|---|
-| α'.4.0 | 1 (cycle 386) | One more Family C witness: `mk [broom₃, cherry]` or `mk [vertex, broom₃]` (order 6). Pin the cross-term recipe. |
-| α'.4.1 | 1–2 (cycle 387+) | Ship recursive `inversePolyTree` (Variant V4) with a `bichildPolynomial` helper. Calibration witnesses against all 11+ ladder trees. |
-| α'.4.2 | 1 (cycle 388+) | Migrate `inversePolynomial`'s Family C branches to dispatch to `inversePolyTree`. Phase γ extension. |
+1. `Quotient.inductionOn` on `η_q` → `⟨s, M⟩` (identical to 384).
+2. Setup `let`-bindings for the elementary weights `v, c, b', m,
+   M_broom₃, bc` and any new kernel from Block (4).
+3. Reuse `h_inv_v`, `h_vertex`, `h_dws_cherry` (cycle 367), and
+   introduce `h_dws_broom₃` (cycle 368-style) plus
+   `h_inv_broom₃` (cycle 368's `elementaryWeightQ_phi_inv_broom₃`
+   representative-lift, per cycle 369 pattern).
+4. Expand `derivativeWeightWithSrc M.inverse i (mk [broom₃, cherry])`
+   via the cons-case unfold (one outer `derivativeWeightProd_cons`,
+   then per-child the cycle 368/367 `h_dws_*` unfolds).
+5. Per-summand: distribute the bilinear product
+   `(inv_broom₃ + S_broom₃(i)) · (inv_cherry + S_cherry(i))` via
+   `Finset.sum_congr rfl (fun i _ => by ring)`. (`ring` does NOT
+   distribute scalars over `Finset.sum` directly — see cycle 371
+   Discovery memory entry.)
+6. Sum distribution: `Finset.sum_add_distrib` / `Finset.sum_sub_distrib`
+   to split into per-block sums.
+7. `← Finset.mul_sum` × N to factor each constant out of its sum.
+8. Back-substitute via `← h_<kernel>` for each named contribution
+   (cycle 372 Discovery: consolidate shared constants where possible
+   to avoid duplicate `← h_<...>` calls).
+9. `ring` closes the final algebraic combination.
 
-### §6 Risk assessment
+### Acceptance criteria for Priority 1
 
-Tabulate:
+* New public theorem `elementaryWeightQ_phi_inv_mkBroomCherry`
+  axiom-clean (`[propext, Classical.choice, Quot.sound]`).
+* New m=0 corollary `powRep_sum_eq_of_agreement_at_mkBroomCherry_zero`
+  axiom-clean. Agreement hypotheses: vertex, cherry, broom₃,
+  mk [cherry], mk [broom₃], mk [broom₃, cherry], plus any new kernel
+  surfaced by Block (4).
+* Two non-vacuity `example`s on `⟦explicitEuler⟧`:
+  - Closed-form witness pinning to a specific rational (compute it
+    from the paper-derivation; do not guess).
+  - m=0 reflexive witness via `rfl × N`.
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` unchanged at 5
+  (4 docstring + 1 grandfathered code sorry).
+* `lake env lean OpenMath/Chapter4/Section422.lean` exits 0.
+* `#print axioms` on both new theorems returns
+  `[propext, Classical.choice, Quot.sound]`.
+
+## Priority 2 — STRETCH (only if Priority 1 ships clean with slack)
+
+Ship `elementaryWeightQ_phi_inv_mkCherryBroom` for `mk [cherry, broom₃]`
+(children in reversed order) — the R2 symmetry-pair confirmation per
+scoping doc §6.2.
+
+* LOC budget: ~100 LOC (proof mirrors Priority 1 with factor order
+  swapped).
+* The closed form should be **identical** modulo argument order in the
+  `mk [...]` self-term, since `PhiEquivalent` quotients out child
+  permutations at the §383 quotient level — but Lean's `RootedTree.mk`
+  is `List`-based, not `Multiset`-based, so the two trees are NOT
+  definitionally equal and need a separate witness.
+
+**If Priority 1 takes the full cycle budget, skip Priority 2.** Better
+to ship one clean witness than two rushed ones.
+
+## Priority 3 — Bookkeeping (after Priority 1)
+
+1. **`extraction/formalization_data/lean_status.json`** `def:422B` row:
+   `cycle_completed_at` 385 → 386, status `partial`, append note:
+   "Cycle 386 ships 10th Family C witness `Φ_{η_q⁻¹}(mk [broom₃, cherry])`
+   (asymmetric two-non-leaf-children order-6, σ = 1) + m=0 Sub-lemma A
+   corollary. Block (4) bilinear cross-term surfaces [new kernel name].
+   Section422.lean ~6520 → ~6770 LOC. §422 streak: 49 substantive + 2
+   doc (cycles 336–386)."
+2. **`plan.md`** `def:422B` row: append cycle 386 note in the
+   established compound-paragraph pattern.
+3. **`.prover-state/issues/def_422B_phase_alpha_prime_family_C_scoping.md`**
+   §5.1 / §6 — append a "Cycle 386 update" subsection documenting:
+   - Exact closed form (the 10+ kernel polynomial with coefficients).
+   - New kernels surfaced (Block (3) and Block (4) surprises).
+   - Whether the predicted form matched empirical reality.
+   - LOC delta.
+   - Cycle 387 outlook implications (does Phase α'.4.1 recursive
+     design have enough data points now?).
+
+## What NOT to do this cycle
+
+* **Do NOT skip the paper-derivation step.** Mandatory 30–60 min
+  before any Lean. The cycle 384 surprise must not recur unflagged.
+
+* **Do NOT attempt to ship `inversePolyTree` recursive definition this
+  cycle** (Phase α'.4.1, scoped to cycle 387+). The scoping doc §5
+  orders α'.4.0 (one more data point) before α'.4.1 (recursive ship).
+
+* **Do NOT attempt to close the cycle 365 grandfathered sorry at
+  `Section422.lean:2279`.** Multi-cycle ahead (α'.4 + β/γ).
+
+* **Do NOT pivot to a fresh entity** (`def:451A`, `thm:535A`,
+  `thm:541A`, `def:442A`). The §422 streak is productive; pivot
+  opportunity is post-Phase α'.4.2 (cycle 389+).
+
+* **Do NOT use `simp [recursive-def, name-eq-thm-*, ...]` patterns.**
+  Cycle 382 memory entry `feedback_simp_recursive_def_overunfolds.md`:
+  `simp` over-unfolds recursive defs before name theorems can fold
+  back. Use targeted `rw [name-eq-thm-...]` then `simp [arithmetic]; ring`.
+
+* **Do NOT submit to Aristotle.** Pure manual closure cycle.
+
+* **Do NOT use `ring` to distribute scalars over `Finset.sum`** (cycle
+  371 memory entry). Use `Finset.sum_congr rfl (fun i _ => by ring)`
+  then `Finset.sum_add_distrib` / `Finset.sum_sub_distrib` to split.
+
+* **Do NOT raise `maxHeartbeats` above 200000.** If the proof body
+  stalls, decompose into named private helpers (e.g. extract Block (4)
+  bilinear cross-term as a separate lemma).
+
+* **Do NOT introduce `axiom` / `constant` declarations.**
+
+* **Do NOT introduce sorries.** Cycle 386's deliverable bar is
+  "ship axiom-clean or ship nothing" (cycle 200/201 rollback
+  precedent).
+
+* **Do NOT compile `OpenMath/Chapter4/Section441.lean`.** 43+ GPFS
+  timeouts since cycle 182 per `cycle_182_gpfs_slowness.md`. Section441
+  is unrelated to cycle 386's deliverable.
+
+## Risk assessment
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| R1: recursion shape under-determined by 3 data points | HIGH | Ship 4th witness in cycle 386 before designing recursion |
-| R2: cross-term symmetry under child-permutation | MEDIUM | Ship symmetry-witness pair (`mk [a, b]` and `mk [b, a]`) |
-| R3: order-6+ trees have NEW elementary-weight dependencies | MEDIUM | Witness-accumulation discipline + scoping refinement |
-| R4: `bichildPolynomial` LOC budget exceeds single cycle | LOW | Phase α'.4.1 estimate already allows 2 cycles |
+| Paper-derivation step skipped, Lean attempt stalls | HIGH | Mandatory 30–60 min paper-derivation BEFORE Lean. Cross-check against `⟦explicitEuler⟧` evaluation. |
+| Block (4) bilinear cross-term unexpectedly complex | MEDIUM | Mirror cycle 384's `mk [cherry, cherry]` proof body (Section422.lean:4655–4961) line-by-line. |
+| New kernel surfaced (`mk [vertex, broom₃]` or other) | MEDIUM | Expected — this is the *purpose* of cycle 386. Document in scoping doc cycle 386 update; kernel becomes new agreement hypothesis. |
+| LOC budget overrun (>350 LOC) | LOW | If hitting 400 LOC, ship Priority 1 only (skip Priority 2 stretch). |
+| §422 streak break via accidental sorry/axiom | LOW | Pre-flight `lean_verify` after each named theorem; abort branch and decompose if any sub-helper needs `sorry`. |
+| `derivativeWeightProd_cons` unfolding shape mismatch | LOW | Cycle 368/367 templates already verified the cons-case unfolds; reuse verbatim. |
 
-### §7 Cycle 386 entry point
+## Concrete Lean structure (template, fill in closed form from paper-derivation)
 
-Recommended target: ship the 10th tree witness `mk [broom₃, cherry]`
-(order 6).
+```lean
+theorem elementaryWeightQ_phi_inv_mkBroomCherry
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi (η_q⁻¹)
+      (RootedTree.mk [RootedTree.broom₃, RootedTree.cherry])
+      = -- PAPER-DERIVE: closed form in v, c, b', m, M_broom₃, bc,
+        --              plus any new kernel from Block (4)
+        sorry  -- replace with actual closed form
+        := by
+  refine Quotient.inductionOn η_q ?_
+  rintro ⟨s, M⟩
+  -- let-bindings for elementary weights
+  set v := M.elementaryWeight RootedTree.vertex with hv_def
+  set c := M.elementaryWeight RootedTree.cherry with hc_def
+  set b' := M.elementaryWeight RootedTree.broom₃ with hbroom_def
+  set m := M.elementaryWeight (RootedTree.mk [RootedTree.cherry])
+    with hmkCherry_def
+  set M_broom₃ := M.elementaryWeight (RootedTree.mk [RootedTree.broom₃])
+    with hmkBroom_def
+  -- ... additional kernels as paper-derivation determines
+  -- Cycle 358 LHS expansion:
+  rw [elementaryWeightQ_phi_inv_mk]
+  -- Cycle 368/367 inner-factor unfolds, cycle 371/372 distribution
+  -- pattern, cycle 372 constant-consolidation for shared sums:
+  ...
+  ring
 
-- σ(mk [broom₃, cherry]) = 1 (no children-multiplicity).
-- Predicted closed form: 10–12 terms in the polynomial (extrapolating
-  cycle 384's 8 terms for order 5).
-- Predicted elementary-weight kernels: 7–8 distinct (potentially
-  including new order-5 kernels and `mk [broom₃, cherry]` itself).
-- Proof template: cycle 384's recipe with binary product over the
-  heterogeneous pair `(broom₃, cherry)` — the bilinear cross-term
-  becomes asymmetric and exposes the order-mixing pattern.
+theorem powRep_sum_eq_of_agreement_at_mkBroomCherry_zero
+    (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+    (h_vertex : ...) (h_cherry : ...) (h_broom₃ : ...)
+    (h_mkCherry : ...) (h_mkBroom₃ : ...) (h_mkBroomCherry : ...)
+    -- plus any new kernel from Block (4)
+    : elementaryWeightQ_phi (η_q ^ (-(((0 + 1 : ℕ) : ℤ))))
+        (RootedTree.mk [RootedTree.broom₃, RootedTree.cherry])
+    = elementaryWeightQ_phi (η_q' ^ (-(((0 + 1 : ℕ) : ℤ))))
+        (RootedTree.mk [RootedTree.broom₃, RootedTree.cherry]) := by
+  have h_inv : ∀ ζ : Quotient PhiEquivalent.setoidSigma,
+    ζ ^ (-(((0 + 1 : ℕ) : ℤ))) = ζ⁻¹ := fun ζ => by
+    rw [zero_add, Nat.cast_one]; exact zpow_neg_one _
+  rw [h_inv, h_inv]
+  rw [elementaryWeightQ_phi_inv_mkBroomCherry,
+      elementaryWeightQ_phi_inv_mkBroomCherry]
+  rw [h_vertex, h_cherry, h_broom₃, h_mkCherry, h_mkBroom₃,
+      h_mkBroomCherry] -- and any new kernel from Block (4)
 
-LOC budget: ~250 LOC.
+example : elementaryWeightQ_phi
+    ((⟦⟨1, RKTableau.explicitEuler⟩⟧
+      : Quotient PhiEquivalent.setoidSigma)⁻¹)
+    (RootedTree.mk [RootedTree.broom₃, RootedTree.cherry])
+  = -- COMPUTE from closed form at v = c = b' = m = ... = 1
+    sorry := by
+  rw [elementaryWeightQ_phi_inv_mkBroomCherry]
+  simp [explicitEuler, RKTableau.explicitEuler,
+        Fin.sum_univ_one, Matrix.of_apply]
+  norm_num
 
-### §8 Cross-references
+example (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi (η_q ^ (-(((0 + 1 : ℕ) : ℤ))))
+      (RootedTree.mk [RootedTree.broom₃, RootedTree.cherry])
+    = elementaryWeightQ_phi (η_q ^ (-(((0 + 1 : ℕ) : ℤ))))
+      (RootedTree.mk [RootedTree.broom₃, RootedTree.cherry]) :=
+  powRep_sum_eq_of_agreement_at_mkBroomCherry_zero η_q η_q
+    rfl rfl rfl rfl rfl rfl -- one rfl per agreement hypothesis
+```
 
-- `.prover-state/issues/def_422B_subLemmaA_inductive_plan.md` (cycle
-  373) — Sub-lemma A inductive plan.
-- `.prover-state/issues/def_422B_phase_alpha_prime_scoping.md`
-  (cycle 379) — Phase α' recursive design.
-- Section422.lean cycle 371 / 372 / 384 ships — the three Family C
-  witnesses.
-- `.prover-state/issues/def_422B_path.md` — overall `def:422B`
-  roadmap.
+## Cycle 387+ outlook
 
-### §9 Self-reference
+After cycle 386 lands the 10th Family C witness, cycle 387 options:
 
-- Cycle 385 ships this doc.
-- Cycle 386 ships the 10th-tree Family C witness per §7.
-- Cycle 387+ ships Phase α'.4.1 (`inversePolyTree` + helper).
+* **α'.4.1** (recommended): ship recursive `inversePolyTree` (Variant
+  V4) + `bichildPolynomial` helper, with calibration witnesses across
+  all 10 ladder trees. ~300–500 LOC, may span 2 cycles. Per scoping
+  doc §5.2.
 
-## Priority 2 — IF time permits (stretch, optional)
+* **α'.4.0 stretch** (alternative): one more Family C data point if
+  cycle 386 reveals the Block (4) bilinear cross-term is more complex
+  than predicted. Candidates: `mk [vertex, broom₃]` (k=2, leaf +
+  non-leaf, order 5) or `mk [broom₃, broom₃]` (k=2, symmetric two-
+  broom, order 7).
 
-If the scoping doc closes early, ship **one** non-vacuity sanity
-witness for cycle 384's `mk [cherry, cherry]` closed form at a
-**different** explicit RK method beyond `explicitEuler`. Candidates:
+* Pivot to fresh entity if cycle 386 hits unexpected difficulty. But
+  §422 has high compound momentum; pivot is cycle 389+ territory.
 
-- `paddedEuler` (cycle 030, `RKTableau 2`): at this method,
-  `Φ_η(vertex) = 1`, etc. (verify before shipping). Witness shape:
-  `Φ_{⟦paddedEuler⟧⁻¹}(mk [cherry, cherry]) = <numerical value>`.
-
-**Do NOT** ship another full closed-form witness (a 10th tree) as
-P2 — that's cycle 386's job under the scoping doc plan, not a
-stretch this cycle. Witness-treadmill restraint is the cycle 372/378
-worker's standing directive.
-
-## Priority 3 — NO LEAN CODE THIS CYCLE
-
-Cycle 385 is a markdown-only scoping cycle. Do NOT modify
-`Section422.lean` or any other Lean file. If the scoping doc takes
-the full cycle budget, that's the expected outcome.
-
-The cycle 373 precedent is the model: it shipped only markdown
-(`def_422B_subLemmaA_inductive_plan.md`) and directly drove cycles
-374–378's 8-tree ladder build-out. The cycle 379 precedent is the
-same shape: shipped `def_422B_phase_alpha_prime_scoping.md`, drove
-cycles 380–383's Family A/B migrations.
-
-## What NOT to do
-
-- **Do NOT continue the witness-accumulation treadmill** without
-  scoping. The cycle 384 worker explicitly flagged Family C as
-  needing a unified plan, not more individual closed forms. Adding
-  10th, 11th, 12th witnesses without first identifying the recursive
-  recipe is wasted effort. (P2 above is a sanity *example*, not a
-  new closed form.)
-- **Do NOT attempt the cycle 365 grandfathered sorry** general body
-  this cycle. It remains gated on Phase α'.4 (and likely on Phase β
-  / γ migration after that). Multi-cycle work, not a single-cycle
-  target.
-- **Do NOT attempt the cycle 370 broom-family general theorem**
-  this cycle. Family B is fully ladder-migrated as of cycle 383; the
-  general inductive form on `broomTree k` is deferred to a future
-  cycle.
-- **Do NOT modify `inversePolyChain` (Family A) or `inversePolyBroom`
-  (Family B)**. Both are stable and consumed by `inversePolynomial`'s
-  dispatch table; the scope here is Family C only.
-- **Do NOT attempt to ship a `bichildPolynomial` helper in cycle 385**.
-  The recipe needs at least one more data point (cycle 386's
-  `mk [broom₃, cherry]` ship) before the recursive shape can be
-  pinned down without speculation.
-- **Do NOT pivot to a fresh entity** to break the §422 streak. While
-  48 consecutive cycles is long, the streak is **productive** — each
-  cycle ships axiom-clean progress toward `def:422B` closure. The
-  cycle 384 worker's "Suggested next approach" recommends staying in
-  §422 with the scoping doc. Pivoting now would lose compound
-  momentum.
-- **Do NOT attempt §441 Section441.lean work**. The GPFS-slowness
-  blocker (cycle 182+ pathology) is still in effect; the standing
-  guidance is "skip §441 path".
-- **Do NOT introduce sorries**. Cycle 200/201 and 149/150 rollback
-  precedents stand: sorry-first scaffolds on multi-cycle targets
-  without single-cycle close paths get rolled back. The scoping doc
-  has no Lean code, so this is trivially preserved.
-
-## What success looks like
-
-- One new markdown file at
-  `.prover-state/issues/def_422B_phase_alpha_prime_family_C_scoping.md`.
-- 400–600 lines covering §1–§9 above.
-- Cross-links to cycles 371 (`mk [broom₃]`), 372 (`mk [vertex,
-  cherry]`), 384 (`mk [cherry, cherry]`).
-- Cross-links to cycle 373 (`subLemmaA_inductive_plan.md`) and
-  cycle 379 (`phase_alpha_prime_scoping.md`).
-- Concrete cycle 386 entry point (the 10th-tree witness target).
-- Zero Lean changes (no new files, no diffs against `Section422.lean`
-  or any other Lean file).
-- Sorry count unchanged at 1 (the grandfathered cycle 365 sorry).
-- §422 axiom-clean streak advances to 48 substantive + 2 doc cycles
-  (336–385).
-
-## Self-check before shipping
-
-- [ ] Scoping doc has all 9 sections (§1 through §9).
-- [ ] All three Family C witnesses' closed forms transcribed accurately
-  from the cycle 371 / 372 / 384 ships (cross-reference the
-  `Section422.lean` line numbers).
-- [ ] Cycle 386 entry point names a concrete target tree and a
-  concrete LOC budget.
-- [ ] No Lean files modified (`git diff --stat` should show only
-  `.prover-state/` paths).
-- [ ] `task_results/cycle_385.md` documents the markdown-only ship
-  pattern, citing cycle 373 / 379 precedent.
-- [ ] `plan.md` row for `def:422B` left at `[~]` (still partial;
-  no migration).
-- [ ] `lean_status.json` row for `def:422B` left at `partial`.
+Phase E sealing of `def:422B` continues to be projected for the 390s
+given Sub-lemma A's general body is the multi-cycle blocker. Stay the
+course on the §422 track.
