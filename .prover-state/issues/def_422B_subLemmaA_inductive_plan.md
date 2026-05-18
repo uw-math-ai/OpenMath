@@ -1163,6 +1163,117 @@ four-tree ladder suffices for Phase ε — proceed directly to Phase δ
 (extension to general `m` via `powRep`) and then Phase ε (closing
 the cycle 365 grandfathered sorry).
 
+### §10.6 Cycle 377 update — Phases α.2, β.2, and γ extension all shipped
+
+**Scope delivered (vs. plan)**: the cycle 377 strategy budgeted ~110
+LOC for Steps 1–4 (extend `inversePolynomial` to 7 trees, 3 calibration
+witnesses, 3 per-tree bridges, 7-tree aggregator). The pre-flight check
+revealed that the cycle 376 Phase γ proof's default branch breaks
+under Step 1's redefinition: with three new `else if` branches
+(`bushy`, `mk [broom₃]`, `mk [vertex, cherry]`) inserted before the
+`else 0` fallback, the default branch's `rw [if_neg h_vertex,
+if_neg h_cherry, if_neg h_broom, if_neg h_mkCherry, ...]` chain leaves
+three unsolved `if t = bushy then ... else if ... else 0`-shaped goals
+(see "Discovery #1" below). Per the strategy's contingency, three new
+`by_cases` blocks were needed for full Phase γ coverage. Rather than
+defer to cycle 378, the worker shipped the **full Phase γ extension
+in this cycle** (the deferral path would have left the file with a
+build error, so was infeasible).
+
+**Theorems and definitions shipped (8 total)**:
+
+1. `inversePolynomial` (Phase α.2 extension) — `noncomputable def`,
+   3 new `else if` branches between `mk [cherry]` and the `else 0`
+   fallback. Matches cycle 370/371/372 closed forms verbatim.
+2. `_bushy` Phase α.2 calibration witness (`example`) — 4 `if_neg`
+   + `if_pos rfl`.
+3. `_mkBroom₃` Phase α.2 calibration witness (`example`) — 5 `if_neg`
+   + `if_pos rfl`.
+4. `_mkVertexCherry` Phase α.2 calibration witness (`example`) — 6
+   `if_neg` + `if_pos rfl`.
+5. `elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy` Phase β.2
+   bridge — `unfold inversePolynomial`, 4 `if_neg`, `if_pos rfl`, then
+   `exact elementaryWeightQ_phi_inv_bushy η_q`.
+6. `elementaryWeightQ_phi_inv_eq_inversePolynomial_mkBroom₃` Phase β.2
+   bridge — 5 `if_neg` chain.
+7. `elementaryWeightQ_phi_inv_eq_inversePolynomial_mkVertexCherry`
+   Phase β.2 bridge — 6 `if_neg` chain.
+8. `elementaryWeightQ_phi_inv_eq_inversePolynomial_on_ladder` — Phase
+   β.1 + β.2 aggregated 7-way disjunction.
+
+Plus the in-place extension of `inversePolynomial_eq_of_subtree_agreement`
+(Phase γ): 3 new `by_cases` blocks for `bushy`, `mk [broom₃]`,
+`mk [vertex, cherry]`, each mirroring the cycle 376 `mk [cherry]`
+block recipe, and a 3-`if_neg`-each extension of the final default
+branch.
+
+**Axiom-clean confirmation**: `#print axioms` on all 4 new public
+theorems (`_bushy`, `_mkBroom₃`, `_mkVertexCherry`, `_on_ladder`)
+and the in-place-extended `inversePolynomial_eq_of_subtree_agreement`
+each returns `[propext, Classical.choice, Quot.sound]` — no `sorryAx`.
+The §422 axiom-clean streak (41 substantive + 1 doc through cycle
+376) advances to **42 substantive + 1 doc**.
+
+**Sorry count unchanged**: still `1` actual sorry at
+`Section422.lean:2272` (the cycle 365 grandfathered Sub-lemma A body;
+note the line moved from 2279 → 2272 in the cycle 374 reordering and
+is now reported at 2272 in `lake env lean` diagnostics). The cycle
+377 ship adds 0 new sorries; `grep -c sorry Section422.lean` returns
+`5` (4 docstring mentions + 1 code sorry), unchanged from HEAD.
+
+**`lean_status.json` for `def:422B`**: stays `partial`. No status
+promotion — Phase α.2 + β.2 + γ extension closes the 7-tree-ladder
+phase of the Sub-lemma A chain; further phases (δ for general `m`
+via `powRep`, ε for closing the cycle 365 sorry) remain.
+
+**Discovery #1 — `unfold inversePolynomial` reorders proof
+obligations**: the cycle 376 Phase γ proof's `unfold` at the start
+of the proof exposes the full chain of nested `if-then-else`
+expressions. After Step 1's redefinition, the unfolded chain has
+7 nested `if`s instead of 4. The four existing `by_cases` blocks
+still work (each `subst h_<tree>` triggers `if_pos rfl` after
+`if_neg`-discharging earlier branches via `by decide`), but the
+default branch — which previously discharged the 4 `if`s and saw
+`0 = 0` — now discharges only 4 and is left with 3 unresolved
+`if t = <new tree> then ...` expressions on each side. The fix is
+to insert 3 new `by_cases` blocks **between** the existing
+`mk [cherry]` block and the final `else` branch, each following
+the cycle 376 `mk [cherry]` recipe verbatim. The final `else`
+branch then needs 3 more `if_neg h_<new>` discharges in its `rw`
+chain.
+
+**Discovery #2 — proof-block ordering is load-bearing**: the new
+`by_cases` blocks must be inserted in the **same order** as the
+new `else if` branches in `inversePolynomial`. Specifically:
+`h_bushy`, then `h_mkBroom`, then `h_mkVertexCherry`. Each block's
+`if_pos rfl` triggers at the position corresponding to that tree's
+branch in the chain. Reordering would require shuffling the count
+of `if_neg` discharges per block.
+
+**Discovery #3 — `by decide` discharges all 7-tree disequalities**:
+all `RootedTree` disequalities used in the new `if_neg` discharges
+(e.g. `RootedTree.bushy ≠ OpenMath.Chapter3.Section310.RootedTree.mk
+[RootedTree.cherry]`) are dispatched by `by decide` thanks to the
+cycle 343 structurally-recursive `RootedTree.order` infrastructure
+plus structural injectivity. No additional `simp` lemmas or manual
+`fun_prop` reasoning needed.
+
+**LOC accounting**: total cycle 377 diff is ~360 LOC (Step 1: ~25
+LOC; Phase γ extension: ~165 LOC; Step 2: ~70 LOC; Step 3: ~100 LOC;
+Step 4: ~10 LOC). Larger than the 110 LOC plan budget but unavoidable
+given the Phase γ default-branch break; the strategy explicitly
+called out this contingency.
+
+**Phase δ outlook (refined)**: with Phases α.1, α.2, β.1, β.2, γ
+(now 7-tree), the entire 7-tree closed-form ladder is **fully bridged
+in both directions** (forward via Phase β bridges, agreement-stable
+via Phase γ). Cycle 378+ can now attack Phase δ (general `m` via
+`powRep` induction) using cycle 361's `linearResidualAt_succ_mk_eq`
+as the inductive bridge and the cycle 377 Phase β.2 + γ bridges as
+the m=0 base case across all 7 trees. Phase ε remains gated on
+Phase α' (recursive `inversePolynomial` covering arbitrary `t`) and
+its own multi-cycle scoping doc.
+
 ### §10.2 Memory references
 
 - `project_butcher_D_operator.md` — `D` operator is §385b 1-stage

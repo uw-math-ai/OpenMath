@@ -4244,6 +4244,28 @@ noncomputable def inversePolynomial (t : RT) (f : RT → ℝ) : ℝ :=
     -(f RootedTree.vertex) ^ 3
       + 2 * f RootedTree.vertex * f RootedTree.cherry
       - f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+  else if t = RootedTree.bushy then
+    (f RootedTree.vertex) ^ 4
+      - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+      + 3 * f RootedTree.vertex * f RootedTree.broom₃
+      - f RootedTree.bushy
+  else if t = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃] then
+    (f RootedTree.vertex) ^ 4
+      - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+      + f RootedTree.vertex * f RootedTree.broom₃
+      + 2 * f RootedTree.vertex
+          * f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+      - f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+  else if t = OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry] then
+    (f RootedTree.vertex) ^ 4
+      - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+      + (f RootedTree.cherry) ^ 2
+      + f RootedTree.vertex * f RootedTree.broom₃
+      + f RootedTree.vertex
+          * f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+      - f (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry])
   else
     0
 
@@ -4305,6 +4327,120 @@ example (f : RT → ℝ) :
         (by decide :
           OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
             ≠ RootedTree.broom₃),
+      if_pos rfl]
+
+/-- *Phase α.2 (cycle 377) — bushy calibration witness.*
+
+Matches cycle 370's `elementaryWeightQ_phi_inv_bushy`
+(`Φ_{η⁻¹}({τ,τ,τ}) = (Φ_η τ)⁴ − 3 (Φ_η τ)² (Φ_η [τ]) + 3 (Φ_η τ)(Φ_η [τ,τ]) − Φ_η bushy`).
+The bushy branch is the 5th in `inversePolynomial`'s chain, so the
+witness requires 4 `if_neg` discharges before `if_pos rfl`. -/
+example (f : RT → ℝ) :
+    inversePolynomial RootedTree.bushy f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy := by
+  unfold inversePolynomial
+  rw [if_neg (by decide : RootedTree.bushy ≠ RootedTree.vertex),
+      if_neg (by decide : RootedTree.bushy ≠ RootedTree.cherry),
+      if_neg (by decide : RootedTree.bushy ≠ RootedTree.broom₃),
+      if_neg
+        (by decide :
+          RootedTree.bushy
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+      if_pos rfl]
+
+/-- *Phase α.2 (cycle 377) — `mk [broom₃]` calibration witness.*
+
+Matches cycle 371's `elementaryWeightQ_phi_inv_mkBroom₃`
+(`Φ_{η⁻¹}([[τ,τ]]) = (Φ_η τ)⁴ − 3 (Φ_η τ)² (Φ_η [τ]) + (Φ_η τ)(Φ_η [τ,τ])
+   + 2 (Φ_η τ)(Φ_η [[τ]]) − Φ_η [[τ,τ]]`).
+The `mk [broom₃]` branch is the 6th in `inversePolynomial`'s chain, so
+the witness requires 5 `if_neg` discharges before `if_pos rfl`. -/
+example (f : RT → ℝ) :
+    inversePolynomial
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]) f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + f RootedTree.vertex * f RootedTree.broom₃
+        + 2 * f RootedTree.vertex
+            * f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]) := by
+  unfold inversePolynomial
+  rw [if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+            ≠ RootedTree.vertex),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+            ≠ RootedTree.cherry),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+            ≠ RootedTree.broom₃),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+            ≠ RootedTree.bushy),
+      if_pos rfl]
+
+/-- *Phase α.2 (cycle 377) — `mk [vertex, cherry]` calibration witness.*
+
+Matches cycle 372's `elementaryWeightQ_phi_inv_mkVertexCherry`
+(`Φ_{η⁻¹}([τ,[τ]]) = (Φ_η τ)⁴ − 3 (Φ_η τ)² (Φ_η [τ]) + (Φ_η [τ])²
+   + (Φ_η τ)(Φ_η [τ,τ]) + (Φ_η τ)(Φ_η [[τ]]) − Φ_η [τ,[τ]]`).
+The `mk [vertex, cherry]` branch is the 7th (final matched) branch in
+`inversePolynomial`'s chain, so the witness requires 6 `if_neg`
+discharges before `if_pos rfl`. -/
+example (f : RT → ℝ) :
+    inversePolynomial
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry]) f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + (f RootedTree.cherry) ^ 2
+        + f RootedTree.vertex * f RootedTree.broom₃
+        + f RootedTree.vertex
+            * f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]) := by
+  unfold inversePolynomial
+  rw [if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ RootedTree.vertex),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ RootedTree.cherry),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ RootedTree.broom₃),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ RootedTree.bushy),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]),
       if_pos rfl]
 
 /-! ### Phase β.1 (cycle 375) — per-tree bridges between `elementaryWeightQ_phi η_q⁻¹` and `inversePolynomial`
@@ -4400,26 +4536,145 @@ theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_mkCherry
       if_pos rfl]
   exact elementaryWeightQ_phi_inv_mkCherry η_q
 
-/-- *Phase β.1 (cycle 375) — aggregated bridge on the matched ladder.*
+/-- *Phase β.2 (cycle 377) — bushy bridge.*
 
-Packages the four per-tree bridges
-(`_vertex`, `_cherry`, `_broom₃`, `_mkCherry`) as a single named
-theorem for downstream consumers of Phase β.1. Cycle 376's Phase β.2 /
-γ work can quote this lemma instead of branching on the four cases
-manually. -/
+At `t = bushy`, `elementaryWeightQ_phi η_q⁻¹ t` agrees with the
+closed-form polynomial `inversePolynomial t (elementaryWeightQ_phi η_q)`.
+Reduces to cycle 370's `elementaryWeightQ_phi_inv_bushy` after four
+`if_neg` discharges (vertex, cherry, broom₃, mk [cherry]) and
+`if_pos rfl`. -/
+theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi η_q⁻¹ RootedTree.bushy
+      = inversePolynomial RootedTree.bushy (elementaryWeightQ_phi η_q) := by
+  unfold inversePolynomial
+  rw [if_neg (by decide : RootedTree.bushy ≠ RootedTree.vertex),
+      if_neg (by decide : RootedTree.bushy ≠ RootedTree.cherry),
+      if_neg (by decide : RootedTree.bushy ≠ RootedTree.broom₃),
+      if_neg
+        (by decide :
+          RootedTree.bushy
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+      if_pos rfl]
+  exact elementaryWeightQ_phi_inv_bushy η_q
+
+/-- *Phase β.2 (cycle 377) — `mk [broom₃]` bridge.*
+
+At `t = mk [broom₃]`, `elementaryWeightQ_phi η_q⁻¹ t` agrees with the
+closed-form polynomial `inversePolynomial t (elementaryWeightQ_phi η_q)`.
+Reduces to cycle 371's `elementaryWeightQ_phi_inv_mkBroom₃` after five
+`if_neg` discharges (vertex, cherry, broom₃, mk [cherry], bushy) and
+`if_pos rfl`. -/
+theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_mkBroom₃
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi η_q⁻¹
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+      = inversePolynomial
+          (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+          (elementaryWeightQ_phi η_q) := by
+  unfold inversePolynomial
+  rw [if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+            ≠ RootedTree.vertex),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+            ≠ RootedTree.cherry),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+            ≠ RootedTree.broom₃),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+            ≠ RootedTree.bushy),
+      if_pos rfl]
+  exact elementaryWeightQ_phi_inv_mkBroom₃ η_q
+
+/-- *Phase β.2 (cycle 377) — `mk [vertex, cherry]` bridge.*
+
+At `t = mk [vertex, cherry]`, `elementaryWeightQ_phi η_q⁻¹ t` agrees
+with the closed-form polynomial
+`inversePolynomial t (elementaryWeightQ_phi η_q)`. Reduces to cycle
+372's `elementaryWeightQ_phi_inv_mkVertexCherry` after six `if_neg`
+discharges (vertex, cherry, broom₃, mk [cherry], bushy, mk [broom₃])
+and `if_pos rfl`. -/
+theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_mkVertexCherry
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi η_q⁻¹
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry])
+      = inversePolynomial
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry])
+          (elementaryWeightQ_phi η_q) := by
+  unfold inversePolynomial
+  rw [if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ RootedTree.vertex),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ RootedTree.cherry),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ RootedTree.broom₃),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ RootedTree.bushy),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]
+            ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]),
+      if_pos rfl]
+  exact elementaryWeightQ_phi_inv_mkVertexCherry η_q
+
+/-- *Phase β.1 (cycle 375) + β.2 (cycle 377) — aggregated bridge on the
+seven-tree matched ladder.*
+
+Packages the seven per-tree bridges (`_vertex`, `_cherry`, `_broom₃`,
+`_mkCherry`, `_bushy`, `_mkBroom₃`, `_mkVertexCherry`) as a single
+named theorem for downstream consumers. Cycle 378+'s Phase δ work can
+quote this lemma instead of branching on the seven cases manually. -/
 theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_on_ladder
     (η_q : Quotient PhiEquivalent.setoidSigma) (t : RT)
     (ht : t = RootedTree.vertex ∨ t = RootedTree.cherry
         ∨ t = RootedTree.broom₃
         ∨ t = OpenMath.Chapter3.Section310.RootedTree.mk
-                [RootedTree.cherry]) :
+                [RootedTree.cherry]
+        ∨ t = RootedTree.bushy
+        ∨ t = OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.broom₃]
+        ∨ t = OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]) :
     elementaryWeightQ_phi η_q⁻¹ t
       = inversePolynomial t (elementaryWeightQ_phi η_q) := by
-  rcases ht with h | h | h | h <;> subst h
+  rcases ht with h | h | h | h | h | h | h <;> subst h
   · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_vertex η_q
   · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_cherry η_q
   · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_broom₃ η_q
   · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_mkCherry η_q
+  · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy η_q
+  · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_mkBroom₃ η_q
+  · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_mkVertexCherry η_q
 
 /-! ### Phase γ (cycle 376) — closed-subtree agreement for `inversePolynomial`
 
@@ -4524,7 +4779,176 @@ theorem inversePolynomial_eq_of_subtree_agreement
             OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
               ≠ RootedTree.broom₃),
         if_pos rfl, hv, hc, hm]
+  by_cases h_bushy : t = RootedTree.bushy
+  · subst h_bushy
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    have hbu : f RootedTree.bushy = g RootedTree.bushy :=
+      h_closed RootedTree.bushy (le_refl _)
+    rw [if_neg (by decide : RootedTree.bushy ≠ RootedTree.vertex),
+        if_neg (by decide : RootedTree.bushy ≠ RootedTree.cherry),
+        if_neg (by decide : RootedTree.bushy ≠ RootedTree.broom₃),
+        if_neg
+          (by decide :
+            RootedTree.bushy
+              ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+        if_pos rfl,
+        if_neg (by decide : RootedTree.bushy ≠ RootedTree.vertex),
+        if_neg (by decide : RootedTree.bushy ≠ RootedTree.cherry),
+        if_neg (by decide : RootedTree.bushy ≠ RootedTree.broom₃),
+        if_neg
+          (by decide :
+            RootedTree.bushy
+              ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+        if_pos rfl, hv, hc, hb, hbu]
+  by_cases h_mkBroom :
+      t = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+  · subst h_mkBroom
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    have hmc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        = g (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hmb :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+        = g (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]) :=
+      h_closed _ (le_refl _)
+    rw [if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+              ≠ RootedTree.vertex),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+              ≠ RootedTree.cherry),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+              ≠ RootedTree.broom₃),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+              ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+              ≠ RootedTree.bushy),
+        if_pos rfl,
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+              ≠ RootedTree.vertex),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+              ≠ RootedTree.cherry),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+              ≠ RootedTree.broom₃),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+              ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]
+              ≠ RootedTree.bushy),
+        if_pos rfl, hv, hc, hb, hmc, hmb]
+  by_cases h_mkVertexCherry :
+      t = OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry]
+  · subst h_mkVertexCherry
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    have hmc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        = g (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hmvc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry])
+        = g (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry]) :=
+      h_closed _ (le_refl _)
+    rw [if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ RootedTree.vertex),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ RootedTree.cherry),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ RootedTree.broom₃),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ RootedTree.bushy),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]),
+        if_pos rfl,
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ RootedTree.vertex),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ RootedTree.cherry),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ RootedTree.broom₃),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ RootedTree.bushy),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]
+              ≠ OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]),
+        if_pos rfl, hv, hc, hb, hmc, hmvc]
   · rw [if_neg h_vertex, if_neg h_cherry, if_neg h_broom, if_neg h_mkCherry,
-        if_neg h_vertex, if_neg h_cherry, if_neg h_broom, if_neg h_mkCherry]
+        if_neg h_bushy, if_neg h_mkBroom, if_neg h_mkVertexCherry,
+        if_neg h_vertex, if_neg h_cherry, if_neg h_broom, if_neg h_mkCherry,
+        if_neg h_bushy, if_neg h_mkBroom, if_neg h_mkVertexCherry]
 
 end OpenMath.Chapter4.Section422
