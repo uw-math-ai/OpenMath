@@ -1723,3 +1723,74 @@ Cycle 371 worker recommends option 1 for cycle 372 (one more
 heterogeneous-children data point), then cycle 373's planner picks
 between option 2 (one more witness) and option 3 (pivot to inductive
 scoping). Cycle 374+ likely begins the multi-cycle inductive attack.
+
+## Cycle 372 closure — `mk [vertex, cherry]` (first asymmetric order-4
+witness) ship
+
+Cycle 372 shipped option 1 (the first asymmetric order-4 witness)
+following the cycle 371 `_mkBroom₃` recipe:
+
+* `elementaryWeightQ_phi_inv_mkVertexCherry` — closed form for the
+  inverse at `mk [vertex, cherry] = mk [vertex, mk [vertex]]`:
+  ```
+  Φ_{η_q⁻¹}(mk [vertex, cherry])
+    = v⁴ − 3v²·c + c² + v·b' + v·m − Φ_η(mk [vertex, cherry])
+  ```
+  where v = Φ_η(vertex), c = Φ_η(cherry), b' = Φ_η(broom₃), m =
+  Φ_η(mk [cherry]). The first witness with a non-leading **`c²`
+  quadratic self-term** outside of `v⁴` and `v²·c` cross-terms.
+* `powRep_sum_eq_of_agreement_at_mkVertexCherry_zero` — m=0 case of
+  Sub-lemma A at `t = mk [vertex, cherry]`, with five agreement
+  hypotheses (vertex, cherry, broom₃, mk [cherry], mk [vertex,
+  cherry]).
+
+Plus two non-vacuity examples: closed-form at `⟦explicitEuler⟧`
+pinning to `1`, and reflexive m=0 witness via `rfl × 5`.
+
+Both new theorems are **axiom-clean** (`[propext, Classical.choice,
+Quot.sound]`). §422 streak extends to **38 consecutive axiom-clean
+cycles** (336–372). Witness library now has **7 trees**: vertex,
+cherry, broom₃, mk [cherry], bushy, mk [broom₃], mk [vertex,
+cherry].
+
+**Discovery refresher** (cycle 372): **Constant consolidation for
+shared-sum back-substitutions.** When two per-summand integrand
+terms share the same Σⱼ tail (e.g. both `+3v²·Sᵢ` and `-c·Sᵢ`
+involve `Σᵢ bᵢ·Sᵢ = M.eW(cherry)`), folding their constants together
+into a single `(3v² - c) · (M.b i · Sᵢ)` term avoids needing two
+separate `← Finset.mul_sum, ← h_cherry` rewrites; `ring` at the end
+handles the constant algebra. Similarly the `-v⁴` and `+v²c` terms
+in cycle 372's closed form consolidate into `(-v³ + vc) · M.b i`
+behind a single `← h_vertex` call, factoring v⁴ from a single
+`Σᵢ M.b i · v³` remainder rather than needing nested power
+expansion. This pattern is now load-bearing infrastructure for any
+witness whose closed form has multiple terms ending in the same
+elementary weight.
+
+**Cycle 373+ entry-point recommendation** (cycle 372 worker's
+perspective):
+
+1. **STRONGLY RECOMMENDED: Option 3 — pivot to inductive scoping.**
+   With 7 closed-form witnesses spanning single-child ladders
+   (cherry, mk [cherry], mk [broom₃]), multi-leaf brooms (broom₃,
+   bushy), and the first heterogeneous-children case (mk [vertex,
+   cherry]), the witness library is genuinely sufficient to inform
+   a multi-cycle scoping doc analogous to `lem_310B_plan.md`. The
+   closed forms reveal a clear pattern: the inverse's value at any
+   rooted tree decomposes as a polynomial in the elementary weights
+   of its strict subtrees, with coefficients determined by tree
+   structure. The witness-accumulation treadmill has served its
+   purpose.
+
+2. Option 2 (`mk [mk [cherry]]`, depth-3 ladder) — one more data
+   point. Mechanistically a small step (single outer wrap of cycle
+   369's `mk [cherry]`); adds an extra ladder level but no new
+   structural pattern.
+
+3. Fresh entity pivot (e.g. `def:451A`) — loses the 38 consecutive
+   axiom-clean §422 streak.
+
+Cycle 372 worker strongly recommends option 3 for cycle 373: the
+witness library is at the natural point of diminishing returns, and
+inductive scoping is the path off the treadmill toward Phase D.3.d
+and Phase E sealing of `def:422B`.

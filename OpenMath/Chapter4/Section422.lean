@@ -3745,4 +3745,442 @@ example :
     (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
     rfl rfl rfl rfl rfl
 
+/-- *Phase D.3.b Step 2 (cycle 372) — `mk [vertex, cherry]` (first
+asymmetric order-4 tree) closed form for Φ_{η_q⁻¹}.* At the order-4
+tree `mk [vertex, cherry] = mk [vertex, mk [vertex]]`, the quotient-
+level elementary weight of the §383 inverse class admits the closed
+form
+  `Φ_{η_q⁻¹}(mk [vertex, cherry])
+       = (Φ_η(vertex))^4
+         − 3 · (Φ_η(vertex))^2 · Φ_η(cherry)
+         + (Φ_η(cherry))^2
+         + Φ_η(vertex) · Φ_η(broom₃)
+         + Φ_η(vertex) · Φ_η(mk [cherry])
+         − Φ_η(mk [vertex, cherry])`.
+
+Seventh data point in the cycle 366 §G Route B hypothesis ladder
+(vertex, cherry, broom₃, mk [cherry], bushy, mk [broom₃],
+mk [vertex, cherry]). The first asymmetric order-4 witness:
+heterogeneous children with one leaf-child and one cherry-child,
+introducing a new `c²` quadratic self-term not present in any
+prior witness's closed form.
+
+Proof outline (mirrors cycle 371's `mk [broom₃]` recipe with a
+two-child cons-case unfold pattern from cycle 368, and inner cherry
+handling from cycle 369):
+
+1. Reduce to a representative `⟨s, M⟩` via `Quotient.inductionOn`.
+2. Reuse cycle 367/368/369 helpers `h_inv_v`, `h_vertex`,
+   `h_dw_cherry`, `h_cherry`, `h_dws_cherry`, `h_dw_broom₃`,
+   `h_broom₃`, `h_inv_cherry`, `h_dw_mkCherry`, `h_mkCherry`.
+3. Add three new helpers for the `mk [vertex, cherry]` two-child
+   asymmetric structure:
+   - `h_dw_mkVertexCherry` : `M.derivativeWeight i (mk [vertex, cherry])
+                              = (∑ⱼ Aᵢⱼ) · (∑ⱼ Aᵢⱼ · ∑ₖ Aⱼₖ)`
+     (two-child cons-case unfold combining cycle 367's `h_dw_cherry`
+     inner factor with the vertex-factor `Σⱼ Aᵢⱼ · 1`).
+   - `h_mkVertexCherry` : `M.elementaryWeight (mk [vertex, cherry])
+                           = ∑ᵢ bᵢ · (∑ⱼ Aᵢⱼ) · (∑ⱼ Aᵢⱼ · ∑ₖ Aⱼₖ)`.
+   - `h_dws_mkVertexCherry` : `M.derivativeWeightWithSrc M.inverse i
+                               (mk [vertex, cherry])
+                               = (inv_v + ∑ⱼ Aᵢⱼ)
+                                 · (inv_c
+                                    + ∑ⱼ Aᵢⱼ · (inv_v + ∑ₖ Aⱼₖ))`
+     (two outer cons-case unfolds; inner cherry layer reuses cycle
+     367's `h_dws_cherry`).
+4. After `_inv_mk`, `_mk` × 5 rewrites, substitute the closed form
+   per-summand (5-term decomposition with inner ∑ⱼ Aᵢⱼ · (-v + ∑ₖ Aⱼₖ)
+   pre-distributed via `Finset.sum_add_distrib` + `← Finset.mul_sum`),
+   distribute the sum via `Finset.sum_add_distrib × 4`, factor
+   constants via `← Finset.mul_sum × 4`, back-substitute via
+   `← h_mkVertexCherry, ← h_broom₃, ← h_mkCherry, ← h_cherry,
+   ← h_vertex`, close with `ring`. -/
+theorem elementaryWeightQ_phi_inv_mkVertexCherry
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi (η_q⁻¹)
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry])
+      = (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 4
+        - 3 * (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 2
+            * elementaryWeightQ_phi η_q RootedTree.cherry
+        + (elementaryWeightQ_phi η_q RootedTree.cherry) ^ 2
+        + elementaryWeightQ_phi η_q RootedTree.vertex
+            * elementaryWeightQ_phi η_q RootedTree.broom₃
+        + elementaryWeightQ_phi η_q RootedTree.vertex
+            * elementaryWeightQ_phi η_q
+              (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        - elementaryWeightQ_phi η_q
+            (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]) := by
+  refine Quotient.inductionOn η_q ?_
+  rintro ⟨s, M⟩
+  -- Cycle 367 helpers (reused verbatim).
+  have h_inv_v : M.inverse.elementaryWeight RootedTree.vertex
+      = -M.elementaryWeight RootedTree.vertex := by
+    show ∑ j : Fin s, M.inverse.b j * M.inverse.derivativeWeight j RootedTree.vertex
+          = -(∑ j : Fin s, M.b j * M.derivativeWeight j RootedTree.vertex)
+    rw [← Finset.sum_neg_distrib]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [RKTableau.inverse_b, RKTableau.derivativeWeight_vertex,
+        RKTableau.derivativeWeight_vertex, neg_mul]
+  have h_vertex : M.elementaryWeight RootedTree.vertex = ∑ j : Fin s, M.b j := by
+    show ∑ j : Fin s, M.b j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.b j
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [RKTableau.derivativeWeight_vertex, mul_one]
+  have h_dw_cherry : ∀ i : Fin s,
+      M.derivativeWeight i RootedTree.cherry = ∑ j : Fin s, M.A i j := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [] = ∑ j : Fin s, M.A i j
+    rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [RKTableau.derivativeWeight_vertex, mul_one]
+  have h_cherry : M.elementaryWeight RootedTree.cherry
+      = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j := by
+    show ∑ i : Fin s, M.b i * M.derivativeWeight i RootedTree.cherry
+          = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_cherry i]
+  have h_dws_cherry : ∀ i : Fin s,
+      M.derivativeWeightWithSrc M.inverse i RootedTree.cherry
+        = M.inverse.elementaryWeight RootedTree.vertex + ∑ j : Fin s, M.A i j := by
+    intro i
+    show (M.inverse.elementaryWeight RootedTree.vertex
+            + ∑ j : Fin s, M.A i j
+                * M.derivativeWeightWithSrc M.inverse j RootedTree.vertex)
+          * (1 : ℝ) = _
+    rw [mul_one]
+    congr 1
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [RKTableau.derivativeWeightWithSrc_vertex, mul_one]
+  -- Cycle 368 helpers (reused verbatim).
+  have h_dw_broom₃ : ∀ i : Fin s,
+      M.derivativeWeight i RootedTree.broom₃ = (∑ j : Fin s, M.A i j) ^ 2 := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [RootedTree.vertex]
+        = (∑ j : Fin s, M.A i j) ^ 2
+    have h_inner_sum :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeight_vertex, mul_one]
+    have h_prod_step :
+        M.derivativeWeightProd i [RootedTree.vertex] = ∑ j : Fin s, M.A i j := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+            * M.derivativeWeightProd i [] = ∑ j : Fin s, M.A i j
+      rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one, h_inner_sum]
+    rw [h_inner_sum, h_prod_step]; ring
+  have h_broom₃ : M.elementaryWeight RootedTree.broom₃
+      = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 2 := by
+    show ∑ i : Fin s, M.b i * M.derivativeWeight i RootedTree.broom₃
+          = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 2
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_broom₃ i]
+  -- Cycle 369: `h_inv_cherry` lifted from cycle 367's quotient theorem at ⟦M⟧.
+  have h_inv_cherry : M.inverse.elementaryWeight RootedTree.cherry
+      = (M.elementaryWeight RootedTree.vertex) ^ 2
+        - M.elementaryWeight RootedTree.cherry :=
+    elementaryWeightQ_phi_inv_cherry
+      (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩)
+  -- Cycle 369 helpers for `mk [cherry]` derivative/elementary weight closed forms.
+  have h_dw_mkCherry : ∀ i : Fin s,
+      M.derivativeWeight i
+          (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        = ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.cherry)
+          * M.derivativeWeightProd i [] = _
+    rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [h_dw_cherry j]
+  have h_mkCherry : M.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+      = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k := by
+    show ∑ i : Fin s, M.b i
+            * M.derivativeWeight i
+                (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+          = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_mkCherry i]
+  -- New cycle 372 helpers — two-child asymmetric `mk [vertex, cherry]` structure.
+  -- Derivative weight: combines the vertex-factor `Σⱼ Aᵢⱼ · 1` with the
+  -- cherry-factor `Σⱼ Aᵢⱼ · Σₖ Aⱼₖ` via two-child cons-case unfold.
+  have h_dw_mkVertexCherry : ∀ i : Fin s,
+      M.derivativeWeight i
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry])
+        = (∑ j : Fin s, M.A i j)
+          * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k) := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [RootedTree.cherry] = _
+    have h_vertex_factor :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeight_vertex, mul_one]
+    have h_cherry_factor :
+        M.derivativeWeightProd i [RootedTree.cherry]
+          = ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.cherry)
+            * M.derivativeWeightProd i [] = _
+      rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one]
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [h_dw_cherry j]
+    rw [h_vertex_factor, h_cherry_factor]
+  have h_mkVertexCherry : M.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry])
+      = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j)
+          * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k) := by
+    show ∑ i : Fin s, M.b i
+            * M.derivativeWeight i
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.cherry])
+          = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j)
+              * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k)
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_mkVertexCherry i]; ring
+  -- Two-layer cons-case unfold for `mk [vertex, cherry]`'s
+  -- derivativeWeightWithSrc: outer one-cons unfold strips the `mk` layer,
+  -- producing a product of two source-tagged factors (vertex layer + cherry
+  -- layer). The vertex factor reduces via `derivativeWeightWithSrc_vertex = 1`,
+  -- the cherry factor unfolds via cycle 367's `h_dws_cherry`.
+  have h_dws_mkVertexCherry : ∀ i : Fin s,
+      M.derivativeWeightWithSrc M.inverse i
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry])
+        = (M.inverse.elementaryWeight RootedTree.vertex
+            + ∑ j : Fin s, M.A i j)
+          * (M.inverse.elementaryWeight RootedTree.cherry
+             + ∑ j : Fin s, M.A i j
+                 * (M.inverse.elementaryWeight RootedTree.vertex
+                    + ∑ k : Fin s, M.A j k)) := by
+    intro i
+    show (M.inverse.elementaryWeight RootedTree.vertex
+            + ∑ j : Fin s, M.A i j
+                * M.derivativeWeightWithSrc M.inverse j RootedTree.vertex)
+          * M.derivativeWeightWithSrcProd M.inverse i [RootedTree.cherry] = _
+    have h_vertex_factor :
+        ∑ j : Fin s, M.A i j * M.derivativeWeightWithSrc M.inverse j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeightWithSrc_vertex, mul_one]
+    have h_cherry_factor :
+        M.derivativeWeightWithSrcProd M.inverse i [RootedTree.cherry]
+          = M.inverse.elementaryWeight RootedTree.cherry
+            + ∑ j : Fin s, M.A i j
+                * (M.inverse.elementaryWeight RootedTree.vertex
+                   + ∑ k : Fin s, M.A j k) := by
+      show (M.inverse.elementaryWeight RootedTree.cherry
+              + ∑ j : Fin s, M.A i j
+                  * M.derivativeWeightWithSrc M.inverse j RootedTree.cherry)
+            * M.derivativeWeightWithSrcProd M.inverse i [] = _
+      rw [show M.derivativeWeightWithSrcProd M.inverse i [] = 1 from rfl, mul_one]
+      congr 1
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [h_dws_cherry j]
+    rw [h_vertex_factor, h_cherry_factor]
+  -- Main computation: assemble closed form via _inv_mk + _mk × 5 + sum algebra.
+  rw [elementaryWeightQ_phi_inv_mk M
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry]),
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk]
+  have h_sum :
+      (∑ i : Fin s, M.b i
+          * M.derivativeWeightWithSrc M.inverse i
+              (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]))
+        = M.elementaryWeight
+            (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry])
+          - M.elementaryWeight RootedTree.vertex
+              * M.elementaryWeight RootedTree.broom₃
+          - M.elementaryWeight RootedTree.vertex
+              * M.elementaryWeight
+                  (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+          + 3 * (M.elementaryWeight RootedTree.vertex) ^ 2
+              * M.elementaryWeight RootedTree.cherry
+          - (M.elementaryWeight RootedTree.cherry) ^ 2
+          - (M.elementaryWeight RootedTree.vertex) ^ 4 := by
+    have h_subst :
+        (∑ i : Fin s, M.b i
+            * M.derivativeWeightWithSrc M.inverse i
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.cherry]))
+          = ∑ i : Fin s,
+              (M.b i * (∑ j : Fin s, M.A i j)
+                  * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k)
+                + (-M.elementaryWeight RootedTree.vertex)
+                    * (M.b i * (∑ j : Fin s, M.A i j) ^ 2)
+                + (-M.elementaryWeight RootedTree.vertex)
+                    * (M.b i * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k))
+                + (2 * (M.elementaryWeight RootedTree.vertex) ^ 2
+                    - M.elementaryWeight RootedTree.cherry)
+                    * (M.b i * ∑ j : Fin s, M.A i j)
+                + (-(M.elementaryWeight RootedTree.vertex) ^ 3
+                    + M.elementaryWeight RootedTree.vertex
+                      * M.elementaryWeight RootedTree.cherry) * M.b i) := by
+      refine Finset.sum_congr rfl (fun i _ => ?_)
+      rw [h_dws_mkVertexCherry i, h_inv_cherry, h_inv_v]
+      -- The inner Σⱼ Aᵢⱼ · (-v + Σₖ Aⱼₖ) needs to be distributed before
+      -- `ring` can match the 5-term per-summand decomposition.
+      have h_inner_expand :
+          ∑ j : Fin s, M.A i j
+              * (-M.elementaryWeight RootedTree.vertex + ∑ k : Fin s, M.A j k)
+            = -M.elementaryWeight RootedTree.vertex * ∑ j : Fin s, M.A i j
+              + ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k := by
+        have h_inner :
+            ∑ j : Fin s, M.A i j
+                * (-M.elementaryWeight RootedTree.vertex + ∑ k : Fin s, M.A j k)
+              = ∑ j : Fin s, (-M.elementaryWeight RootedTree.vertex * M.A i j
+                  + M.A i j * ∑ k : Fin s, M.A j k) := by
+          refine Finset.sum_congr rfl (fun j _ => ?_); ring
+        rw [h_inner, Finset.sum_add_distrib, ← Finset.mul_sum]
+      rw [h_inner_expand]; ring
+    rw [h_subst, Finset.sum_add_distrib, Finset.sum_add_distrib,
+        Finset.sum_add_distrib, Finset.sum_add_distrib,
+        ← Finset.mul_sum, ← Finset.mul_sum, ← Finset.mul_sum, ← Finset.mul_sum,
+        ← h_mkVertexCherry, ← h_broom₃, ← h_mkCherry, ← h_cherry, ← h_vertex]
+    ring
+  rw [h_sum]; ring
+
+/-- *Phase D.3.b Step 2 (cycle 372) — `mk [vertex, cherry]` closed form
+non-vacuity at `η_q = ⟦explicitEuler⟧`.* The expected value is
+`Φ_{⟦explicitEuler⟧⁻¹}(mk [vertex, cherry]) = 1^4 − 3·1²·0 + 0² + 1·0
++ 1·0 − 0 = 1`, since for explicit Euler `Σ b = 1` (so `Φ_η(vertex) =
+1`) and `A = 0` (so all higher elementary weights vanish). -/
+example :
+    elementaryWeightQ_phi
+      ((Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩))⁻¹
+      (OpenMath.Chapter3.Section310.RootedTree.mk
+        [RootedTree.vertex, RootedTree.cherry]) = 1 := by
+  rw [elementaryWeightQ_phi_inv_mkVertexCherry, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk]
+  have h_vertex : RKTableau.explicitEuler.elementaryWeight RootedTree.vertex = 1 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.vertex = 1
+    simp [RKTableau.explicitEuler, RKTableau.derivativeWeight_vertex]
+  have h_cherry_zero :
+      RKTableau.explicitEuler.derivativeWeight 0 RootedTree.cherry = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [] = 0
+    simp [RKTableau.explicitEuler]
+  have h_cherry : RKTableau.explicitEuler.elementaryWeight RootedTree.cherry = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.cherry = 0
+    simp [h_cherry_zero]
+  have h_broom₃_zero :
+      RKTableau.explicitEuler.derivativeWeight 0 RootedTree.broom₃ = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [RootedTree.vertex] = 0
+    simp [RKTableau.explicitEuler]
+  have h_broom₃ : RKTableau.explicitEuler.elementaryWeight RootedTree.broom₃ = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.broom₃ = 0
+    simp [h_broom₃_zero]
+  have h_mkCherry_zero :
+      RKTableau.explicitEuler.derivativeWeight 0
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.cherry)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [] = 0
+    simp [RKTableau.explicitEuler]
+  have h_mkCherry :
+      RKTableau.explicitEuler.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i
+              (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) = 0
+    simp [h_mkCherry_zero]
+  have h_mkVertexCherry_zero :
+      RKTableau.explicitEuler.derivativeWeight 0
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry]) = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [RootedTree.cherry] = 0
+    simp [RKTableau.explicitEuler]
+  have h_mkVertexCherry :
+      RKTableau.explicitEuler.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry]) = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i
+              (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]) = 0
+    simp [h_mkVertexCherry_zero]
+  rw [h_vertex, h_cherry, h_broom₃, h_mkCherry, h_mkVertexCherry]; ring
+
+/-- *Phase D.3.b Step 2 (cycle 372) — Priority 2 `mk [vertex, cherry]`
+m=0 witness:* specialisation of Sub-lemma A
+`powRep_sum_eq_of_strict_subtree_agreement` at
+`t = mk [vertex, cherry], m = 0`. Under agreement at `vertex`, `cherry`,
+`broom₃`, `mk [cherry]`, and `mk [vertex, cherry]` (five subtrees
+corresponding to the closed-form factors), the `η_q^(-1)` images at
+`mk [vertex, cherry]` coincide.
+
+Proof: reduce `η_q ^ (-(((0 + 1 : ℕ) : ℤ)))` to `η_q⁻¹` via
+`Nat.cast_one` + `zpow_neg_one`, apply cycle 372's
+`elementaryWeightQ_phi_inv_mkVertexCherry` on both sides, then
+substitute the five agreement hypotheses. -/
+theorem powRep_sum_eq_of_agreement_at_mkVertexCherry_zero
+    (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+    (h_vertex : elementaryWeightQ_phi η_q RootedTree.vertex
+              = elementaryWeightQ_phi η_q' RootedTree.vertex)
+    (h_cherry : elementaryWeightQ_phi η_q RootedTree.cherry
+              = elementaryWeightQ_phi η_q' RootedTree.cherry)
+    (h_broom₃ : elementaryWeightQ_phi η_q RootedTree.broom₃
+              = elementaryWeightQ_phi η_q' RootedTree.broom₃)
+    (h_mkCherry : elementaryWeightQ_phi η_q
+                    (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+              = elementaryWeightQ_phi η_q'
+                  (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]))
+    (h_mkVertexCherry : elementaryWeightQ_phi η_q
+                          (OpenMath.Chapter3.Section310.RootedTree.mk
+                            [RootedTree.vertex, RootedTree.cherry])
+              = elementaryWeightQ_phi η_q'
+                  (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.cherry])) :
+    elementaryWeightQ_phi (η_q ^ (-(((0 + 1 : ℕ) : ℤ))))
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry])
+      = elementaryWeightQ_phi (η_q' ^ (-(((0 + 1 : ℕ) : ℤ))))
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry]) := by
+  have h_pow : ∀ ζ : Quotient PhiEquivalent.setoidSigma,
+      ζ ^ (-(((0 + 1 : ℕ) : ℤ))) = ζ⁻¹ := by
+    intro ζ; rw [zero_add, Nat.cast_one]; exact zpow_neg_one _
+  rw [h_pow η_q, h_pow η_q',
+      elementaryWeightQ_phi_inv_mkVertexCherry,
+      elementaryWeightQ_phi_inv_mkVertexCherry,
+      h_vertex, h_cherry, h_broom₃, h_mkCherry, h_mkVertexCherry]
+
+/-- *Phase D.3.b Step 2 (cycle 372) — `mk [vertex, cherry]` m=0 witness
+non-vacuity at `η_q = η_q' = ⟦explicitEuler⟧`.* Discharges the five
+agreement hypotheses by `rfl`. -/
+example :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) ^ (-(((0 + 1 : ℕ) : ℤ))))
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry])
+      = elementaryWeightQ_phi
+          ((Quotient.mk PhiEquivalent.setoidSigma
+              ⟨1, RKTableau.explicitEuler⟩) ^ (-(((0 + 1 : ℕ) : ℤ))))
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry]) :=
+  powRep_sum_eq_of_agreement_at_mkVertexCherry_zero
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    rfl rfl rfl rfl rfl
+
 end OpenMath.Chapter4.Section422
