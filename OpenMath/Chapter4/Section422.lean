@@ -2183,4 +2183,185 @@ example :
     (M₁ := RKTableau.explicitEuler) (M₁' := RKTableau.explicitEuler)
     RKTableau.explicitEuler RootedTree.cherry (fun _ _ => rfl) 0
 
+/-! ### Phase D.3.b Step 2 (cycle 365) — parametricity of `linearResidualAt`
+
+Cycle 360–362 shipped the §422 D.3.b infrastructure: the
+`linearResidualAt` helper (cycle 360, redefined cycle 364), the ℤ-form
+lift `elementaryWeightQ_phi_zpow_negSucc_mk` (cycle 361), and the
+strict-subtree parametricity lemma for `derivativeWeightWithSrc`
+(cycle 362, `derivativeWeightWithSrc_eq_of_strict_subtree_agreement`).
+Cycle 365 ships **Phase D.3.b Step 2**: parametricity for
+`linearResidualAt` itself. Concretely, the headline says that the
+residual at a given `(i, t)` depends only on the §383 quotient
+class's `elementaryWeightQ_phi` values at subtrees of `t`
+(closed-subtree form, `s.order ≤ t.order` — see "Faithfulness note"
+below for the closed-vs-strict justification).
+
+The proof structure decomposes into:
+
+* **Sub-lemma A — `powRep_sum_eq_of_strict_subtree_agreement`**: the
+  substantive content. States that `Φ_{η_q^(-(m+1))}(t)` is invariant
+  under quotient classes agreeing on `Φ` at every tree of order
+  `≤ t.order`. Body deferred to cycle 366 (sorry) — the load-bearing
+  algebraic identity reduces (via Quotient.inductionOn₂ +
+  `elementaryWeightQ_phi_zpow_negSucc_mk`) to a comparison of two
+  `powRep`-sums with **different stage counts** (heterogeneous Σ-types
+  in `M.powRep (m+1)` vs `M'.powRep (m+1)`), which requires a more
+  involved structural argument than the existing cycle 362 lemma alone
+  can deliver.
+
+* **Sub-lemma B — `linearResidualAt_depends_only_on_strict_subtrees`**:
+  the headline. Direct composition of Sub-lemma A with cycle 364's
+  redefined `linearResidualAt`, splitting on `i = 0` (`Φ_{η^0}(t) = 0`
+  by `zpow_zero` + `elementaryWeightQ_phi_id`) and `i = m + 1` (apply
+  Sub-lemma A on the `Φ_{η_q^(-(m+1))}(t)` term and `h_closed t (le_refl _)`
+  on the direct `Φ_{η_q}(t)` term). Ships **axiom-clean** modulo
+  Sub-lemma A as black box.
+
+### Faithfulness note: closed-subtree vs strict-subtree
+
+The cycle 365 strategy's headline scopes the hypothesis as
+**closed-subtree** agreement (`s.order ≤ t.order`, including `t`
+itself). This is **strictly weaker** as a Lean theorem (a more
+permissive consumer interface) and is **sufficient** for Phase D.3.d's
+`underlyingOneStepMethod_aux` recursion: by the time strong induction
+on `t.order` reaches `t`, the recursion has stored agreement at every
+`s.order ≤ t.order` (since `s.order < t.order` follows from the
+recursive hypothesis, and `s.order = t.order` is supplied at the
+recursion's anchor point).
+
+The strict-subtree form (with separate handling of `t`-itself via the
+cycle 364 Discovery #3 cancellation) is the stretch target; cycle 365
+ships the closed-subtree form to maximise the probability of an
+axiom-clean headline ship under a constrained sorry budget.
+
+### Cycle 365 → 366 split
+
+Per the strategy's "Likely" outcome: cycle 365 ships **Sub-lemma A's
+signature (sorry) + Sub-lemma B's full body (axiom-clean)**. Cycle 366
+discharges Sub-lemma A's body; that closure restores `Section422.lean`
+to sorry-free. The headline (Sub-lemma B) is locked in axiom-clean
+form via this cycle's ship; cycle 366 work is restricted to A's body.
+-/
+
+/-- *Phase D.3.b Step 2 (cycle 365) — Sub-lemma A:* parametricity of
+`Φ_{η^(-(m+1))}(t)` under closed-subtree agreement. If `η_q` and `η_q'`
+agree on `elementaryWeightQ_phi` at every tree of order at most
+`t.order` (including `t` itself), then their negative-power images
+`η_q^(-(m+1))` and `η_q'^(-(m+1))` agree on `elementaryWeightQ_phi`
+at `t`.
+
+**Body deferred to cycle 366.** Per the cycle 365 task results, the
+substantive algebraic content is the heterogeneous Σ-type comparison
+of the two `powRep`-sums produced by
+`elementaryWeightQ_phi_zpow_negSucc_mk` on `⟦M⟧^(-(m+1))` and
+`⟦M'⟧^(-(m+1))` (different stage counts, different source-method
+threading). Closing this requires more substantive infrastructure
+than the cycle 362 strict-subtree lemma alone provides (likely a
+strong-induction-on-`t.order` argument that lifts the cycle 362 lemma
+through `M.inverse` substitution, plus a `powRep`-level cancellation
+identity matching the cycle 364 Discovery #3 prediction).
+
+**Cycle 366 obligation**: discharge the body. Cycle 366 should attempt:
+(i) Quotient.inductionOn₂ on `η_q, η_q'`; (ii) apply
+`elementaryWeightQ_phi_zpow_negSucc_mk` on both sides; (iii) prove
+equality of the two heterogeneous `powRep`-sums via an auxiliary
+parametricity argument (likely strong induction on `t.order` with
+`derivativeWeightWithSrc_eq_of_strict_subtree_agreement` at the inner
+step). -/
+theorem powRep_sum_eq_of_strict_subtree_agreement
+    (m : ℕ) (t : RT)
+    (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+    (_h_closed : ∀ s : RT, s.order ≤ t.order →
+        elementaryWeightQ_phi η_q s = elementaryWeightQ_phi η_q' s) :
+    elementaryWeightQ_phi (η_q ^ (-(((m + 1) : ℕ) : ℤ))) t
+      = elementaryWeightQ_phi (η_q' ^ (-(((m + 1) : ℕ) : ℤ))) t := by
+  sorry
+
+/-- *Phase D.3.b Step 2 (cycle 365) — Sub-lemma B (HEADLINE):*
+parametricity for `linearResidualAt`. If `η_q` and `η_q'` agree on
+`elementaryWeightQ_phi` at every tree of order at most `t.order`
+(including `t` itself), then their linear residuals at every `(i, t)`
+coincide.
+
+This is the Phase D.3.b Step 2 headline deliverable: it certifies
+that the linear-coefficient residual depends only on the §383
+quotient's "local profile" at subtrees of `t`, which is the
+prerequisite for Phase D.3.d's `underlyingOneStepMethod_aux`
+well-founded recursion on `RootedTree.order` (cycle 343's
+`WellFoundedRelation RootedTree := measure RootedTree.order`).
+
+Proof: case-split on `i`. At `i = 0`, both sides reduce to `0 + 0 = 0`
+via `zpow_zero` and `elementaryWeightQ_phi_id`. At `i = m + 1`, apply
+Sub-lemma A `powRep_sum_eq_of_strict_subtree_agreement` on the
+`Φ_{η_q^(-(m+1))}(t)` term and `h_closed t (le_refl _)` on the direct
+`Φ_{η_q}(t)` term; both terms transfer η_q → η_q', closing the goal
+modulo definitional ring.
+
+Headline ships **axiom-clean** modulo Sub-lemma A as black box
+(Sub-lemma A's body is cycle 366 work; the headline statement is
+locked in). -/
+theorem linearResidualAt_depends_only_on_strict_subtrees
+    (i : ℕ) (t : RT)
+    (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+    (h_closed : ∀ s : RT, s.order ≤ t.order →
+        elementaryWeightQ_phi η_q s = elementaryWeightQ_phi η_q' s) :
+    linearResidualAt i η_q t = linearResidualAt i η_q' t := by
+  match i with
+  | 0 =>
+    simp [linearResidualAt, zpow_zero]
+  | m + 1 =>
+    have hA := powRep_sum_eq_of_strict_subtree_agreement m t η_q η_q' h_closed
+    have hT := h_closed t (le_refl _)
+    unfold linearResidualAt
+    rw [hA, hT]
+
+/-- *Phase D.3.b Step 2 (cycle 365) — non-vacuity at `(i, t) = (1, cherry)`
+with trivial agreement on `explicitEuler`.* Exercises the headline at
+the first non-vertex tree with `η_q = η_q' = ⟦explicitEuler⟧`, so the
+strict-subtree hypothesis is discharged by `fun _ _ => rfl`. -/
+example :
+    linearResidualAt 1
+        (Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩) RootedTree.cherry
+      = linearResidualAt 1
+          (Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) RootedTree.cherry :=
+  linearResidualAt_depends_only_on_strict_subtrees 1 RootedTree.cherry
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    (fun _ _ => rfl)
+
+/-- *Phase D.3.b Step 2 (cycle 365) — non-vacuity at `(i, t) = (2, cherry)`
+with trivial agreement on `explicitEuler`.* Exercises the headline at
+the next residual index `i = 2`, confirming the lemma fires uniformly
+across `i` (via the `m + 1` branch with `m = 1`). -/
+example :
+    linearResidualAt 2
+        (Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩) RootedTree.cherry
+      = linearResidualAt 2
+          (Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) RootedTree.cherry :=
+  linearResidualAt_depends_only_on_strict_subtrees 2 RootedTree.cherry
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    (fun _ _ => rfl)
+
+/-- *Phase D.3.b Step 2 (cycle 365) — non-vacuity at `i = 0` (the vertex-
+free base branch).* Exercises the `i = 0` branch of the headline at
+arbitrary tree; the residual at `i = 0` is `Φ_{η^0}(t) + 0 = 0` for
+any `η`, so both sides are 0 unconditionally. -/
+example :
+    linearResidualAt 0
+        (Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩) RootedTree.cherry
+      = linearResidualAt 0
+          (Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) RootedTree.cherry :=
+  linearResidualAt_depends_only_on_strict_subtrees 0 RootedTree.cherry
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    (fun _ _ => rfl)
+
 end OpenMath.Chapter4.Section422

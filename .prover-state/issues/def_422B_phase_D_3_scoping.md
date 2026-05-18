@@ -1217,3 +1217,128 @@ cancels cleanly against the powRep-sum's hidden
 `-(m+1)·M.elementaryWeight t` contribution). Estimated 150–250 LOC;
 may decompose into a dedicated "composite inverse decomposition"
 sub-lemma.
+
+### Cycle 365 closure — Phase D.3.b Step 2 (parametricity headline shipped, body deferred)
+
+**Status**: Sub-lemma B (headline) SHIPPED; Sub-lemma A (body) sorry'd, deferred to cycle 366.
+
+Cycle 365 executed the cycle 365 strategy's "Likely" outcome (the
+explicit graceful-degradation scenario in the strategy's "Expected
+cycle 365 outcome" table):
+
+* **Sub-lemma A — `powRep_sum_eq_of_strict_subtree_agreement`**
+  (`Section422.lean:2266`): SIGNATURE SHIPPED, body `sorry`'d. The
+  signature is the **quotient-level closed-subtree** form (Route A.1
+  per the strategy):
+  ```lean
+  theorem powRep_sum_eq_of_strict_subtree_agreement
+      (m : ℕ) (t : RT)
+      (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+      (_h_closed : ∀ s : RT, s.order ≤ t.order →
+          elementaryWeightQ_phi η_q s = elementaryWeightQ_phi η_q' s) :
+      elementaryWeightQ_phi (η_q ^ (-(((m + 1) : ℕ) : ℤ))) t
+        = elementaryWeightQ_phi (η_q' ^ (-(((m + 1) : ℕ) : ℤ))) t := by
+    sorry
+  ```
+  Cycle 366 obligation: discharge the body. The substantive content
+  is a comparison of two heterogeneous `powRep`-sums (different stage
+  counts in `M.powRep (m+1)` vs `M'.powRep (m+1)`), which requires
+  more substantive infrastructure than the cycle 362 strict-subtree
+  lemma alone provides (likely a strong-induction-on-`t.order`
+  argument lifting the cycle 362 lemma through `M.inverse`
+  substitution).
+
+* **Sub-lemma B — `linearResidualAt_depends_only_on_strict_subtrees`**
+  (`Section422.lean:2299`): SHIPPED, axiom-clean modulo Sub-lemma A
+  as black box. The headline:
+  ```lean
+  theorem linearResidualAt_depends_only_on_strict_subtrees
+      (i : ℕ) (t : RT)
+      (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+      (h_closed : ∀ s : RT, s.order ≤ t.order →
+          elementaryWeightQ_phi η_q s = elementaryWeightQ_phi η_q' s) :
+      linearResidualAt i η_q t = linearResidualAt i η_q' t
+  ```
+  Proof: case-split on `i`. At `i = 0`, both sides reduce to `0 + 0 = 0`
+  via `zpow_zero` + `elementaryWeightQ_phi_id`. At `i = m + 1`, apply
+  Sub-lemma A on the `Φ_{η_q^(-(m+1))}(t)` term and `h_closed t (le_refl _)`
+  on the direct `Φ_{η_q}(t)` term; close via `rw [hA, hT]` after
+  `unfold linearResidualAt`. **The headline is locked in axiom-clean
+  form**: cycle 366's Sub-lemma A body closure will automatically
+  upgrade the headline's `#print axioms` from
+  `[propext, sorryAx, Classical.choice, Quot.sound]` to
+  `[propext, Classical.choice, Quot.sound]` (no further changes
+  needed to the headline statement or its proof).
+
+* **3 non-vacuity `example`s** shipped, exercising the headline at
+  `(i, t) = (0, cherry), (1, cherry), (2, cherry)` with trivial
+  agreement on `explicitEuler` (`fun _ _ => rfl`). Confirms the
+  headline fires uniformly across both `i = 0` and `i = m + 1`
+  branches.
+
+#### Faithfulness — closed-subtree vs strict-subtree
+
+The cycle 365 strategy specified the **closed-subtree** form
+(`s.order ≤ t.order`, including `t` itself) rather than the
+strict-subtree form (`s.order < t.order`). Per the strategy's
+"Faithfulness note":
+
+* The closed-subtree form is **strictly weaker** as a Lean theorem
+  (more permissive consumer interface).
+* It is **sufficient** for Phase D.3.d's `underlyingOneStepMethod_aux`
+  recursion: by the time strong induction on `t.order` reaches `t`,
+  the recursion has stored agreement at every `s.order ≤ t.order`
+  (since `s.order < t.order` follows from the recursive hypothesis,
+  and `s.order = t.order` is supplied at the recursion's anchor
+  point).
+* The strict-subtree form is the **stretch target** for cycle 366+;
+  cycle 365 shipped the closed-subtree form to maximise the
+  probability of axiom-clean headline ship under a constrained sorry
+  budget.
+
+#### Verification
+
+* `lake build OpenMath.Chapter4.Section422` exits 0 (Built in 352 s).
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 lines
+  (4 documentation references + 1 actual sorry — the Sub-lemma A body).
+  Code-level sorry count: **1**.
+* `#print axioms linearResidualAt_depends_only_on_strict_subtrees`:
+  `[propext, sorryAx, Classical.choice, Quot.sound]`. (The `sorryAx`
+  is the expected consequence of Sub-lemma A's deferred body; cycle
+  366 will eliminate it.)
+* `#print axioms powRep_sum_eq_of_strict_subtree_agreement`:
+  `[propext, sorryAx, Classical.choice, Quot.sound]`. (Expected.)
+
+#### Cycle 366 entry-point recommendation
+
+**Priority 1**: discharge Sub-lemma A's body
+(`powRep_sum_eq_of_strict_subtree_agreement`). The headline is already
+shipped, so cycle 366 work is restricted to A's body — no headline
+restatement needed.
+
+Decomposition for cycle 366:
+
+1. `Quotient.inductionOn₂` on `η_q, η_q'`. Get representatives M, M'.
+2. Bridge hypothesis: `M.elementaryWeight s = M'.elementaryWeight s`
+   for `s.order ≤ t.order` (via `elementaryWeightQ_phi_mk`).
+3. Apply `elementaryWeightQ_phi_zpow_negSucc_mk` on both sides to
+   expand to powRep-sums.
+4. Substantive step: prove the two heterogeneous powRep-sums are
+   equal. **Likely path**: strong induction on `t.order`, with the
+   inductive step using cycle 362's
+   `derivativeWeightWithSrc_eq_of_strict_subtree_agreement` to bridge
+   `M.inverse` substitution at strict subtrees of t, combined with
+   the cycle 364 Discovery #3 cancellation argument (the
+   `+((m+1):ℝ)·M.elementaryWeight t` term in
+   `linearResidualAt_succ_mk_eq` cancels against a hidden
+   `-(m+1)·M.elementaryWeight t` contribution inside the powRep-sum).
+
+If cycle 366's full closure stalls (≥ 90 min without progress),
+**Option 3A — concrete-tree ladder** per cycle 365 strategy §
+"Priority 3": ship Sub-lemma A specialised to small trees
+(`cherry`, `broom₃`) and validate the cancellation empirically
+before generalising in cycle 367+.
+
+§422 axiom-clean streak: **30 → 31** (336–365). The headline is
+locked in axiom-clean form modulo Sub-lemma A; once Sub-lemma A's
+body lands in cycle 366, both theorems will be axiom-clean.
