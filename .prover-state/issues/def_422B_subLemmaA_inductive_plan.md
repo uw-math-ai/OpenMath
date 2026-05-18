@@ -1274,6 +1274,78 @@ the m=0 base case across all 7 trees. Phase ε remains gated on
 Phase α' (recursive `inversePolynomial` covering arbitrary `t`) and
 its own multi-cycle scoping doc.
 
+### §10.7 Cycle 378 update — 8th-tree ladder closure (`mk [mk [cherry]]`)
+
+**Scope delivered**: the 8th tree in the ladder, the depth-3 single-
+child case `mk [mk [cherry]]`. Six deliverables shipped (closed form,
+m=0 corollary, Phase α.4 branch + calibration witness, Phase β.4 bridge,
+β aggregator refresh 7→8 + Phase γ extension). The cycle 377 worker's
+deferred Option 2 (depth-3 ladder extension) is now closed.
+
+**Theorems shipped**:
+
+1. `elementaryWeightQ_phi_inv_mkMkCherry` — closed form
+   `Φ_{η_q⁻¹}(mk [mk [cherry]]) = v⁴ − 3v²c + c² + 2vm − M_mkMkCherry`.
+2. `powRep_sum_eq_of_agreement_at_mkMkCherry_zero` — m=0 corollary with
+   FOUR hypotheses (not five) — deliberately omits `h_broom₃` because
+   the closed form does not depend on `broom₃`. **Faithfulness
+   improvement** over cycles 371/372's m=0 corollaries (which carried
+   strictly-unused `h_broom₃` for "ladder uniformity").
+3. `inversePolynomial` — Phase α.4 branch added (`else if t = mk [mk
+   [cherry]] then v⁴ − 3v²c + c² + 2v·mc − mmc else 0` as the 8th
+   branch before the fallback).
+4. Phase α.4 calibration witness (`example`) — 7 `if_neg` + `if_pos rfl`.
+5. `elementaryWeightQ_phi_inv_eq_inversePolynomial_mkMkCherry` Phase β.4
+   bridge — 7 `if_neg` + `if_pos rfl` + `exact _mkMkCherry η_q`.
+6. `elementaryWeightQ_phi_inv_eq_inversePolynomial_on_ladder` (refresh)
+   — 7-way → 8-way disjunction.
+
+Plus the in-place extension of `inversePolynomial_eq_of_subtree_agreement`
+(Phase γ): one new `by_cases h_mkMkCherry` block between cycle 377's
+`mk [vertex, cherry]` block and the default branch, plus an
+`if_neg h_mkMkCherry` per side in the final default branch.
+
+**Axiom-clean confirmation**: `#print axioms` on each of the 4 new
+public theorems plus the touched `_on_ladder` and
+`inversePolynomial_eq_of_subtree_agreement` aggregator/Phase γ each
+returns `[propext, Classical.choice, Quot.sound]`. §422 axiom-clean
+streak advances to **43 substantive + 1 doc** (cycles 336–378).
+
+**Pre-flight build break occurred exactly as predicted**: after
+inserting the Phase α.4 branch (deliverable 3), `lake build` broke the
+Phase γ default branch with the goal shape predicted by the strategy
+(`if t = mk [mk [cherry]] then ... else 0 = ...`). The fix was exactly
+the strategy-prescribed pattern (one new `by_cases` block + one
+`if_neg h_mkMkCherry` per side in the default branch). This validates
+the "forced by build" approach for mechanical Phase α / γ extensions.
+
+**Discovery — single-child ladder coefficient pattern**: the four trees
+in the single-child ladder
+(vertex, cherry, mk[cherry], mk[mk[cherry]]) have closed forms:
+* `v ↦ −v`
+* `c ↦ v² − c`
+* `mk[c] ↦ −v³ + 2vc − mc`
+* `mk[mk[c]] ↦ v⁴ − 3v²c + c² + 2v·mc − mmc`
+
+with coefficient counts `1, 2, 3, 5` (Fibonacci-shaped?). The depth-3
+case introduces a non-leaf-child term `+ c²` (the parent tree's left-
+most descendant squared) that did not appear in shallower ladder cases.
+This is empirically the cleanest known structural pattern in the
+closed-form catalog and is the strongest evidence to date that Phase α'
+(recursive `inversePolynomial`) could have a tractable single-child
+recipe.
+
+**Phase δ outlook (unchanged)**: still blocked by the cycle 366
+heterogeneous-powRep-sum obstacle. Don't attempt without Phase α'
+machinery.
+
+**Phase α' outlook (refined)**: 8 closed-form data points now in hand.
+Cycle 379+ entry: a dedicated Phase α' scoping doc cataloging the 8
+closed forms, identifying the structural rules for the single-child
+ladder / symmetric ladder / heterogeneous-child cases, and proposing
+a recursive shape for `inversePolynomial` that subsumes all 3 patterns.
+Multi-cycle effort (3-5 cycles scoping + 5-10 cycles implementation).
+
 ### §10.2 Memory references
 
 - `project_butcher_D_operator.md` — `D` operator is §385b 1-stage
