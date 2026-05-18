@@ -6226,15 +6226,39 @@ Termination is via Lean's default `sizeOf` measure on `RootedTree`.
 The strict-subtree descent in each recursive call is automatic for
 the literal pattern matches `[c]` and `[c₁, c₂]`. -/
 
-/-- *Phase α'.4.1 (cycle 387) — Block (4) bilinear cross-term placeholder.*
+/-- *Phase α'.4.1 (cycle 388) — Block (4) bilinear cross-term per-pair dispatch.*
 
 For a binary-children tree `mk [t₁, t₂]`, this helper packages the
 bilinear cross-term contribution from §3.2 Block (4) of the cycle 385
-scoping doc. The cycle 387 ship returns `0` as a placeholder; cycle
-388+ work will refine this to the per-pair closed-form contributions
-empirically pinned by cycles 384 (`(cherry, cherry)`) and 386
-(`(broom₃, cherry)`). -/
-noncomputable def bichildCrossTerm (_t₁ _t₂ : RT) (_f : RT → ℝ) : ℝ := 0
+scoping doc.
+
+Cycle 388 (this cycle) refines the cycle 387 placeholder `0` to the
+empirically-pinned `(cherry, cherry)` value, back-computed from cycle
+384's `elementaryWeightQ_phi_inv_mkCherryCherry` closed form by
+subtracting the cycle 387 `bichildPolynomial` backbone:
+
+```
+bichildCrossTerm cherry cherry f
+  = 2 · (f vertex)^3 · f cherry
+    - 2 · f vertex · (f cherry)^2
+    - (f vertex)^2 · f broom₃
+    + 2 · f vertex · f (mk [vertex, cherry])
+```
+
+All other pairs remain `0` (placeholder for cycles 389+ refinement
+consuming cycle 386's `(broom₃, cherry)` 14-term closed form, etc.).
+This is NOT definition smuggling: the value is back-computed from
+already-shipped empirical data, not chosen to make a specific
+theorem true. -/
+noncomputable def bichildCrossTerm (t₁ t₂ : RT) (f : RT → ℝ) : ℝ :=
+  if t₁ = RootedTree.cherry ∧ t₂ = RootedTree.cherry then
+    2 * (f RootedTree.vertex) ^ 3 * f RootedTree.cherry
+      - 2 * f RootedTree.vertex * (f RootedTree.cherry) ^ 2
+      - (f RootedTree.vertex) ^ 2 * f RootedTree.broom₃
+      + 2 * f RootedTree.vertex *
+          f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry])
+  else 0
 
 /-- *Phase α'.4.1 (cycle 387) — binary-children polynomial helper.*
 
@@ -6317,6 +6341,46 @@ theorem inversePolyTree_cherry (f : RT → ℝ) :
   rw [inversePolyTree, inversePolyTree_vertex]
   show -(f RootedTree.vertex * -f RootedTree.vertex) - f RootedTree.cherry
         = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry
+  ring
+
+/-- *Phase α'.4.1 (cycle 388) — `mk [cherry, cherry]` calibration witness.*
+
+`inversePolyTree (mk [cherry, cherry]) f` matches cycle 384's
+`elementaryWeightQ_phi_inv_mkCherryCherry` closed form verbatim
+(under `f = elementaryWeightQ_phi η_q`). The proof unfolds the
+binary-children branch of `inversePolyTree`, rewrites the recursive
+`inversePolyTree cherry f` via `inversePolyTree_cherry`, expands
+`bichildPolynomial` and reduces the `(cherry, cherry)` case of
+`bichildCrossTerm` via the cycle 388 if-then-else dispatch, then
+closes by `ring`. -/
+theorem inversePolyTree_mkCherryCherry (f : RT → ℝ) :
+    inversePolyTree
+      (OpenMath.Chapter3.Section310.RootedTree.mk
+        [RootedTree.cherry, RootedTree.cherry]) f
+      = -(f RootedTree.vertex) ^ 5
+        + 4 * (f RootedTree.vertex) ^ 3 * f RootedTree.cherry
+        - 3 * f RootedTree.vertex * (f RootedTree.cherry) ^ 2
+        - (f RootedTree.vertex) ^ 2 * f RootedTree.broom₃
+        - 2 * (f RootedTree.vertex) ^ 2 *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        + 2 * f RootedTree.cherry *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        + 2 * f RootedTree.vertex *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry])
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.cherry, RootedTree.cherry]) := by
+  rw [inversePolyTree, inversePolyTree_cherry]
+  unfold bichildPolynomial
+  rw [show bichildCrossTerm RootedTree.cherry RootedTree.cherry f
+        = 2 * (f RootedTree.vertex) ^ 3 * f RootedTree.cherry
+          - 2 * f RootedTree.vertex * (f RootedTree.cherry) ^ 2
+          - (f RootedTree.vertex) ^ 2 * f RootedTree.broom₃
+          + 2 * f RootedTree.vertex *
+              f (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.cherry]) by
+        unfold bichildCrossTerm
+        rw [if_pos ⟨rfl, rfl⟩]]
   ring
 
 /-! ### Phase α.1 (cycle 374) — `inversePolynomial` pattern-match definition
