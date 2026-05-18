@@ -1424,3 +1424,99 @@ relation `LocallyEquivAt t η η' ↔ ∀ s, s.order ≤ t.order → Φ_η(s) =
 Φ_{η'}(s)` — and prove a uniform parametricity statement at this
 relation. This may require a new infrastructure layer beyond cycle
 362's substitution.
+
+### Cycle 367 — cherry closed-form + cherry m=0 witness ship (Priority 1)
+
+Per cycle 367 strategy §B + §C.1 (the cycle 366 recommended
+deliverables), cycle 367 shipped the cherry analog of cycle 341 P3's
+vertex closed form, plus the `m = 0` cherry specialisation of
+Sub-lemma A. Both are axiom-clean; the cycle 366 vertex witness
+library extends from `{vertex}` to `{vertex, cherry (m=0)}`.
+
+**Cycle 367 ship:**
+
+* **`elementaryWeightQ_phi_inv_cherry`** — quotient-level closed
+  form `Φ_{η⁻¹}(cherry) = (Φ_η(vertex))² − Φ_η(cherry)`. Proof:
+  `Quotient.inductionOn` on `η_q` to obtain `⟨s, M⟩`; cycle 358
+  `_inv_mk` to expand the LHS; recursive unfold of
+  `derivativeWeightWithSrc M.inverse i cherry =
+  (M.inverse.elementaryWeight vertex + ∑ⱼ M.A i j · 1) · 1`
+  (using cycle 366 `derivativeWeightWithSrc_vertex` and the
+  base-list rfl); five `have` blocks giving `M.inverse.elementaryWeight
+  vertex = -M.elementaryWeight vertex`, `M.elementaryWeight cherry =
+  ∑ᵢ M.b i · ∑ⱼ M.A i j`, `M.elementaryWeight vertex = ∑ⱼ M.b j`;
+  calc-chain assembly via `Finset.sum_congr` +
+  `← Finset.sum_sub_distrib` + `← Finset.sum_mul` + `ring`.
+  **Axiom-clean**: `[propext, Classical.choice, Quot.sound]`.
+  ~80 LOC (45 proof + 35 docstring).
+
+* **`powRep_sum_eq_of_agreement_at_cherry_zero`** — `m = 0` cherry
+  specialisation of Sub-lemma A. Proof (3 lines):
+  `∀ ζ, ζ ^ (-(((0 + 1 : ℕ) : ℤ))) = ζ⁻¹` helper via `zero_add +
+  Nat.cast_one + zpow_neg_one`, then `elementaryWeightQ_phi_inv_cherry`
+  on both sides, then substitute `h_vertex, h_cherry`. **Axiom-clean**:
+  `[propext, Classical.choice, Quot.sound]`. ~15 LOC.
+
+* Two non-vacuity `example`s on `explicitEuler`:
+  - `Φ_{⟦explicitEuler⟧⁻¹}(cherry) = 1` (computed as `1² − 0 = 1`).
+  - Cherry m=0 witness with `η_q = η_q' = ⟦explicitEuler⟧` and
+    agreement hypotheses discharged by `rfl, rfl`.
+
+**Cycle 367 verification:**
+
+* `lake env lean OpenMath/Chapter4/Section422.lean` exits 0.
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 lines (4
+  documentation references + 1 actual sorry — unchanged from cycle
+  366; Sub-lemma A's body still sorry'd). Code-level sorry count:
+  **1 (unchanged)**.
+* `#print axioms elementaryWeightQ_phi_inv_cherry` =
+  `[propext, Classical.choice, Quot.sound]`. **Axiom-clean.**
+* `#print axioms powRep_sum_eq_of_agreement_at_cherry_zero` =
+  `[propext, Classical.choice, Quot.sound]`. **Axiom-clean.**
+* `#print axioms linearResidualAt_depends_only_on_strict_subtrees` =
+  `[propext, sorryAx, Classical.choice, Quot.sound]`. **Unchanged**.
+* `#print axioms powRep_sum_eq_of_strict_subtree_agreement` =
+  `[propext, sorryAx, Classical.choice, Quot.sound]`. (Unchanged.)
+
+§422 axiom-clean streak: **32 → 33** (336–367). Both new theorems
+are axiom-clean; the existing sorry on Sub-lemma A's body is
+grandfathered from cycle 365.
+
+#### Cycle 368 entry-point recommendation
+
+Per cycle 367 strategy §G, cycle 368 should attempt **Route B at
+`broom₃`** (third tree, order 3) to gauge whether the quotient-level
+closed-form pattern observed at vertex (cycle 341 P3) and cherry
+(cycle 367) generalises:
+
+**Target**: ship `elementaryWeightQ_phi_inv_broom₃` (closed form for
+`Φ_{η⁻¹}(broom₃)`) and the corresponding `m = 0` `broom₃` witness.
+Conjectured form: a quadratic polynomial in
+`Φ_η(vertex), Φ_η(cherry), Φ_η(broom₃)` with small-rational
+coefficients.
+
+**Decision rule for cycle 369+**:
+- If broom₃ closed form ships cleanly in 1 cycle: probable that
+  Route B generalises; cycle 369 attempts the inductive `t.order`
+  formulation of Sub-lemma A.
+- If broom₃ resists in 1 cycle: pivot to Route A (inner-tableau
+  substitution lemma), a multi-cycle infrastructure effort.
+
+**Stretch option** (cycle 367 §C.2 deferred): ship the general-`m`
+cherry closed form `powRep_inv_cherry_closed_form` with conjectured
+formula `Φ_{η^(-(m+1))}(cherry) = (m+1)*(m+2)/2 * (Φ_η(vertex))² −
+(m+1) * Φ_η(cherry)`. The inductive step requires a `Φ_{η₁·η₂}(cherry)`
+quotient-level closed-form decomposition — non-trivial. Cycle 368
+worker may attempt this if broom₃ closed form lands quickly, else
+defer to cycle 369+.
+
+**Phase D.3.d (`underlyingOneStepMethod_aux`) remains blocked** on
+Sub-lemma A's general body. The cherry m=0 witness, like the vertex
+witness, is purely additive infrastructure for Sub-lemma A's
+specialised-witness library; it does not unblock D.3.d on its own.
+Cycle 367 ship targets Route B feasibility validation (two trees of
+order ≤ 2 now confirmed), not D.3.d unblock.
+
+Phase E sealing of `def:422B` projected for **cycle 370+** (revised
+down from earlier projections; depends critically on Sub-lemma A
+general body, which is the multi-cycle blocker).
