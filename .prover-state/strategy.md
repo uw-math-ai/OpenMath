@@ -1,529 +1,343 @@
-# Cycle 398 strategy — Phase α'.4.3 scoping for bushy migration
+# Cycle 400 strategy
 
-## TL;DR
+## §0 Pre-flight verification (do this FIRST, <2 min)
 
-Ship a **markdown-only scoping doc** for Phase α'.4.3:
-`.prover-state/issues/def_422B_phase_alpha_prime_family_bushy_scoping.md`.
-This is the cycle 397 worker's explicit cycle-398 recommendation and
-follows the cycle 373 / 379 / 385 precedent of multi-cycle Lean ships
-preceded by a focused scoping doc.
+The cycle 399 supervisor verdict was `score=0` claiming "git diff
+shows only 3 prover-state files changed with no modifications to
+OpenMath/Chapter4/Section422.lean". **This is the documented
+phantom-commit-verdict pattern** (10th occurrence; see
+`.prover-state/issues/phantom_commit_verdict_pattern.md`). Cycle
+399's substantive ship IS at HEAD. Verify before proceeding:
 
-The remaining migration target is `bushy = mk [vertex, vertex, vertex]`
-— the **last** unmigrated ladder tree. It needs a 3-children-aware
-extension to `inversePolyTree`'s recursion. The closed form has a
-non-trivial bilinear cross-term contribution (paper math suggests
-`+3v·b'`), and the cycle 358 `_inv_mk` block decomposition has 8
-blocks for three children (vs 4 for two). One-cycle direct attempts
-without a derivation plan risk getting signs / coefficients wrong.
+```bash
+git log --oneline -1
+# Expected: bcb2b92 Cycle 399 — §422 Phase α'.4.1 P8 trichild infrastructure ship.
 
-**Do NOT ship Lean infrastructure this cycle.** Specifically: do not
-extend `inversePolyTree`'s match, do not define `trichildPolynomial`,
-do not ship `inversePolyTree_bushy`. All multi-cycle scope; cycle
-399–401 plan deliverable per §6 of the scoping doc below.
+git show --stat bcb2b92 -- OpenMath/Chapter4/Section422.lean
+# Expected: non-empty diffstat (+63 LOC)
 
-§422 axiom-clean streak: 60 substantive + 2 doc (cycles 336–397) →
-**60 substantive + 3 doc** (cycles 336–398) after this ship.
+grep -n "^noncomputable def trichildCrossTerm\|^noncomputable def trichildPolynomial" \
+  OpenMath/Chapter4/Section422.lean
+# Expected: lines 6410 and 6439
 
-## Context (read first)
+wc -l OpenMath/Chapter4/Section422.lean
+# Expected: 8101
+```
 
-### What just landed (cycle 397)
+If all four checks pass (they will), the cycle 399 trichild
+infrastructure is real and ready for cycle 400's calibration witness.
+**Do NOT attempt to re-ship cycle 399's deliverables.** Proceed
+directly to §1 below.
 
-Cycle 397 shipped Phase α'.4.2 P4 — 4th ladder migration. The
-`mk [mk [cherry]]` branch of `inversePolynomial` now dispatches
-through `inversePolyTree (mk [mk [cherry]]) f`. Six edits; all
-axiom-clean; sorry count unchanged at 5 (4 docstring + 1
-grandfathered cycle 365 code at line 2272).
+If any check fails, escalate via the phantom-verdict issue file and
+investigate before any Lean edits.
 
-### Current Phase α'.4.2 migration status
+## §1 Priority 1 — DELIVERABLE: `inversePolyTree_bushy` calibration
 
-`inversePolynomial`'s 9-way `if-then-else` cascade currently routes:
+Per the cycle 398 scoping doc
+(`.prover-state/issues/def_422B_phase_alpha_prime_family_bushy_scoping.md`)
+§6.2 and the cycle 399 task results §"Suggested next approach", ship
+the calibration theorem that verifies cycle 399's trichild
+infrastructure numerically against cycle 370's bushy closed form.
 
-| Tree | Dispatch | Cycle |
-|---|---|---|
-| vertex | `inversePolyChain 0` | Family A (cycle 380) |
-| cherry | `inversePolyChain 1` | Family A |
-| broom₃ | `inversePolyBroom 2` | Family B (cycle 383) |
-| mk [cherry] | `inversePolyTree (mk [cherry])` | ✓ cycle 396 |
-| **bushy** | **`inversePolyBroom 3`** | **Family B (cycle 383) — TARGET** |
-| mk [broom₃] | `inversePolyTree (mk [broom₃])` | ✓ cycle 393 |
-| mk [vertex, cherry] | `inversePolyTree (mk [vertex, cherry])` | ✓ cycle 391 |
-| mk [mk [cherry]] | `inversePolyTree (mk [mk [cherry]])` | ✓ cycle 397 |
-
-`bushy` is the last non-trivial unmigrated tree. After it lands, all
-9 ladder trees route uniformly through `inversePolyTree`, unlocking
-the eventual closure of cycle 365's grandfathered sorry
-(`powRep_sum_eq_of_strict_subtree_agreement` at line 2272).
-
-### Why bushy needs new infrastructure
-
-`bushy = mk [vertex, vertex, vertex]` has **three** children, but
-`inversePolyTree`'s current recursion (Section422.lean:6412–6423)
-explicitly defers k ≥ 3:
+### Target
 
 ```lean
-noncomputable def inversePolyTree : RT → (RT → ℝ) → ℝ
-  | mk [], f       => -f vertex
-  | mk [c], f      => -(v · inversePolyTree c f) + monochildCrossTerm c f - f (mk [c])
-  | mk [c₁, c₂], f => bichildPolynomial c₁ c₂ (inversePolyTree c₁ f) (inversePolyTree c₂ f) f
-  | mk (_ :: _ :: _ :: _), _ => 0   -- ← deferred
+/-- *Phase α'.4.1 (cycle 400) — `bushy` calibration witness.*
+
+`inversePolyTree bushy f = (f vertex)^4 − 3·(f vertex)^2·f cherry
++ 3·f vertex·f broom₃ − f bushy` matches cycle 370's
+`elementaryWeightQ_phi_inv_bushy`. Since `bushy = mk [vertex, vertex,
+vertex]` (three-child), the proof unfolds the triple-children branch
+of `inversePolyTree` (cycle 399), rewrites
+`inversePolyTree vertex f = -f vertex` via `inversePolyTree_vertex`
+three times, expands `trichildPolynomial`, and observes that the
+`(vertex, vertex, vertex)` triple matches the if-branch of
+`trichildCrossTerm`, evaluating to `3 · f vertex · f broom₃`. Closes
+by `ring` after a `show`-bridge that canonicalises `f (mk [vertex])
+↔ f cherry` and `f (mk [vertex, vertex, vertex]) ↔ f bushy`. -/
+theorem inversePolyTree_bushy (f : RT → ℝ) :
+    inversePolyTree RootedTree.bushy f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy
 ```
 
-Bushy migration requires:
-1. New helper `trichildPolynomial : RT → RT → RT → ℝ → ℝ → ℝ → (RT → ℝ) → ℝ`
-   analogous to cycle 387's `bichildPolynomial`.
-2. New helper `trichildCrossTerm : RT → RT → RT → (RT → ℝ) → ℝ`
-   with a `(vertex, vertex, vertex)` dispatch.
-3. Structural extension of `inversePolyTree`'s match: insert
-   `[c₁, c₂, c₃]` BEFORE the existing catch-all.
-4. `inversePolyTree_bushy` calibration witness.
-5. Migration of `inversePolynomial`'s `bushy` branch.
-
-This is the multi-cycle scope the scoping doc plans.
-
-## Priority 1 — DELIVERABLE: Phase α'.4.3 scoping doc
-
-### File location
-
-Create
-`.prover-state/issues/def_422B_phase_alpha_prime_family_bushy_scoping.md`.
-
-### Structural precedent
-
-Read `.prover-state/issues/def_422B_phase_alpha_prime_family_C_scoping.md`
-(cycle 385) before drafting. It is the closest structural precedent
-(also a Phase α'.4 sub-scoping ahead of Lean ship cycles). Cycle 385
-ran 9 sections / 621 lines and drove cycles 386–396's productive
-11-cycle ladder. Target: 8–10 sections, 400–600 lines.
-
-### Required sections
-
-**§1 Status & blocker** (~50 lines)
-
-* Acknowledge: markdown-only cycle, no Lean code shipped.
-* §422 streak: 60 substantive + 2 doc → 60 substantive + 3 doc.
-* Cite cycle 397's task results §"Suggested next approach" as the
-  explicit cycle-398 recommendation.
-* Cross-reference predecessor scoping docs:
-  - `.prover-state/issues/def_422B_subLemmaA_inductive_plan.md` (cycle 373).
-  - `.prover-state/issues/def_422B_phase_alpha_prime_scoping.md` (cycle 379).
-  - `.prover-state/issues/def_422B_phase_alpha_prime_family_C_scoping.md` (cycle 385).
-* Note bushy is the **last** ladder migration; unlocks cycle 365
-  sorry closure path.
-
-**§2 The bushy closed form** (~30 lines)
-
-Quote cycle 370's `elementaryWeightQ_phi_inv_bushy` verbatim from
-`OpenMath/Chapter4/Section422.lean:3011`:
-
-```
-Φ_{η_q⁻¹}(bushy) = v⁴ − 3v²·c + 3v·b' − Φ_η(bushy)
-```
-
-where `v = Φ_η(vertex)`, `c = Φ_η(cherry)`, `b' = Φ_η(broom₃)`.
-
-Cross-check against Family B (cycle 382's `inversePolyBroom 3`):
-- j=0: `(-1)^4·C(3,0)·v³·v = v⁴` ✓
-- j=1: `(-1)^5·C(3,1)·v²·c = -3v²c` ✓
-- j=2: `(-1)^6·C(3,2)·v·b' = 3v·b'` ✓
-- j=3: `(-1)^7·C(3,3)·1·f(bushy) = -f(bushy)` ✓
-
-So `bushy` is Family B at k=3 algebraically; the Phase α'.4.2
-migration unifies dispatch through `inversePolyTree` (currently
-through `inversePolyBroom`).
-
-**§3 Block decomposition for three children** (~80 lines)
-
-Cycle 385's §3.2 decomposed two-children product expansions into 4
-blocks. For three children, the analogous decomposition has **2³ = 8
-blocks** indexed by the (constant vs A-row-sum) choice at each child:
-
-| Block | Selection | Algebraic shape |
-|---|---|---|
-| (1) | c · c · c | `inv₁ · inv₂ · inv₃` |
-| (2) | A · c · c | `(Σⱼ Aᵢⱼ dw(t₁,j)) · inv₂ · inv₃` |
-| (3) | c · A · c | symmetric |
-| (4) | c · c · A | symmetric |
-| (5) | A · A · c | bilinear in `(t₁, t₂)`, const on `t₃` |
-| (6) | A · c · A | bilinear in `(t₁, t₃)`, const on `t₂` |
-| (7) | c · A · A | bilinear in `(t₂, t₃)`, const on `t₁` |
-| (8) | A · A · A | trilinear in `(t₁, t₂, t₃)` |
-
-After multiplying by `M.b i` and summing over `i`:
-
-* Block (1) → `(Σᵢ bᵢ) · inv₁ · inv₂ · inv₃ = v · inv₁ · inv₂ · inv₃`.
-* Blocks (2/3/4) → `inv_j · inv_k · Φ_η(mk [t_other])`. The A-row-sum
-  collapses to a one-child closed form.
-* Blocks (5/6/7) → bilinear cross-terms surfacing a two-children
-  kernel `Φ_η(mk [t_i, t_j])` for each pair.
-* Block (8) → trilinear cross-term surfacing `Φ_η(mk [t₁, t₂, t₃])`
-  itself (the self-kernel).
-
-**§4 Conjectured `trichildPolynomial` shape** (~80 lines)
-
-Strawman analogous to cycle 387's `bichildPolynomial`:
+### Proof recipe (literal port of cycle 387/392/394/395 pattern)
 
 ```lean
-noncomputable def trichildPolynomial
-    (t₁ t₂ t₃ : RT) (inv₁ inv₂ inv₃ : ℝ) (f : RT → ℝ) : ℝ :=
-  -(f vertex * inv₁ * inv₂ * inv₃)        -- Block (1), -v prefactor
-  - inv₂ * inv₃ * f (mk [t₁])              -- Block (2)
-  - inv₁ * inv₃ * f (mk [t₂])              -- Block (3)
-  - inv₁ * inv₂ * f (mk [t₃])              -- Block (4)
-  + trichildCrossTerm t₁ t₂ t₃ f           -- Blocks (5)–(8)
-  - f (mk [t₁, t₂, t₃])                    -- self-term
+  by
+  show inversePolyTree
+      (OpenMath.Chapter3.Section310.RootedTree.mk
+        [RootedTree.vertex, RootedTree.vertex, RootedTree.vertex]) f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy
+  rw [inversePolyTree, inversePolyTree_vertex,
+      inversePolyTree_vertex, inversePolyTree_vertex]
+  unfold trichildPolynomial
+  rw [show trichildCrossTerm RootedTree.vertex RootedTree.vertex
+            RootedTree.vertex f
+          = 3 * f RootedTree.vertex * f RootedTree.broom₃ by
+        unfold trichildCrossTerm
+        rw [if_pos ⟨rfl, rfl, rfl⟩]]
+  show -(f RootedTree.vertex * -f RootedTree.vertex *
+            -f RootedTree.vertex * -f RootedTree.vertex)
+        - -f RootedTree.vertex * -f RootedTree.vertex *
+            f RootedTree.cherry
+        - -f RootedTree.vertex * -f RootedTree.vertex *
+            f RootedTree.cherry
+        - -f RootedTree.vertex * -f RootedTree.vertex *
+            f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy
+  ring
 ```
 
-Sign convention: matches cycle 387's bichildPolynomial leading `-`
-sign (the cycle 358 `_inv_mk` prefactor `-Σⱼ M.b j · ...`).
+**Outer `show`**: unfolds `bushy := mk [vertex, vertex, vertex]`
+(non-reducible `def` per memory `feedback_ring_def_opacity.md`) so
+the `rw [inversePolyTree, ...]` chain can pattern-match the new
+fourth recursion arm (cycle 399's `mk [c₁, c₂, c₃]` case). Cycle
+387's `inversePolyTree_cherry` uses the same outer-`show` pattern at
+`mk [vertex]` (`Section422.lean:6505`).
 
-**Sanity verification at bushy** (paper, not Lean):
+**`rw [inversePolyTree, inversePolyTree_vertex × 3]`**: steps the
+recursion through the new triple-children arm, replacing each
+`inversePolyTree vertex f` by `-f vertex`. Three calls because three
+children.
 
-For `(t₁, t₂, t₃) = (vertex, vertex, vertex)`:
-- `inv₁ = inv₂ = inv₃ = inversePolyTree vertex f = -v`.
-- Block (1): `-(v · (-v) · (-v) · (-v)) = -(v · -v³) = v⁴` ✓
-- Blocks (2/3/4): each = `-(-v) · (-v) · f(mk[vertex])
-  = -v² · c`. Three of these: `-3v²c` ✓
-- Block (?) for `+3v·b'`: comes from `trichildCrossTerm vertex vertex vertex f`.
+**`unfold trichildPolynomial`**: exposes the 6-term backbone
+`-(f v · inv₁ · inv₂ · inv₃) − inv₂·inv₃·f(mk [v]) − inv₁·inv₃·f(mk [v])
+− inv₁·inv₂·f(mk [v]) + trichildCrossTerm v v v f − f(mk [v,v,v])`
+with `inv₁ = inv₂ = inv₃ = -f vertex`.
 
-So the strawman gives `v⁴ - 3v²c + trichildCrossTerm vertex vertex vertex f - f(bushy)`.
-Matching cycle 370's `v⁴ - 3v²c + 3v·b' - f(bushy)` forces
+**Inner `rw [show trichildCrossTerm v v v f = ... by ...]`**: at
+`(vertex, vertex, vertex)`, the `if_pos ⟨rfl, rfl, rfl⟩` discharges
+the triple-conjunction, giving the value
+`3 * f vertex * f broom₃`. Single `if_pos` because there's only one
+matched branch in cycle 399's `trichildCrossTerm` definition (the
+default case is `0`).
 
-```
-trichildCrossTerm vertex vertex vertex f = 3 · f vertex · f broom₃.
-```
+**Inner `show ... = ...`**: bridges `f (mk [vertex]) ↔ f cherry` and
+`f (mk [vertex, vertex, vertex]) ↔ f bushy`. Per memory
+`feedback_ring_def_opacity.md`, `ring` cannot canonicalise these
+non-reducible-`def` aliases — the `show` rewrites the goal into a
+purely algebraic form that `ring` can close.
 
-The `3v·b'` comes from the three (5)/(6)/(7) bilinear blocks at
-`(v, v, v)`, each surfacing `Φ_η(mk [vertex, vertex]) = Φ_η(broom₃)
-= b'` with prefactor `v`. Block (8) trilinear contributes 0 in this
-case (or is absorbed into the surface `-f(bushy)` self-term).
+**`ring`**: closes the resulting algebraic identity
+`-(v · (-v)³) − 3 · (-v)² · c + 3·v·b' − bushy = v⁴ − 3v²c + 3v·b' − bushy`.
 
-**§5 Conjectured `trichildCrossTerm` dispatch** (~40 lines)
+### LOC estimate and insertion site
 
-```lean
-noncomputable def trichildCrossTerm (t₁ t₂ t₃ : RT) (f : RT → ℝ) : ℝ :=
-  if t₁ = vertex ∧ t₂ = vertex ∧ t₃ = vertex then
-    3 * f vertex * f broom₃
-  else
-    0
-```
+~30–35 LOC including the docstring. **Insertion site**: place
+`inversePolyTree_bushy` immediately after cycle 395's
+`inversePolyTree_mkMkCherry` (line 6626) — bushy is order-4 like
+`mk [mk [cherry]]`, and slotting them adjacent groups all order-4
+ladder-tree calibrations. Alternative: locate cycle 392's
+`inversePolyTree_mkBroom₃` and insert nearby — both are
+"non-leaf-wrapped" calibration witnesses with the same proof shape
+modulo the trichild vs monochild dispatch.
 
-Initial dispatch; future Family C trichild work extends per cycle
-388/389/390 pattern. The §7 R3 risk note below flags that the
-conjectured value `3 · f vertex · f broom₃` should be **verified by
-cycle 399's worker before locking** via symbolic derivation from
-cycle 358's `_inv_mk`.
+### Verification commands (after edit)
 
-**§6 Lean ship plan (cycle 399–401)** (~120 lines)
+```bash
+lake env lean OpenMath/Chapter4/Section422.lean
+# Expected: exit 0; only pre-existing grandfathered sorry warning at line 2272
 
-**Cycle 399 (Phase α'.4.1 P8) — trichild infrastructure**:
-1. Symbolically derive `trichildCrossTerm vertex vertex vertex f` from
-   cycle 358's `_inv_mk` at three children = vertex. Cross-check the
-   strawman §5 value.
-2. Define `trichildPolynomial` and `trichildCrossTerm`.
-3. Extend `inversePolyTree`'s match: insert
-   `[c₁, c₂, c₃] → trichildPolynomial ...` BEFORE the existing
-   k-catch-all (now `_ :: _ :: _ :: _ :: _`).
-4. Verify all 9 existing calibration witnesses
-   (`inversePolyTree_vertex` through `inversePolyTree_mkMkCherry`,
-   plus `_mkCherryCherry`, `_mkBroomCherry`, `_mkVertexCherry`)
-   still pass; expected: yes, because their proof bodies match on
-   children-list shapes with k ≤ 2.
-5. Non-vacuity: confirm bushy at `⟦explicitEuler⟧` evaluates correctly.
+grep -c sorry OpenMath/Chapter4/Section422.lean
+# Expected: 5 (unchanged: 4 docstring + 1 grandfathered code)
 
-LOC budget: 80–100.
-
-**Cycle 400 (Phase α'.4.1 P9) — `inversePolyTree_bushy` calibration**:
-1. Ship `inversePolyTree_bushy : inversePolyTree (mk [vertex, vertex, vertex]) f = v⁴ − 3v²c + 3v·b' − f bushy`.
-2. Proof recipe (cycle 392/394/395 pattern): `rw [inversePolyTree,
-   inversePolyTree_vertex, inversePolyTree_vertex, inversePolyTree_vertex]`;
-   `show trichildCrossTerm vertex vertex vertex f = 3 · f vertex · f broom₃
-   by unfold; rw [if_pos ⟨rfl, rfl, rfl⟩]`; `ring`.
-
-LOC budget: 30.
-
-**Cycle 401 (Phase α'.4.2 P5) — `bushy` migration**:
-1. Ship `inversePolyTree_bushy_eq_inversePolynomial` bridge: 7
-   `if_neg` discharges + `if_pos rfl`.
-2. Migrate `inversePolynomial`'s `bushy` branch from
-   `inversePolyBroom 3 f` to `inversePolyTree (mk [vertex, vertex, vertex]) f`.
-3. Update Phase α.2 calibration `example` (cycle 374-era).
-4. Update Phase β bridge `elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy`.
-5. Update Phase γ branch in `inversePolynomial_eq_of_subtree_agreement`.
-6. Derivative fix on cycle 382's `inversePolyBroom_three_eq_inversePolynomial`
-   proof body (cycle 396 Step F precedent).
-
-LOC budget: 50.
-
-Total cycles 399–401: ~3 cycles, ~160 LOC.
-
-**§7 Risk inventory** (~60 lines)
-
-* **R1 (structural recursion extension)**: Inserting a new
-  `[c₁, c₂, c₃]` case BEFORE the existing `(_ :: _ :: _ :: _) → 0`
-  catch-all requires careful pattern ordering. Cycle 387 P6 noted
-  this risk for the future but it never fired through cycles 388–396
-  because no migration needed k ≥ 3. Mitigation: cycle 399 worker
-  should re-read the cycle 387 ship at `Section422.lean:6412–6423`
-  to understand current pattern order.
-
-* **R2 (existing calibration witnesses)**: All 9 existing
-  `inversePolyTree_*` calibrations match on children-list shapes
-  with k ≤ 2 (`mk []`, `mk [c]`, `mk [c₁, c₂]`). The new
-  `[c₁, c₂, c₃]` case won't pattern-match against any of them, so
-  no existing proof body breaks. Cycle 394's lesson (extending
-  `monochildCrossTerm` required adding one `if_neg` discharge in
-  `inversePolyTree_cherry`) does NOT apply here because the
-  extension is at the RECURSION-LEVEL match, not at the
-  `monochildCrossTerm`/`bichildCrossTerm` dispatch level.
-
-* **R3 (cross-term value — RED FLAG)**: The §5 strawman gives
-  `trichildCrossTerm vertex vertex vertex f = 3 · f vertex · f broom₃`.
-  Verify this against cycle 370's actual closed form at `⟦explicitEuler⟧`
-  where `v = c = b' = 1, bushy = 1`:
-
-  - Strawman value: `1⁴ - 3·1²·1 + 3·1·1 - 1 = 1 - 3 + 3 - 1 = 0`.
-  - Cycle 370's actual value at `⟦explicitEuler⟧`:
-    `inversePolyTree_bushy` via Family B `inversePolyBroom 3 f` at
-    `f = elementaryWeightQ_phi ⟦explicitEuler⟧` should give the
-    cycle 370 non-vacuity witness value. Recall cycle 370 example
-    pinned the closed form to `1` at `⟦explicitEuler⟧`.
-
-  **DISCREPANCY**: strawman gives 0, actual gives 1. This means the
-  strawman §5 conjecture is **OFF**. Cycle 399's worker must derive
-  the actual cross-term value symbolically from cycle 358's `_inv_mk`
-  before locking the definition.
-
-  Possible resolutions:
-  - The block decomposition §3 may be missing a term (Block (8)
-    trilinear might contribute non-trivially).
-  - The sign convention in `trichildPolynomial` strawman §4 may be off.
-  - The Family B↔C unification might need a different decomposition.
-
-  Cycle 398's scoping doc MUST flag this red flag explicitly and
-  defer the actual cross-term value to cycle 399 derivation.
-
-* **R4 (sign convention)**: cycle 388 hit a sign issue with the
-  bichild cross-term; verify the §4 trichild sign against the cycle
-  358 `_inv_mk` outer `-Σⱼ M.b j · ...` prefactor.
-
-* **R5 (file size)**: Section422.lean is already ~7867 LOC. Adding
-  trichild infrastructure (cycle 399) + bushy calibration (cycle 400)
-  + bushy migration (cycle 401) adds ~160 LOC. Total post-cycle-401:
-  ~8030 LOC. Still tractable for warm rebuilds (cycle 397 measured
-  ~200s).
-
-**§8 Cycle 399 entry point** (~50 lines)
-
-Pre-flight tasks for cycle 399's worker:
-
-1. **Read cycle 358's `_inv_mk` proof body** at `Section422.lean:582`
-   to understand the per-child block expansion.
-2. **Read cycle 387's `bichildPolynomial` derivation** for the
-   two-children precedent.
-3. **Symbolically compute the three-children expansion** of
-   `derivativeWeightWithSrc M.inverse i (mk [vertex, vertex, vertex])`
-   per the §3 block decomposition. Specifically, compute:
-   - The 8 individual block contributions to
-     `Σᵢ M.b i · derivativeWeightWithSrc M.inverse i (mk [v, v, v])`.
-   - Collect the `Φ_η(mk [vertex, vertex]) = Φ_η(broom₃)` contributions
-     from Blocks (5)/(6)/(7) and the `Φ_η(mk [vertex, vertex, vertex])
-     = Φ_η(bushy)` contribution from Block (8).
-4. **Cross-check against cycle 370's closed form**. The expansion
-   should recover `v⁴ - 3v²c + 3v·b' - f(bushy)` exactly.
-5. **Lock the `trichildCrossTerm` value** based on the derivation,
-   not the §5 strawman.
-6. **THEN write** `trichildPolynomial`, `trichildCrossTerm`, and the
-   `inversePolyTree` extension.
-
-The §7 R3 red flag is the substantive technical work cycle 399 must
-do. Cycle 398 scopes the problem and flags the gap; cycle 399 solves
-it.
-
-**§9 Cross-references** (~30 lines)
-
-Standard cross-references:
-* Predecessor scoping docs: cycle 373, 379, 385 issue files.
-* Cycle 370 closed form: `Section422.lean:3011`.
-* Cycle 358 `_inv_mk`: `Section422.lean:582`.
-* Cycle 387 `bichildPolynomial` + `inversePolyTree` recursion:
-  `Section422.lean:6367–6423`.
-* Cycle 397 migration recipe (mechanical template for cycle 401):
-  `Section422.lean` migration of `mk [mk [cherry]]` branch.
-* Cycle 396 derivative-fix pattern (Step F): cycle 396 task results.
-* Memory: `feedback_simp_recursive_def_overunfolds.md`,
-  `feedback_indexed_inductive_cases_disjoint.md`.
-
-**§10 Self-reference** (~20 lines)
-
-* Cycle 398 ships this doc as sole deliverable; no Lean changes.
-* Cycle 399 ships Phase α'.4.1 P8 (trichild infrastructure) per §6.
-* Cycle 400 ships Phase α'.4.1 P9 (bushy calibration).
-* Cycle 401 ships Phase α'.4.2 P5 (bushy migration).
-* Post-cycle-401: all 9 ladder trees route uniformly through
-  `inversePolyTree`. Cycle 402+ attacks the cycle 365 grandfathered
-  sorry.
-
-## Priority 2 — What NOT to ship this cycle
-
-### Do NOT attempt direct Lean ship of trichild infrastructure
-
-The §7 R3 red flag is real: the strawman §5 cross-term value gives
-the WRONG closed-form value at `⟦explicitEuler⟧`. A one-cycle attempt
-to ship `trichildPolynomial` + `inversePolyTree_bushy` without
-resolving R3 will produce an incorrect definition that downstream
-cycles 400–401 will need to roll back.
-
-### Do NOT touch existing `inversePolyTree`
-
-The cycle 387 `(_ :: _ :: _ :: _) → 0` catch-all is the current
-ship; modifying it without the trichild infrastructure leaves the
-file in an inconsistent state.
-
-### Do NOT skip bushy migration via alternate route
-
-Cycle 397 worker recommended unification through `inversePolyTree`.
-Don't try to make `inversePolynomial`'s `bushy` branch dispatch
-through some other helper; that creates a divergent path that breaks
-the cycle 365 sorry closure plan.
-
-### Do NOT pivot to a fresh entity
-
-`def:451A`, `thm:535A`, `thm:541A`, etc. — all available but losing
-the 60-cycle §422 streak is a high cost. The bushy migration is one
-scoping cycle + three Lean cycles away from completing Phase α'.4.
-
-### Do NOT attempt cycle 365 sorry closure
-
-The cycle 366 heterogeneous-stage obstacle is unresolved until ALL 9
-ladder trees route through `inversePolyTree`. Bushy is the gate.
-
-### Do NOT raise `maxHeartbeats`
-
-Per CLAUDE.md.
-
-### Do NOT edit `scripts/autonomous_loop.py`
-
-Loop-maintainer territory.
-
-### Do NOT attempt Section441.lean
-
-43+ cycle GPFS slowness pathology per `cycle_182_gpfs_slowness.md`.
-
-## Priority 3 — Optional stretch (if scoping doc finishes early)
-
-If the scoping doc is complete with substantial cycle budget
-remaining (~30 minutes), the only safe Lean ship is:
-
-**Optional cycle 398 P2 stretch**: One axiom-clean
-sanity-cross-check `example` (NOT a `theorem`) at the bushy closed
-form. E.g.:
-
-```lean
-example :
-    elementaryWeightQ_phi (⟦⟨1, RKTableau.explicitEuler⟩⟧ : Quotient
-      OpenMath.Chapter3.Section312.RKTableau.PhiEquivalent.setoidSigma)⁻¹
-      RootedTree.bushy
-    = 1 := by
-  -- Verify cycle 370's bushy closed form value at ⟦explicitEuler⟧.
-  ...
+# Spot-check axiom cleanliness via lean_verify MCP:
+# inversePolyTree_bushy → [propext, Classical.choice, Quot.sound]
 ```
 
-This is a one-shot non-vacuity confirmation that the §2 closed form
-gives `1` at `⟦explicitEuler⟧` (where `v = c = b' = 1, bushy = 1`,
-giving `1 - 3 + 3 - 1 = 0`... wait, that's 0, not 1).
+Cycle 400 build time will be slower than recent cycles (warm cache
+~14 min per cycle 399 task results §Result, due to the extended
+5-arm `inversePolyTree` recursion's equation-compiler unfolding
+overhead). Budget accordingly; do NOT panic if `lake env lean` runs
+8–15 min on first compile.
 
-Wait — `elementaryWeightQ_phi` at the INVERSE (η_q⁻¹), and
-cycle 370's closed form gives `Φ_{η_q⁻¹}(bushy) = v⁴ - 3v²c + 3v·b' - Φ_η(bushy)`.
-Substituting v=c=b'=Φ_η(bushy)=1: `1 - 3 + 3 - 1 = 0`. So at
-`⟦explicitEuler⟧`, `Φ_{⟦explicitEuler⟧⁻¹}(bushy) = 0`.
+## §2 Priority 2 — STRETCH ONLY: Skip the explicit Euler non-vacuity example
 
-But cycle 370's `elementaryWeightQ_phi_inv_bushy` non-vacuity
-example pinned this to `1`. Let me re-read cycle 370 task results...
+Per cycle 398 scoping doc §6.2 step 7 ("Optional non-vacuity
+`example`"), an `example` at `f := elementaryWeightQ_phi
+⟦explicitEuler⟧` confirming `inversePolyTree bushy f = 1` is
+explicitly marked optional. **Skip this cycle**. The calibration
+theorem above IS the non-vacuity content; a redundant `example` at
+explicit Euler adds compile time without informational value.
 
-Actually cycle 370 says:
-> non-vacuity examples: closed-form witness gives `1`; reflexive m=0
-> closes by `rfl × 4`.
+## §3 Priority 3 — DO NOT TOUCH
 
-So `1`. But the algebraic check gives `0`. There's a discrepancy
-between cycle 370's recorded non-vacuity value and the algebraic
-substitution. **This is exactly the §7 R3 red flag** — cycle 398's
-scoping doc must flag this discrepancy explicitly. The P2 stretch
-above SHOULD ship to verify which value is correct, but doing so
-requires actually running the Lean check.
+* **Do NOT migrate `inversePolynomial`'s `bushy` branch.** That is
+  cycle 401's Phase α'.4.2 P5 deliverable per scoping doc §6.3
+  (parallel of cycle 397's `mk [mk [cherry]]` migration recipe with
+  bridge theorem `inversePolyTree_bushy_eq_inversePolynomial`).
+  Cycle 400 produces *only* the calibration; cycle 401 wires it into
+  `inversePolynomial`'s dispatch chain.
+* **Do NOT attempt to close the cycle 365 grandfathered sorry**
+  (`Section422.lean:2279`,
+  `powRep_sum_eq_of_strict_subtree_agreement` general body). That
+  requires the full `inversePolynomial` migration of all 9 ladder
+  trees plus multi-cycle Phase β/γ extension. After cycle 401, all 9
+  trees route through `inversePolyTree` and cycle 402+ can begin
+  attacking the sorry.
+* **Do NOT extend `trichildCrossTerm` beyond `(vertex, vertex,
+  vertex)`.** No other three-children ladder tree exists; the
+  default `else 0` branch is correct for all foreseeable Phase α'
+  work.
+* **Do NOT submit to Aristotle.** This is a pure mechanical proof
+  with no `sorry`s to mine; no Aristotle suitability per cycle 399
+  strategy §G precedent.
+* **Do NOT add explicit-Euler examples for previously-shipped
+  calibrations** (e.g. re-witnessing `inversePolyTree_cherry`,
+  `inversePolyTree_broom₃` at `⟦explicitEuler⟧`). Cycle 399 didn't
+  add any; cycle 400 follows suit.
 
-**Recommended P2 stretch**: Yes, ship the verification `example`.
-If the value is `0`, cycle 370 task results are wrong; if `1`,
-the algebraic substitution above (and §4/§5 strawmen) are wrong.
-Either way, this is critical sanity data for cycle 399.
+## §4 What NOT to try — failure modes flagged by memory + history
 
-LOC: 5–15. Risk: low. The Lean answer is authoritative.
+Memory hits that apply to this cycle:
 
-**If cycle 398 P2 ship reveals cycle 370's value is correct (1):**
-the §4/§5 strawmen in the scoping doc are wrong, and cycle 399's
-worker must derive the correct closed form symbolically. Document
-the resolution in the scoping doc's §7 R3.
+* **`feedback_ring_def_opacity.md`** — `ring` cannot bridge `f (mk
+  [args])` to `f namedTree` when `namedTree` is a non-reducible
+  `def` (like `cherry`, `broom₃`, `bushy`). **Apply the recommended
+  fix: insert `show ...` to canonicalize before `ring`.** The proof
+  recipe in §1 above includes the necessary `show` bridge already.
+  Do NOT skip it — the proof will fail with "ring failed" if you
+  feed `ring` a goal containing `f (mk [...])` mixed with `f cherry`
+  / `f bushy`.
 
-**If cycle 398 P2 ship reveals cycle 370's value is wrong (0):**
-flag for the loop maintainer; cycle 370's recorded value should be
-audited. Cycle 399 proceeds with strawman §4/§5 unchanged.
+* **`feedback_simp_recursive_def_overunfolds.md`** — `simp
+  [recursive-def, name-eq-thm]` over-unfolds. **Use targeted
+  `rw [name-eq-thm, ...]` rather than `simp` for the recursion
+  steps.** The proof recipe uses `rw [inversePolyTree, ...]` not
+  `simp [inversePolyTree, ...]`; do not "improve" this with simp.
 
-## Priority 4 — Aristotle status
+* **`feedback_indexed_inductive_cases_disjoint.md`** — not directly
+  triggered this cycle (no `cases h` on distinct constructor
+  inequalities expected), but the `if_pos ⟨rfl, rfl, rfl⟩`
+  discharge in the inner `show trichildCrossTerm ... = ...` uses
+  three definitional reflexivities on `vertex = vertex`. This works
+  by `decide` semantics on `DecidableEq RootedTree` (cycle 017's
+  decidable-equality instance). If `⟨rfl, rfl, rfl⟩` fails to
+  type-check, fall back to: `rw [if_pos ⟨by decide, by decide, by
+  decide⟩]` or split into intermediate steps.
 
-No pending Aristotle results. No new submissions needed.
+Cycle history "what was tried" hits that apply:
 
-## Sanity checklist for cycle 398 worker
+* **Cycle 392 Discovery (`mk [broom₃]` migration)**: the
+  `monochildCrossTerm` extension required an additional `if_neg`
+  discharge in `inversePolyTree_cherry`'s proof body. **This does
+  NOT apply to cycle 400.** Cycle 399's `trichildCrossTerm` has only
+  one populated branch (`(vertex, vertex, vertex)`) plus the
+  default; existing calibrations on smaller trees (`vertex`,
+  `cherry`, `broom₃`, etc.) match patterns with arity ≤ 2 in the
+  `inversePolyTree` recursion, so the new `mk [c₁, c₂, c₃]` arm does
+  NOT unify against any of their match patterns. **No retrofitting
+  of existing proofs is required.** Verify by running `lake env lean
+  OpenMath/Chapter4/Section422.lean` *before* adding
+  `inversePolyTree_bushy` — the file should still build with cycle
+  399 alone.
 
-Before declaring scoping doc complete:
+* **Cycle 395 Discovery (`mk [mk [cherry]]`)**: the cherry-branch
+  extension of `monochildCrossTerm` required two `if_neg` discharges
+  before the `if_pos rfl`. For cycle 400's bushy, the
+  `trichildCrossTerm` dispatch is `if_pos` directly (single
+  non-default branch), so **zero `if_neg` discharges**. The proof
+  recipe in §1 has this correct.
 
-1. **§2 closed form correctly quoted from cycle 370**:
-   `v⁴ − 3v²c + 3v·b' − f bushy`.
-2. **§3 block decomposition has 8 blocks** with the (constant vs
-   A-row-sum) selection structure.
-3. **§4 strawman trichildPolynomial sign convention verified at
-   bushy**: under inv = -v at three children, the leading `-(v · inv³)`
-   gives `+v⁴`.
-4. **§7 R3 red flag explicitly called out**: the strawman §5 cross-term
-   value at `(vertex, vertex, vertex)` is NOT verified; cycle 399 must
-   derive it from cycle 358's `_inv_mk`.
-5. **§6 cycle 399–401 plan is concrete**: named deliverables, LOC
-   estimates, proof recipe sketches.
-6. **§8 cycle 399 entry point lists pre-flight steps** in order.
+* **`feedback_planner_faithfulness_spotcheck.md`** — verify cycle
+  370's closed form matches cycle 400's calibration RHS verbatim.
+  Cycle 370's
+  `elementaryWeightQ_phi_inv_bushy`:
 
-## Faithfulness check
+  ```
+  Φ_{η_q⁻¹}(bushy) = v⁴ − 3v²·c + 3v·b' − Φ_η(bushy)
+  ```
 
-This cycle ships only `.prover-state/issues/def_422B_phase_alpha_prime_family_bushy_scoping.md`
-(new markdown file). No Lean changes, no new `def`/`theorem`/`structure`,
-no axioms, no sorries (unchanged at 5: 4 docstring + 1 grandfathered).
+  Cycle 400's target:
 
-The scoping doc itself does not "smuggle" content: §4/§5 propose
-strawmen, §7 R3 flags the open red flag, §8 explicitly defers
-verification to cycle 399.
+  ```
+  inversePolyTree bushy f = (f v)^4 − 3·(f v)^2·f cherry
+                            + 3·f v·f broom₃ − f bushy
+  ```
 
-`lean_status.json` `def:422B` row: stays `partial`, `cycle_completed_at`
-bumped from 397 to 398.
+  With `f := elementaryWeightQ_phi η_q`, these match: `v = f vertex
+  = Φ_η(vertex)`, `c = f cherry = Φ_η(cherry)`, `b' = f broom₃ =
+  Φ_η(broom₃)`, `f bushy = Φ_η(bushy)`. ✓ **No textbook divergence;
+  proceed.**
 
-`plan.md` `def:422B` row: stays `[~]`.
+## §5 Sorry policy + axiom cleanliness
 
-## Expected outcomes
+* Sorry count: 5 → 5 (unchanged — only the grandfathered cycle 365
+  Sub-lemma A body at line 2279 + 4 docstring references).
+* New theorem must be axiom-clean:
+  `[propext, Classical.choice, Quot.sound]`. The proof recipe uses
+  only `show`, `rw`, `unfold`, `if_pos ⟨rfl, rfl, rfl⟩`, and `ring`
+  — all axiom-clean tactics.
+* Do NOT introduce `axiom` or `constant` declarations.
+* Do NOT raise `maxHeartbeats` above 200000. If the proof exceeds
+  heartbeats (unlikely for a 6-line `rw + show + ring` body),
+  decompose the inner `show` into two intermediate `have` statements
+  for the `f cherry` and `f bushy` rewrites separately.
 
-* Sorry count: **5 (unchanged)**.
-* §422 axiom-clean streak: 60 substantive + 2 doc → **60 substantive + 3 doc**.
-* `lake build OpenMath.Chapter4.Section422` exit 0 (no Lean changes).
-* `git diff --stat` shows only `.prover-state/` paths.
-* New file:
-  `.prover-state/issues/def_422B_phase_alpha_prime_family_bushy_scoping.md`
-  (~400–600 lines, 8–10 sections).
+## §6 Cycle 401+ outlook (informational only, do NOT execute)
 
-## Cycle 399 entry point (for continuity)
+After cycle 400 lands the calibration:
 
-Cycle 399 ships Phase α'.4.1 P8 per the scoping doc §6:
+* **Cycle 401** (Phase α'.4.2 P5 per scoping doc §6.3): migrate
+  `inversePolynomial`'s `bushy` branch from cycle 383's
+  `inversePolyBroom 3 f` dispatch to a `inversePolyTree bushy f`
+  dispatch. Six edits (mechanical mirror of cycle 397's `mk [mk
+  [cherry]]` migration): (1) bridge theorem
+  `inversePolyTree_bushy_eq_inversePolynomial` via `unfold
+  inversePolynomial + 4 if_neg + if_pos rfl`, (2)
+  `inversePolynomial`'s `bushy` branch body migrated, (3) Phase α.2
+  calibration `example` updated, (4) Phase β.3 bridge
+  `elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy` updated,
+  (5) Phase γ branch in `inversePolynomial_eq_of_subtree_agreement`
+  updated, (6) cycle 382's
+  `inversePolyBroom_three_eq_inversePolynomial` proof body extended.
+  Estimated ~50 LOC. **Do NOT attempt in cycle 400.**
 
-1. (FIRST) Symbolically derive `trichildCrossTerm vertex vertex vertex f`
-   from cycle 358's `_inv_mk` at three children = vertex. Resolve §7 R3.
-2. Define `trichildPolynomial`, `trichildCrossTerm` (with derived value).
-3. Extend `inversePolyTree`'s match.
-4. Verify all 9 existing calibrations still pass.
-5. Confirm bushy at `⟦explicitEuler⟧` matches cycle 370's witness.
+* **Cycle 402+**: all 9 ladder trees now route uniformly through
+  `inversePolyTree`. The cycle 365 grandfathered Sub-lemma A sorry
+  becomes attackable via the unified recursive structure (multi-
+  cycle Phase β/γ extension).
 
-LOC budget: ~80–100. Risk: low-medium (the symbolic derivation in
-step 1 is the substantive new content; the rest is mechanical).
+## §7 Success criteria (cycle 400 self-check)
+
+1. `OpenMath/Chapter4/Section422.lean` grows by ~30–35 LOC (cycle
+   400's calibration witness only).
+2. `lake env lean OpenMath/Chapter4/Section422.lean` exits 0 with
+   only the grandfathered sorry warning at line 2272.
+3. `grep -c sorry OpenMath/Chapter4/Section422.lean` returns 5
+   (unchanged).
+4. `#print axioms OpenMath.Chapter4.Section422.inversePolyTree_bushy`
+   returns `[propext, Classical.choice, Quot.sound]`.
+5. No existing calibration witness (`inversePolyTree_{vertex,
+   cherry, broom₃, mkBroom₃, mkCherry, mkMkCherry, mkCherryCherry,
+   mkBroomCherry, mkVertexCherry}`) regresses — verified by
+   successful build.
+6. §422 axiom-clean streak advances: 61 substantive + 3 doc
+   (cycles 336–399) → **62 substantive + 3 doc** (cycles 336–400).
+7. `lean_status.json` for `def:422B`: `cycle_completed_at` bumped
+   from 399 to 400; status remains `partial`; `lean_symbol` remains
+   on the existing partial-ship symbol (do NOT rename — the
+   calibration is infrastructure, not a textbook entity closure).
+8. `plan.md` for `def:422B`: status row updated with cycle 400 note
+   appended to the existing partial-ship entry; row remains `[~]`.
+
+## §8 Bottom line
+
+Ship `inversePolyTree_bushy` calibration theorem (~30–35 LOC) per
+the §1 recipe. One theorem, axiom-clean, sorry-clean, regression-
+free. Cycle 401 follows with the `bushy` branch migration; cycles
+402+ revisit the grandfathered cycle 365 sorry.
+
+The cycle 399 supervisor verdict was a phantom — proceed normally.

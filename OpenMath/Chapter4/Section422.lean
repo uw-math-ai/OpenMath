@@ -6646,6 +6646,55 @@ theorem inversePolyTree_mkMkCherry (f : RT → ℝ) :
         rw [if_neg (by decide), if_neg (by decide), if_pos rfl]]
   ring
 
+/-- *Phase α'.4.1 (cycle 400) — `bushy` calibration witness.*
+
+`inversePolyTree bushy f = (f vertex)^4 − 3·(f vertex)^2·f cherry
++ 3·f vertex·f broom₃ − f bushy` matches cycle 370's
+`elementaryWeightQ_phi_inv_bushy`. Since `bushy = mk [vertex, vertex,
+vertex]` (three-child), the proof unfolds the triple-children branch
+of `inversePolyTree` (cycle 399), rewrites
+`inversePolyTree vertex f = -f vertex` via `inversePolyTree_vertex`
+three times, expands `trichildPolynomial`, and observes that the
+`(vertex, vertex, vertex)` triple matches the if-branch of
+`trichildCrossTerm`, evaluating to `3 · f vertex · f broom₃`. Closes
+by `ring` after a `show`-bridge that canonicalises `f (mk [vertex])
+↔ f cherry` and `f (mk [vertex, vertex, vertex]) ↔ f bushy`. -/
+theorem inversePolyTree_bushy (f : RT → ℝ) :
+    inversePolyTree RootedTree.bushy f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy := by
+  show inversePolyTree
+      (OpenMath.Chapter3.Section310.RootedTree.mk
+        [RootedTree.vertex, RootedTree.vertex, RootedTree.vertex]) f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy
+  rw [inversePolyTree, inversePolyTree_vertex]
+  unfold trichildPolynomial
+  rw [show trichildCrossTerm RootedTree.vertex RootedTree.vertex
+            RootedTree.vertex f
+          = 3 * f RootedTree.vertex * f RootedTree.broom₃ by
+        unfold trichildCrossTerm
+        rw [if_pos ⟨rfl, rfl, rfl⟩]]
+  show -(f RootedTree.vertex * -f RootedTree.vertex *
+            -f RootedTree.vertex * -f RootedTree.vertex)
+        - -f RootedTree.vertex * -f RootedTree.vertex *
+            f RootedTree.cherry
+        - -f RootedTree.vertex * -f RootedTree.vertex *
+            f RootedTree.cherry
+        - -f RootedTree.vertex * -f RootedTree.vertex *
+            f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy
+  ring
+
 /-- *Phase α'.4.1 (cycle 388) — `mk [cherry, cherry]` calibration witness.*
 
 `inversePolyTree (mk [cherry, cherry]) f` matches cycle 384's
