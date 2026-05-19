@@ -816,8 +816,123 @@ existing axiom-clean theorems were disturbed.
 
 ---
 
+## §12 Cycle 401 closure (Phase α'.4.2 P5 ship)
+
+Cycle 401 shipped the migration per §6.3 — the **fifth and final**
+Phase α'.4.2 ladder-tree migration. All 9 ladder trees (`vertex`,
+`cherry`, `broom₃`, `mk [cherry]`, `bushy`, `mk [broom₃]`,
+`mk [vertex, cherry]`, `mk [mk [cherry]]`) now route uniformly
+through `inversePolyTree`. Phase α'.4 fully closed.
+
+### §12.1 Six edits landed (all in `OpenMath/Chapter4/Section422.lean`)
+
+* **Step A** — New bridge theorem
+  `inversePolyTree_bushy_eq_inversePolynomial` inserted after cycle
+  397's `inversePolyTree_mkMkCherry_eq_inversePolynomial`. Proof is
+  `unfold inversePolynomial; rw [if_neg × 4, if_pos rfl]` per the
+  cycle 391/393/396/397 recipe (4 `if_neg`s because `bushy` is the
+  5th branch in `inversePolynomial`'s if-then-else chain).
+
+* **Step B** — `inversePolynomial`'s 5th branch body migrated:
+  `inversePolyBroom 3 f` → `inversePolyTree RootedTree.bushy f`.
+  Value-preserving by cycle 400's `inversePolyTree_bushy` matching
+  cycle 370's closed form `v⁴ − 3v²c + 3v·b' − f bushy`, which also
+  equals cycle 383's `inversePolyBroom_three` expansion.
+
+* **Step C** — Phase α.2 calibration `example` trailing rewrite
+  `inversePolyBroom_three` → `inversePolyTree_bushy`.
+
+* **Step D** — Phase β.2 bridge
+  `elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy` trailing
+  rewrite `inversePolyBroom_three` → `inversePolyTree_bushy`.
+
+* **Step E** — Phase γ branch (`inversePolynomial_eq_of_subtree_agreement`,
+  `bushy` arm): TWO `inversePolyBroom_three` occurrences (one per
+  side per cycle 393's double-replacement pattern) both swapped to
+  `inversePolyTree_bushy`.
+
+* **Step F** — Cycle 382's `inversePolyBroom_three_eq_inversePolynomial`
+  derivative bridge: trailing rewrites extended with
+  `inversePolyBroom_three, inversePolyTree_bushy` to bridge both
+  sides to cycle 370's closed form post-migration. Theorem statement
+  unchanged; only proof body extended.
+
+### §12.2 Verification
+
+`lake build OpenMath.Chapter4.Section422` exits 0 (1165 s warm cache;
+elevated due to `inversePolyTree`'s 5-arm equation-compiler unfolding
+lemma growth flagged in cycle 399 Discovery). Only the pre-existing
+grandfathered cycle 365 sorry warning at line 2272 fires (sorry count
+unchanged at 5: 4 docstring references + 1 actual code sorry at line
+2279).
+
+`#print axioms` on all five named theorems
+(`inversePolyTree_bushy_eq_inversePolynomial`,
+`elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy`,
+`inversePolynomial_eq_of_subtree_agreement`,
+`inversePolyBroom_three_eq_inversePolynomial`, plus cycle 400's
+`inversePolyTree_bushy` as regression check) returns
+`[propext, Classical.choice, Quot.sound]` uniformly.
+
+### §12.3 LOC + streak
+
+Section422.lean: 8150 → 8178 LOC (+28 LOC, well within the strategy's
+~50 LOC budget; cycle 397 ship was the LOC-matching precedent).
+
+§422 axiom-clean streak: 62 substantive + 3 doc (336–400) →
+**63 substantive + 3 doc** (cycles 336–401).
+
+### §12.4 Phase α'.4 fully closed
+
+Phase α'.4 (the recursive `inversePolyTree` infrastructure for the
+9-tree ladder) is complete. The dispatch matrix:
+
+| Tree | Branch # | Migration cycle | `inversePolyTree` realisation cycle |
+|---|---|---|---|
+| `vertex` | 1 | cycle 374 (Family A baseline) | cycle 387 P2 calibration |
+| `cherry` | 2 | cycle 396 (Phase α'.4.2 P3) | cycle 387 P2 calibration |
+| `broom₃` | 3 | cycle 393 (Phase α'.4.2 P2) | cycle 389 calibration |
+| `mk [cherry]` | 4 | cycle 396 (Phase α'.4.2 P3) | cycle 387 P2 calibration |
+| **`bushy`** | **5** | **cycle 401 (Phase α'.4.2 P5)** | **cycle 400 P9 calibration** |
+| `mk [broom₃]` | 6 | cycle 393 (Phase α'.4.2 P2) | cycle 390 calibration |
+| `mk [vertex, cherry]` | 7 | cycle 391 (Phase α'.4.2 P1) | cycle 387/388 calibration |
+| `mk [mk [cherry]]` | 8 | cycle 397 (Phase α'.4.2 P4) | cycle 387 P2 calibration |
+
+(Tree #9 `mk [cherry, cherry]` per cycle 384 is the order-5 calibration
+witness baseline; not in `inversePolynomial`'s dispatch but exercised
+via `inversePolyTree_mkCherryCherry` cycle 388.)
+
+### §12.5 Cycle 402+ outlook
+
+Cycle 402+ candidates:
+
+1. **Phase α'.5 scoping doc** — `k ≥ 3` heterogeneous children
+   (e.g. `mk [vertex, vertex, cherry]`, `mk [cherry, cherry, cherry]`).
+   Cycle 399's catch-all bumped from `(_::_::_::_)` to
+   `(_::_::_::_::_)` to leave the door open; full closure requires
+   `tetrachildPolynomial` / `quadchildCrossTerm` analogues.
+
+2. **Phase β/γ extension toward cycle 365 sorry closure scoping
+   doc** — the now-unified `inversePolyTree` routing makes the
+   cycle 365 grandfathered Sub-lemma A sorry (line 2272) structurally
+   attackable; but full closure still requires a per-tree subtree-
+   agreement → `linearResidualAt`-agreement bridge yet to be built.
+   Multi-cycle work that warrants its own scoping doc first.
+
+3. **Pivot to fresh entity** — `def:451A`, `def:442A`, `thm:535A`,
+   `thm:541A` per `cycle_336_pivot_options.md`. The §422 streak is
+   approaching 70 substantive cycles; natural inflection point for
+   a pivot decision belongs to cycle 402's planner.
+
+That decision belongs to cycle 402's planner. Cycle 401's job was to
+land the last Phase α'.4.2 migration cleanly, and the recipe stayed
+on rails: 6 edits, +28 LOC, build clean, 5 axiom-clean theorems.
+
+---
+
 **End of scoping doc.** Cycle 398 shipped the markdown file; cycle
-399 shipped the trichild infrastructure per §6.1. Cycle 400 ships
-the calibration witness per §6.2. Cycle 401 ships the migration per
-§6.3. Cycles 402+ revisit cycle 365's grandfathered Sub-lemma A
-sorry under the now-extended `inversePolyTree` routing.
+399 shipped the trichild infrastructure per §6.1; cycle 400 shipped
+the calibration witness per §6.2; cycle 401 shipped the migration
+per §6.3. **Phase α'.4 fully closed.** Cycles 402+ revisit cycle
+365's grandfathered Sub-lemma A sorry under the now-extended
+`inversePolyTree` routing OR pivot.

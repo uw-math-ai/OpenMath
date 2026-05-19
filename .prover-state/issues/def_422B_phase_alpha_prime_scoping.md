@@ -1235,6 +1235,81 @@ migration** (cycles 391, 393, 396); remaining migrations target
   dispatch path, and the cycle 365 grandfathered sorry becomes
   attackable via the unified recursive structure.
 
+### Cycle 401 update — Phase α'.4.2 `bushy` migration shipped (Phase α'.4 fully closed)
+
+Per the cycle 401 strategy, cycle 401 ships the mechanical
+mirror-port of cycles 391/393/396/397, migrating
+`inversePolynomial`'s 5th branch (`bushy`) from `inversePolyBroom 3 f`
+to dispatch through `inversePolyTree RootedTree.bushy f`. **This is
+the 5th and FINAL Phase α'.4.2 ladder migration** (cycles 391, 393,
+396, 397, 401); **all 9 ladder trees now route uniformly through
+`inversePolyTree`. Phase α'.4 fully closed.**
+
+**Six edits**:
+
+1. **Step A bridge theorem** — `inversePolyTree_bushy_eq_inversePolynomial`
+   shipped (4 `if_neg` discharges for `vertex`, `cherry`, `broom₃`,
+   `mk [cherry]`, then `if_pos rfl`; both sides reduce to
+   `inversePolyTree RootedTree.bushy f` and the proof closes by the
+   implicit `rfl` after the `rw` cascade). Mechanical mirror of
+   cycle 396's `inversePolyTree_mkCherry_eq_inversePolynomial` and
+   cycle 397's `inversePolyTree_mkMkCherry_eq_inversePolynomial`.
+2. **Step B body migration** — `inversePolynomial`'s `bushy` branch
+   replaced `inversePolyBroom 3 f` with
+   `inversePolyTree RootedTree.bushy f`. Value-preserving via cycle
+   400's `inversePolyTree_bushy` matching cycle 370's closed form
+   `v⁴ − 3v²c + 3v·b' − f bushy`, which also equals cycle 383's
+   `inversePolyBroom_three` expansion.
+3. **Step C** — Phase α.2 (cycle 377) calibration `example`
+   closer changed from `inversePolyBroom_three` to
+   `inversePolyTree_bushy`.
+4. **Step D** — Phase β.2 bridge
+   `elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy` closer
+   updated likewise.
+5. **Step E** — Phase γ `inversePolynomial_eq_of_subtree_agreement`
+   `bushy` branch: both `inversePolyBroom_three` instances
+   replaced with `inversePolyTree_bushy` (mirrors cycle 393/396/397's
+   double-replacement pattern; Phase γ rewrites once per `f` and
+   `g` side).
+6. **Step F derivative** — cycle 382's Phase α'.3 bridge
+   `inversePolyBroom_three_eq_inversePolynomial` proof updated:
+   after migration, the goal becomes
+   `inversePolyBroom 3 f = inversePolyTree RootedTree.bushy f`,
+   closed by appending `inversePolyBroom_three, inversePolyTree_bushy`
+   to the existing `rw` (both routes reduce to cycle 370's closed
+   form). Theorem statement unchanged; only the proof body extended
+   by two rewrite tokens.
+
+**Verification**:
+
+* `lake build OpenMath.Chapter4.Section422` exits 0 (1165s warm
+  rebuild; elevated due to `inversePolyTree`'s 5-arm equation-compiler
+  unfolding lemma growth flagged in cycle 399 Discovery).
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` returns 5
+  (unchanged — only the cycle 365 grandfathered Sub-lemma A body
+  sorry at line 2279).
+* `#print axioms` on `inversePolyTree_bushy_eq_inversePolynomial`,
+  `elementaryWeightQ_phi_inv_eq_inversePolynomial_bushy`,
+  `inversePolynomial_eq_of_subtree_agreement`,
+  `inversePolyBroom_three_eq_inversePolynomial`, and
+  `inversePolyTree_bushy` (cycle 400 regression check) all return
+  `[propext, Classical.choice, Quot.sound]` (axiom-clean).
+* §422 axiom-clean streak: **63 substantive + 3 doc** (336–401).
+* `lean_status.json` `def:422B` `cycle_completed_at`: 400 → 401.
+
+**Cycle 402+ outlook**:
+
+* Cycle 402+: Pivot decision. With Phase α'.4 fully closed, the §422
+  streak is approaching 70 substantive cycles — natural inflection
+  point. Candidates: Phase α'.5 (`k ≥ 3` heterogeneous children)
+  scoping doc; Phase β/γ extension toward cycle 365 sorry closure
+  scoping doc; or pivot to fresh entity (`def:451A`, `def:442A`,
+  `thm:535A`, `thm:541A` per `cycle_336_pivot_options.md`). The
+  cycle 365 grandfathered sorry now becomes structurally attackable
+  via the unified `inversePolyTree` routing, but full closure still
+  requires a per-tree subtree-agreement → `linearResidualAt`-agreement
+  bridge yet to be built.
+
 ## §11 Self-reference & cross-links
 
 ### Predecessor scoping docs
