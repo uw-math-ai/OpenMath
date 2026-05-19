@@ -999,6 +999,71 @@ migration).
   branch + ship `inversePolyTree_mkMkCherry` calibration.
 * Cycle 395+: continue Phase α'.4.2 per-tree migrations.
 
+### Cycle 393 update — Phase α'.4.2 `mk [broom₃]` migration shipped
+
+Per the cycle 393 strategy (and the cycle 392 worker's recommendation
+in §10 above), cycle 393 ships the mechanical port of cycle 391's
+`mk [vertex, cherry]` migration template to the `mk [broom₃]` branch.
+Five sub-deliverables executed verbatim:
+
+* **B.1 Bridge theorem** (new): `inversePolyTree_mkBroom₃_eq_inversePolynomial`
+  threads `inversePolyTree (mk [broom₃]) f = inversePolynomial (mk [broom₃]) f`.
+  Proof: `unfold inversePolynomial` then 5 `if_neg` discharges
+  (vertex, cherry, broom₃, mk [cherry], bushy — the `mk [broom₃]`
+  branch is the 6th in the if-chain) + `if_pos rfl`. After
+  migration both sides literally reduce to the same
+  `inversePolyTree (mk [broom₃]) f` term; closure is implicit
+  in the final `if_pos rfl` rewrite.
+* **B.2 `inversePolynomial` body migration**: the `mk [broom₃]`
+  branch RHS was the explicit 5-term closed form
+  `v⁴ - 3v²c + vb' + 2vm - Φ_η(mk [broom₃])`; replaced with the
+  dispatch `inversePolyTree (mk [broom₃]) f`. Value-preserving
+  because cycle 392's `inversePolyTree_mkBroom₃` already proved
+  the closed-form equality.
+* **B.3 Calibration witness update**: the `example` on line
+  ~6833 (Phase α.2 `mk [broom₃]` witness) had a trailing
+  `if_pos rfl]` rewrite; appended `inversePolyTree_mkBroom₃`
+  so the existing proof closes against the post-migration RHS.
+* **B.4 Phase β bridge update**:
+  `elementaryWeightQ_phi_inv_eq_inversePolynomial_mkBroom₃`'s
+  final `if_pos rfl]` rewrite likewise extended with
+  `inversePolyTree_mkBroom₃`.
+* **B.5 Phase γ branch update**: in
+  `inversePolynomial_eq_of_subtree_agreement`, the `h_mkBroom`
+  arm's trailing `if_pos rfl, hv, hc, hb, hmc, hmb]` extended
+  to `if_pos rfl, inversePolyTree_mkBroom₃, inversePolyTree_mkBroom₃,
+  hv, hc, hb, hmc, hmb]` (twice for `f` and `g` sides).
+
+**Outcome**:
+
+* `lake env lean OpenMath/Chapter4/Section422.lean` exits 0 with
+  only the grandfathered cycle 365 sorry warning at line 2272.
+* `lake build OpenMath.Chapter4.Section422` exits 0 (214 s cold).
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 (unchanged).
+* `#print axioms inversePolyTree_mkBroom₃_eq_inversePolynomial`
+  → `[propext, Classical.choice, Quot.sound]`.
+* All 7 cumulative `inversePolyTree_*` calibration witnesses
+  (vertex, cherry, broom₃, mkBroom₃, mkCherryCherry, mkBroomCherry,
+  mkVertexCherry) re-verify axiom-clean. Both Phase β bridges
+  (`_eq_inversePolynomial_mkBroom₃`, `_eq_inversePolynomial_mkVertexCherry`)
+  and `inversePolynomial_eq_of_subtree_agreement` likewise
+  axiom-clean.
+* §422 axiom-clean streak: **56 substantive + 2 doc** (336–393).
+* `lean_status.json` `def:422B` `cycle_completed_at`: 392 → 393.
+
+**Cycle 394+ outlook (per strategy §H)**:
+
+* Cycle 394: extend `monochildCrossTerm` for `c = mk [cherry]`
+  branch using cycle 378's closed form `v⁴ − 3v²c + c² + 2vm −
+  M_mkMkCherry`. Ship `inversePolyTree_mkMkCherry` calibration
+  witness; estimated ~50 LOC.
+* Cycle 395+: continue Phase α'.4.2 per-tree migrations for
+  `bushy`, `mk [cherry]`, `mk [mk [cherry]]` until all 8 ladder
+  trees dispatch through `inversePolyTree`. Then Phase β/γ
+  consumers can collapse to a single dispatch through the
+  recursive def, and the cycle 365 grandfathered sorry becomes
+  attackable via the unified recursive structure.
+
 ## §11 Self-reference & cross-links
 
 ### Predecessor scoping docs
