@@ -1064,6 +1064,104 @@ Five sub-deliverables executed verbatim:
   recursive def, and the cycle 365 grandfathered sorry becomes
   attackable via the unified recursive structure.
 
+### Cycle 394 update — Phase α'.4.1 P6 `monochildCrossTerm` cherry extension shipped
+
+Per the cycle 394 strategy, cycle 394 ships the `cherry` branch of
+the `monochildCrossTerm` infrastructure (P5 follow-on) plus the
+corresponding `mk [cherry]` calibration witness:
+
+* **A. `monochildCrossTerm` extension** (~3 LOC): added the second
+  `else if c = RootedTree.cherry then f vertex * f cherry`
+  branch between the existing `broom₃` branch and the default
+  `else 0`. Paper-derivation: cycle 369's `mk [cherry]` closed
+  form is `-v³ + 2vc - m`; with `monochildCrossTerm cherry = 0`
+  the naive `inversePolyTree (mk [cherry])` body evaluates to
+  `-v³ + vc - m`, off by `+vc`; the correction `f vertex * f cherry`
+  closes the gap.
+* **B. `inversePolyTree_cherry` proof one-line update** (1 LOC):
+  the `show monochildCrossTerm vertex f = 0` block's discharge
+  chain grew from one `if_neg (by decide)` to two (for `vertex ≠
+  broom₃` and `vertex ≠ cherry`); the new `if_neg` is the trailing
+  discharge before reaching the default `else 0`.
+* **C. `inversePolyTree_mkCherry` calibration witness** (~25 LOC):
+  `inversePolyTree (mk [cherry]) f = -v³ + 2vc - m`, matching
+  cycle 369's `elementaryWeightQ_phi_inv_mkCherry` at the
+  unquotiented level. Proof template mirrors cycle 392's
+  `inversePolyTree_mkBroom₃`: `rw [inversePolyTree,
+  inversePolyTree_cherry]` then `show monochildCrossTerm cherry f
+  = … by unfold; rw [if_neg (by decide), if_pos rfl]` then `ring`.
+
+**Outcome**:
+
+* `lake env lean OpenMath/Chapter4/Section422.lean` exits 0 with
+  only the grandfathered cycle 365 sorry warning.
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 (unchanged).
+* All 8 cumulative `inversePolyTree_*` calibration witnesses
+  axiom-clean (`[propext, Classical.choice, Quot.sound]`).
+* §422 axiom-clean streak: **57 substantive + 2 doc** (336–394).
+* `lean_status.json` `def:422B` `cycle_completed_at`: 393 → 394.
+
+### Cycle 395 update — Phase α'.4.1 P7 `monochildCrossTerm` mk [cherry] extension shipped
+
+Per the cycle 395 strategy, cycle 395 ships the third
+`monochildCrossTerm` branch (`c = mk [cherry]`) plus the
+`mk [mk [cherry]]` calibration witness — a mechanical extension
+of cycle 394's template, ~30 LOC delta:
+
+* **A. `monochildCrossTerm` extension** (~5 LOC): added the third
+  `else if c = OpenMath.Chapter3.Section310.RootedTree.mk
+  [RootedTree.cherry] then -(v²·c) + c² + v·m else 0` branch
+  between the cycle 394 `cherry` branch and the default `else 0`.
+  Paper-derivation: cycle 378's `mk [mk [cherry]]` closed form is
+  `v⁴ - 3v²c + c² + 2vm - M_mc`; with the new
+  `monochildCrossTerm (mk [cherry])` not yet defined, the naive
+  body via `inversePolyTree_mkCherry` evaluates to
+  `-(v · (-v³ + 2vc - m)) - M_mc = v⁴ - 2v²c + vm - M_mc`, off by
+  exactly `-(v²·c) + c² + v·m`; the new branch closes the gap.
+* **B. `inversePolyTree_cherry` proof one-line update** (1 LOC):
+  the `show monochildCrossTerm vertex f = 0` block's discharge
+  chain grew from two `if_neg (by decide)` to three (for
+  `vertex ≠ broom₃`, `vertex ≠ cherry`, `vertex ≠ mk [cherry]`);
+  the new `if_neg` is the trailing discharge before reaching the
+  default `else 0`.
+* **C. `inversePolyTree_mkMkCherry` calibration witness**
+  (~25 LOC): `inversePolyTree (mk [mk [cherry]]) f = v⁴ - 3v²c +
+  c² + 2vm - f (mk [mk [cherry]])`, matching cycle 378's
+  `elementaryWeightQ_phi_inv_mkMkCherry` at the unquotiented
+  level. Proof template mirrors cycle 394's
+  `inversePolyTree_mkCherry`: `rw [inversePolyTree,
+  inversePolyTree_mkCherry]` then `show monochildCrossTerm
+  (mk [cherry]) f = … by unfold; rw [if_neg (by decide), if_neg
+  (by decide), if_pos rfl]` then `ring`. Two `if_neg`s before
+  the `if_pos rfl` (broom₃ and cherry discharges) per the cycle
+  394 worker's Discovery #1 generalisation.
+
+**Outcome**:
+
+* `lake env lean OpenMath/Chapter4/Section422.lean` exits 0 with
+  only the grandfathered cycle 365 sorry warning.
+* `lake build OpenMath.Chapter4.Section422` exits 0 (8037 jobs).
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 (unchanged).
+* All 9 cumulative `inversePolyTree_*` calibration witnesses
+  (`_vertex`, `_cherry`, `_broom₃`, `_mkBroom₃`, `_mkCherry`,
+  `_mkMkCherry`, `_mkCherryCherry`, `_mkBroomCherry`,
+  `_mkVertexCherry`) axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`).
+* §422 axiom-clean streak: **58 substantive + 2 doc** (336–395).
+* `lean_status.json` `def:422B` `cycle_completed_at`: 393 → 395.
+
+**Cycle 396+ outlook**:
+
+* Cycle 396: Phase α'.4.2 migration of `inversePolynomial`'s
+  `mk [cherry]` branch (parallel of cycles 391/393). Ship bridge
+  theorem `inversePolyTree_mkCherry_eq_inversePolynomial`, then
+  migrate `inversePolynomial`'s `mk [cherry]` body from the
+  3-term closed form (`-v³ + 2vc - m`) to dispatch through
+  `inversePolyTree (mk [cherry]) f`. ~40–50 LOC.
+* Cycle 397+: continue Phase α'.4.2 per-tree migrations for
+  remaining single-child trees (`bushy`, `mk [mk [cherry]]`)
+  until all 9 ladder trees dispatch through `inversePolyTree`.
+
 ## §11 Self-reference & cross-links
 
 ### Predecessor scoping docs
