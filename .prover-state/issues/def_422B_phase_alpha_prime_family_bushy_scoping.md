@@ -661,8 +661,163 @@ Pre-flight tasks for cycle 399's worker, in order:
 
 ---
 
-**End of scoping doc.** Cycle 398 ships this markdown file as its
-sole deliverable; standard bookkeeping (task results, heartbeat,
-history.jsonl) follows. No Lean code, no axioms, no sorry-count
-changes (5: 4 docstring + 1 grandfathered). Cycle 399 enters per §8
-above.
+## §11 Cycle 399 closure (Phase α'.4.1 P8 ship)
+
+Cycle 399 shipped the §6.1 deliverables verbatim per strategy
+(no scope deviation). Three new symbols in
+`OpenMath/Chapter4/Section422.lean`, inserted between cycle 387's
+`bichildPolynomial` (ending at line 6389) and the `inversePolyTree`
+recursion (formerly lines 6412–6423, now extended to a 5-arm form).
+
+### §11.1 What shipped
+
+* `trichildCrossTerm : RT → RT → RT → (RT → ℝ) → ℝ` — Block (5)+(6)+(7)
+  trilinear cross-term per-triple dispatch. Single non-default
+  if-branch at `(vertex, vertex, vertex) → 3 · f vertex · f broom₃`;
+  all other triples return `0` (placeholder for future Phase α'.4.3+
+  triple-children witnesses, analogous to cycle 387's initial
+  `bichildCrossTerm` placeholder for binary pairs).
+* `trichildPolynomial : RT → RT → RT → ℝ → ℝ → ℝ → (RT → ℝ) → ℝ` —
+  8-block polynomial backbone shaped
+  `-(v · inv₁ · inv₂ · inv₃)
+   − inv₂ · inv₃ · f (mk [t₁])
+   − inv₁ · inv₃ · f (mk [t₂])
+   − inv₁ · inv₂ · f (mk [t₃])
+   + trichildCrossTerm t₁ t₂ t₃ f
+   − f (mk [t₁, t₂, t₃])`,
+  mirroring cycle 387's `bichildPolynomial` sign convention. The
+  uniform leading `-` and the uniform `- f (mk [t₁, t₂, t₃])`
+  self-term match the cycle 380/383/387 convention.
+* `inversePolyTree` recursion extension — new fourth match arm
+  `mk [c₁, c₂, c₃] → trichildPolynomial c₁ c₂ c₃ (inversePolyTree c₁ f)
+  (inversePolyTree c₂ f) (inversePolyTree c₃ f) f` inserted before the
+  catch-all; catch-all pattern bumped from `(_ :: _ :: _ :: _)` to
+  `(_ :: _ :: _ :: _ :: _)` (now firing for k ≥ 4, not k ≥ 3). Case
+  order preserved per strategy §A.3 (`[]`, `[c]`, `[c₁, c₂]`,
+  `[c₁, c₂, c₃]`, k ≥ 4 catch-all).
+* Docstring above `inversePolyTree` updated to enumerate the new
+  triple-children case + the bumped catch-all arity (one-bullet
+  diff, no rewrite). Cycle 387's anchor `(cycle 387, extended
+  cycle 399)` byline added to the header.
+
+### §11.2 LOC delta
+
+* Section422.lean: 8038 → 8101 LOC (+63 LOC), well within the
+  strategy's ~80–100 LOC budget envelope. The headline `+63 LOC`
+  decomposes as ~40 LOC of new docstrings + new def bodies and
+  ~10 LOC of `inversePolyTree` extension + ~13 LOC of docstring
+  reflow for the `inversePolyTree` byline + new bullets.
+* No Section381 / Section310 / other-file changes — strictly
+  additive to Section422.
+
+### §11.3 Build verification
+
+* `lake env lean OpenMath/Chapter4/Section422.lean` exits 0 with
+  only the pre-existing grandfathered cycle 365 sorry warning at
+  line 2272 (compiler-displayed line; sorry-token at line 2279 in
+  the source).
+* All 11 existing `inversePolyTree_*` calibration witnesses
+  (cycles 387, 392, 394, 395, 388, 389, 390, plus their corollaries
+  through cycles 393/396/397) continue to compile — their match
+  patterns (`mk []`, `mk [c]`, `mk [c₁, c₂]`) do not unify against
+  the new `mk [c₁, c₂, c₃]` arm, so the cycle 387–397 ship stack is
+  undisturbed.
+* Build time: ~14 min on warm cache, longer than the strategy's
+  ~200–300 s estimate. Hypothesis: the recursive def's
+  equation-compiler-generated unfolding lemmas grow polynomially
+  with arm count, and the file's growth past 8000 LOC slows
+  elaboration. Phase α'.5 work on k ≥ 4 should expect the same
+  scaling pressure.
+
+### §11.4 Faithfulness check
+
+* Entity ID: `def:422B` (continuing the §422 work track via Phase α'
+  infrastructure).
+* Lean statements capture: **same content** as the §4/§5 strawmen
+  in this scoping doc. The cycle 398 §C/§7 R3 resolution stands —
+  `trichildCrossTerm vertex vertex vertex f = 3 · f vertex · f broom₃`
+  matches cycle 370's bushy closed form `+v⁴ − 3v²c + 3v·b' − f bushy`
+  via Block (5)+(6)+(7)'s three identical bilinear contributions
+  each evaluating to `+v · b'`.
+* Definition smuggling: PASS for all three. The new `noncomputable
+  def`s are pure computational helpers; their `Prop`-content will
+  be delivered by cycle 400's `inversePolyTree_bushy` calibration
+  witness (the canonical non-vacuity check for this infrastructure).
+* Tautology check: N/A (no theorems shipped).
+* Identity check: N/A (no theorems shipped).
+* Hypothesis strength: N/A (no theorems shipped).
+* `inversePolyTree` extension preserves the existing arms verbatim;
+  the new arm structurally mirrors the binary arm's delegation
+  pattern (delegate to a polynomial helper, with recursive
+  `inversePolyTree c_i f` evaluations as helper inputs).
+
+### §11.5 What this cycle deliberately did NOT do
+
+* Did NOT ship the `inversePolyTree_bushy` calibration witness.
+  Cycle 400's work per §6.2.
+* Did NOT migrate `inversePolynomial`'s `bushy` branch. Cycle 401's
+  work per §6.3.
+* Did NOT touch the cycle 365 grandfathered sorry at line 2279.
+  Multi-cycle Phase β/γ extension; deferred to cycle 402+.
+* Did NOT ship the optional scratch-verification `example` from §D
+  step 7. The cycle 400 calibration witness will verify the
+  strawman values numerically as a byproduct of its proof; a
+  separate intermediate `example` would be redundant.
+* Did NOT submit to Aristotle. Strategy §G prohibits this cycle's
+  trichild defs as Aristotle targets — pure `noncomputable def`s
+  with no `sorry`s to mine.
+* Did NOT refactor `bichildCrossTerm` / `bichildPolynomial` /
+  `monochildCrossTerm` / existing `inversePolyTree` cases. Cycle
+  399 is strictly additive per strategy §G.
+
+### §11.6 Cycle 400 entry point (Phase α'.4.1 P9)
+
+Per §6.2 and strategy §J, ship `inversePolyTree_bushy` calibration:
+
+```lean
+theorem inversePolyTree_bushy (f : RT → ℝ) :
+    inversePolyTree RootedTree.bushy f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + 3 * f RootedTree.vertex * f RootedTree.broom₃
+        - f RootedTree.bushy := by
+  show inversePolyTree
+      (OpenMath.Chapter3.Section310.RootedTree.mk
+        [RootedTree.vertex, RootedTree.vertex, RootedTree.vertex]) f = _
+  rw [inversePolyTree, inversePolyTree_vertex,
+      inversePolyTree_vertex, inversePolyTree_vertex]
+  unfold trichildPolynomial
+  rw [show trichildCrossTerm RootedTree.vertex RootedTree.vertex
+            RootedTree.vertex f
+          = 3 * f RootedTree.vertex * f RootedTree.broom₃ by
+        unfold trichildCrossTerm
+        rw [if_pos ⟨rfl, rfl, rfl⟩]]
+  -- bridge mk [vertex] = cherry and mk [vertex, vertex, vertex] = bushy
+  show ... = ...
+  ring
+```
+
+Estimated ~30 LOC. Memory `feedback_ring_def_opacity.md` predicts the
+`mk [vertex] ↔ cherry` and `mk [vertex, vertex, vertex] ↔ bushy`
+bridges via `show`-blocks (`cherry` and `bushy` are non-reducible
+`def`s in Section310; `ring` cannot canonicalise them without a
+`show` reframing). The `if_pos ⟨rfl, rfl, rfl⟩` discharges the
+all-vertex triple via the strawman branch, matching cycle 394's
+`(cherry)` and cycle 388's `(cherry, cherry)` recipes scaled to a
+3-tuple.
+
+### §11.7 §422 streak status
+
+§422 axiom-clean streak: 60 substantive + 3 doc (336–398) →
+**61 substantive + 3 doc** (cycles 336–399). The new defs do not
+print axioms (def, not theorem); the broader streak continues
+without interruption since no new theorems were shipped and no
+existing axiom-clean theorems were disturbed.
+
+---
+
+**End of scoping doc.** Cycle 398 shipped the markdown file; cycle
+399 shipped the trichild infrastructure per §6.1. Cycle 400 ships
+the calibration witness per §6.2. Cycle 401 ships the migration per
+§6.3. Cycles 402+ revisit cycle 365's grandfathered Sub-lemma A
+sorry under the now-extended `inversePolyTree` routing.

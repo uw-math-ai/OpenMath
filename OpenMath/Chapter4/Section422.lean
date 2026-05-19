@@ -6388,7 +6388,64 @@ noncomputable def bichildPolynomial
     + bichildCrossTerm t₁ t₂ f
     - f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁, t₂])
 
-/-- *Phase α'.4.1 (cycle 387) — recursive inverse-polynomial on rooted trees.*
+/-- *Phase α'.4.1 (cycle 399) — triple-children cross-term per-triple dispatch.*
+
+For a triple-children tree `mk [t₁, t₂, t₃]`, this helper packages the
+trilinear cross-term contribution from §3 Blocks (5)+(6)+(7) of the
+cycle 398 scoping doc.
+
+Empirical dispatch:
+
+* `(vertex, vertex, vertex)` → `3 · f vertex · f broom₃`. Back-computed
+  from cycle 370's `mk [vertex, vertex, vertex] = bushy` closed form
+  `v⁴ - 3v²c + 3v·b' - f bushy`, after subtracting the
+  `trichildPolynomial` backbone at `(inv_v, inv_v, inv_v) = (-v, -v, -v)`.
+  The three identical Block (5)/(6)/(7) bilinear contributions each
+  evaluate to `+v · b'`; their sum is `+3v · b' = 3 · f vertex · f broom₃`.
+* Other triples → `0` (default; refined in cycle 402+ as more
+  triple-child witnesses surface).
+
+Mirror of cycle 387's `bichildCrossTerm` design for the triple-child
+case. Phase α'.4.1 P8 deliverable. -/
+noncomputable def trichildCrossTerm
+    (t₁ t₂ t₃ : RT) (f : RT → ℝ) : ℝ :=
+  if t₁ = RootedTree.vertex ∧ t₂ = RootedTree.vertex
+      ∧ t₃ = RootedTree.vertex then
+    3 * f RootedTree.vertex * f RootedTree.broom₃
+  else 0
+
+/-- *Phase α'.4.1 (cycle 399) — triple-children polynomial helper.*
+
+Given three subtrees `t₁ t₂ t₃ : RT`, their recursively-known
+`inversePolyTree` values `inv₁, inv₂, inv₃ : ℝ`, and an
+elementary-weight function `f : RT → ℝ`,
+`trichildPolynomial t₁ t₂ t₃ inv₁ inv₂ inv₃ f` is the closed-form
+polynomial-in-`f` that (after the cycle 400+ calibration and
+cycle 401+ migration work) will reproduce `Φ_{η⁻¹}(mk [t₁, t₂, t₃])`'s
+value under `f = Φ_η`.
+
+The shape is the §3 eight-block decomposition reorganised:
+
+* `-(v · inv₁ · inv₂ · inv₃)` — Block (1) (pure triple subtree-inverse
+  product), with a leading negation matching cycle 380's
+  `inversePolyChain` recurrence sign convention.
+* `-(inv₂ · inv₃ · f (mk [t₁]))` — Block (2) contribution.
+* `-(inv₁ · inv₃ · f (mk [t₂]))` — Block (3) (symmetric to Block (2)).
+* `-(inv₁ · inv₂ · f (mk [t₃]))` — Block (4) (symmetric to Block (2)).
+* `+ trichildCrossTerm t₁ t₂ t₃ f` — Blocks (5)+(6)+(7) trilinear
+  cross-term contributions, packaged as one term.
+* `- f (mk [t₁, t₂, t₃])` — the self-term (sign `-1` uniform with
+  cycles 367/369/371/378/388/389/390 binary/single-child witnesses). -/
+noncomputable def trichildPolynomial
+    (t₁ t₂ t₃ : RT) (inv₁ inv₂ inv₃ : ℝ) (f : RT → ℝ) : ℝ :=
+  -(f RootedTree.vertex * inv₁ * inv₂ * inv₃)
+    - inv₂ * inv₃ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁])
+    - inv₁ * inv₃ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₂])
+    - inv₁ * inv₂ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₃])
+    + trichildCrossTerm t₁ t₂ t₃ f
+    - f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁, t₂, t₃])
+
+/-- *Phase α'.4.1 (cycle 387, extended cycle 399) — recursive inverse-polynomial on rooted trees.*
 
 For any rooted tree `t` and elementary-weight function `f : RT → ℝ`,
 `inversePolyTree t f` is the recursive closed-form polynomial in `f`
@@ -6405,7 +6462,9 @@ Dispatch by children-list shape:
   `monochildCrossTerm` cross-term refinement handles the non-leaf
   child cases (currently `c = broom₃`; cycle 393+ adds more).
 * `mk [c₁, c₂]` (binary): delegates to `bichildPolynomial`.
-* `mk (c :: c :: c :: _)` (k ≥ 3): returns `0` (deferred to Phase α'.5).
+* `mk [c₁, c₂, c₃]` (triple): delegates to `trichildPolynomial`
+  (cycle 399 extension).
+* `mk (_ :: _ :: _ :: _ :: _)` (k ≥ 4): returns `0` (deferred to Phase α'.5).
 
 Termination via Lean's default `sizeOf` measure: each recursive call
 is on a strict subtree (a `List.get` of the children list). -/
@@ -6419,7 +6478,11 @@ noncomputable def inversePolyTree : RT → (RT → ℝ) → ℝ
   | OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂], f =>
       bichildPolynomial c₁ c₂
         (inversePolyTree c₁ f) (inversePolyTree c₂ f) f
-  | OpenMath.Chapter3.Section310.RootedTree.mk (_ :: _ :: _ :: _), _ =>
+  | OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃], f =>
+      trichildPolynomial c₁ c₂ c₃
+        (inversePolyTree c₁ f) (inversePolyTree c₂ f)
+        (inversePolyTree c₃ f) f
+  | OpenMath.Chapter3.Section310.RootedTree.mk (_ :: _ :: _ :: _ :: _), _ =>
       0
 
 /-- *Phase α'.4.1 (cycle 387) — vertex calibration witness.*
