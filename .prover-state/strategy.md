@@ -1,283 +1,418 @@
-# Cycle 402 Strategy
+# Cycle 403 strategy — Phase α'.5.0 ship: `mk [vertex, vertex, cherry]`
 
-## §A. Status snapshot (post-cycle 401)
+## §A. No blocker. Pivot directly to Phase α'.5.0.
 
-* Phase α'.4 of `def:422B` is **fully closed**. All 9 ladder trees
-  (`vertex`, `cherry`, `broom₃`, `mk [cherry]`, `bushy`, `mk [broom₃]`,
-  `mk [vertex, cherry]`, `mk [mk [cherry]]`, plus `mk [cherry, cherry]`
-  via cycle 388 calibration) route uniformly through `inversePolyTree`.
-* §422 axiom-clean streak: **63 substantive + 3 doc** cycles (336–401).
-* Section422.lean: 8178 LOC, sorry count 5 (4 docstring + **1
-  grandfathered cycle 365 code sorry at line 2279** — Sub-lemma A
-  body `powRep_sum_eq_of_strict_subtree_agreement`).
-* Build cost has risen sharply: warm rebuild of `OpenMath.Chapter4.Section422`
-  measured 1165s in cycle 401 (cycle 399 Discovery: `inversePolyTree`'s
-  5-arm match generates equation-compiler unfolding lemmas that scale
-  with arm count; expect ≥1200s warm rebuilds going forward).
+Cycle 402 shipped `.prover-state/issues/def_422B_phase_alpha_prime_5_scoping.md`
+(956 lines) as a markdown-only scoping doc per the cycle 401 task
+results' Option 1 recommendation. The doc explicitly names cycle 403
+as the **Phase α'.5.0 implementation cycle** with target tree
+`mk [vertex, vertex, cherry]` (order 5, k=3, asymmetric two-leaf
++ cherry children — the **first non-symmetric `k = 3` empirical
+witness** for `inversePolyTree`).
 
-## §B. No Aristotle results pending.
+Read scoping doc §3.2 (preliminary paper derivation), §6.1 (Phase
+α'.5.0 deliverable specification), §7 (risks), and §8 (cycle 403
+entry point) before writing Lean code.
 
-Skip Aristotle integration step. There are no in-flight Aristotle
-projects to poll this cycle.
+## §B. Target: `elementaryWeightQ_phi_inv_mkVertexVertexCherry`
 
-## §C. Cycle 402 deliverable — Phase α'.5 scoping doc (markdown-only)
+Ship a single closed-form theorem in
+`OpenMath/Chapter4/Section422.lean`, placed immediately after cycle
+372's `elementaryWeightQ_phi_inv_mkVertexCherry` (at ~line 4062).
+Plus the matching `m=0` corollary
+`powRep_sum_eq_of_agreement_at_mkVertexVertexCherry_zero` per the
+cycle 367/368/369/370/371/372/384/386 template.
 
-**Ship a single new markdown file**:
-`.prover-state/issues/def_422B_phase_alpha_prime_5_scoping.md`.
+**Statement** (predicted closed form, paper-derived in §C below —
+DO verify symbolically before finalising the RHS):
 
-This is a deliberate continuation of the cycle 385 / cycle 398
-scoping-doc precedent: markdown-only cycle, no Lean edits, no axiom
-risk. It directly enables cycles 403+ to execute Phase α'.5 work
-(generalising `inversePolyTree` to `k ≥ 3` heterogeneous children)
-without re-scoping.
+```lean
+theorem elementaryWeightQ_phi_inv_mkVertexVertexCherry
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi (η_q⁻¹)
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+      = -(elementaryWeightQ_phi η_q RootedTree.vertex) ^ 5
+        + 3 * (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 3
+            * elementaryWeightQ_phi η_q RootedTree.cherry
+        - 2 * elementaryWeightQ_phi η_q RootedTree.vertex
+            * (elementaryWeightQ_phi η_q RootedTree.cherry) ^ 2
+        + 2 * elementaryWeightQ_phi η_q RootedTree.vertex
+            * elementaryWeightQ_phi η_q
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.cherry])
+        - (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 2
+            * elementaryWeightQ_phi η_q RootedTree.broom₃
+        - (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 2
+            * elementaryWeightQ_phi η_q
+                (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        + elementaryWeightQ_phi η_q RootedTree.cherry
+            * elementaryWeightQ_phi η_q RootedTree.broom₃
+        - elementaryWeightQ_phi η_q
+            (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry]) := by
+  ...
+```
 
-### §C.1 Why a scoping doc, and why now
+**8 distinct elementary-weight kernels** on RHS: `vertex`, `cherry`,
+`broom₃`, `mk [cherry]`, `mk [vertex, cherry]` (cycle 372 kernel),
+`mk [vertex, vertex, cherry]` (the self-kernel). No new kernel
+introduced — `mk [vertex, cherry]` was already shipped by cycle 372.
 
-The cycle 401 worker explicitly enumerated three options for cycle
-402 (see `task_results/cycle_401.md` §"Suggested next approach"):
+## §C. Paper derivation (verify symbolically before locking RHS)
 
-1. Phase α'.5 scoping doc (k ≥ 3 heterogeneous children)
-2. Phase β/γ extension scoping doc (cycle 365 sorry closure)
-3. Pivot to a fresh entity
+Notation: `v = Φ_η(vertex)`, `c = Φ_η(cherry)`, `b' = Φ_η(broom₃)`,
+`m = Φ_η(mk [cherry])`, `vc = Φ_η(mk [vertex, cherry])`.
 
-The pivot option (#3) was investigated this cycle and declined for
-two reasons: (a) `def:442A` — the most-adjacent Ch.4 §441 candidate
-— requires Riemann-surface / order-star infrastructure that Mathlib
-lacks (verified by reading the entity JSON; `rouche_theorem_missing.md`
-documents the parallel gap). (b) `lem:351A` — a self-contained RK
-stability-function identity — would require introducing a new RK
-`R(z) = 1 + zbᵀ(I − zA)⁻¹1` definition plus the rank-1-determinant
-algebra and is plausibly single-cycle but carries setup risk that a
-scoping doc avoids.
+Per-row inverse-derivative factor (cycle 358 `_inv_mk` expansion at
+the three-child tree `mk [vertex, vertex, cherry]`):
 
-Option #2 (cycle 365 sorry closure) was explicitly deferred by the
-cycle 401 worker: "should be deferred to mid-cycle 402+, after the
-planner has chosen between Options 1 and 3." That instruction stands.
+```
+M.inverse.derivativeWeightWithSrc i (mk [vertex, vertex, cherry])
+  = ((-v) + Aᵢ) · ((-v) + Aᵢ) · ((v² - c) + Bᵢ)
+```
 
-**Option #1 is the cleanest cycle 402 ship**:
+where `Aᵢ := Σⱼ Aᵢⱼ` and `Bᵢ := Σⱼ Aᵢⱼ · Σₖ Aⱼₖ`. The cherry-child
+factor uses cycle 367's `inv_cherry = v² - c` plus the inner
+`Σⱼ Aᵢⱼ · derivativeWeight j cherry = Bᵢ`.
 
-* Direct continuation of the productive §422 work track.
-* Markdown-only — zero Lean changes, zero axiom risk, no build-cost hit.
-* Follows the cycle 385 (Family C scoping, drove cycles 386–397) and
-  cycle 398 (Phase α'.4.3 bushy scoping, drove cycles 399–401)
-  precedents — each markdown scoping cycle precedes 11–12 cycles of
-  substantive ship.
-* Sets up cycle 403+ for concrete Phase α'.5.0 / α'.5.1 / α'.5.2
-  ladder ships, mirroring the cycle 386–401 cadence.
+Expanding `(-v + Aᵢ)² · ((v² - c) + Bᵢ)`:
 
-### §C.2 Scope of the new scoping doc
+```
+= (v² - 2v·Aᵢ + Aᵢ²) · ((v² - c) + Bᵢ)
+= v²(v² - c)            + v²·Bᵢ
+  - 2v(v² - c)·Aᵢ       - 2v·Aᵢ·Bᵢ
+  + (v² - c)·Aᵢ²        + Aᵢ²·Bᵢ
+```
 
-The doc must follow the cycle 385 / cycle 398 template — see
-`.prover-state/issues/def_422B_phase_alpha_prime_family_C_scoping.md`
-(cycle 385, 800+ lines, 11 sections + post-cycle update appendices)
-and `.prover-state/issues/def_422B_phase_alpha_prime_family_bushy_scoping.md`
-(cycle 398, 700+ lines, 10 sections + post-cycle update appendices).
+Summing against `M.b i` and collapsing via:
 
-**Required sections (target 400–700 lines)**:
+* `Σᵢ bᵢ · 1 = v` (constant factors out)
+* `Σᵢ bᵢ · Aᵢ = c` (Φ_η(cherry))
+* `Σᵢ bᵢ · Aᵢ² = b'` (Φ_η(broom₃))
+* `Σᵢ bᵢ · Bᵢ = m` (Φ_η(mk [cherry]))
+* `Σᵢ bᵢ · Aᵢ · Bᵢ = vc` (Φ_η(mk [vertex, cherry]))
+* `Σᵢ bᵢ · Aᵢ² · Bᵢ = Φ_η(mk [vertex, vertex, cherry])` (self-kernel)
 
-* **§1 Status & blocker** — Phase α'.4 closure baseline. State
-  precisely what `inversePolyTree`'s current 5-arm match handles
-  (`[]`, `[c]`, `[c₁, c₂]`, `[c₁, c₂, c₃]`, catch-all) and what's
-  missing: the catch-all `(_::_::_::_::_)` returns `0` for `k ≥ 4`,
-  which is mathematically incorrect for arbitrary heterogeneous
-  trees of arity ≥ 4. Also note that the `[c₁, c₂, c₃]` arm only
-  handles the `(vertex, vertex, vertex)` triple correctly via
-  cycle 399's hard-coded `trichildCrossTerm` branch; arbitrary
-  k = 3 triples (e.g. `(vertex, vertex, cherry)`,
-  `(cherry, cherry, cherry)`) currently return wrong values.
-* **§2 Block decomposition for k ≥ 3 children** — Mirror cycle 398
-  §3's two-child block analysis. For arity-k children, cycle 358's
-  `_inv_mk` unfolds the per-row product into `2^k` blocks indexed by
-  `{const, A-sum}^k` selections at each child. Catalogue these for
-  k = 3 (8 blocks) and k = 4 (16 blocks). Bushy at k = 3 is the
-  symmetric all-`(const, const, const)`-plus-permutations special
-  case; asymmetric triples mix const and A-sum selections per child.
-* **§3 Empirical data points** — Currently the **only** k = 3
-  empirical evidence is cycle 370's `elementaryWeightQ_phi_inv_bushy`
-  (three identical leaf children). For Phase α'.5 we need
-  empirical data on **non-symmetric** k = 3 trees. The first
-  natural target is `mk [vertex, vertex, cherry]` (order 5, two
-  leaves + one cherry), which has not been computed yet. Catalog
-  what closed-form kernels are expected to appear (`v`, `c`,
-  `f(mk [vertex, vertex, cherry])`-self-term, plus likely
-  `v · f(mk [vertex, cherry])` or `c · f(cherry)` cross-terms
-  from the §2 block decomposition).
-* **§4 Conjectured `trichildPolynomial` extension** — Cycle 399's
-  current `trichildPolynomial` and `trichildCrossTerm` are
-  hard-coded for the `(vertex, vertex, vertex)` triple. Sketch the
-  generalisation: a per-triple dispatch analogous to cycle 387's
-  `bichildCrossTerm` (which now handles 3 binary pairs:
-  `(cherry, cherry)`, `(broom₃, cherry)`, `(vertex, cherry)`).
-  Pin the §2 block-decomposition structure as the source of truth
-  for the cross-term polynomial shape. List 3–4 specific triples
-  that should be reached (e.g. `(vertex, vertex, cherry)`,
-  `(vertex, cherry, cherry)`, `(cherry, cherry, cherry)`) and
-  note each is a separate empirical+migration ship.
-* **§5 Conjectured `tetrachildPolynomial` for k = 4** — Sketch the
-  k = 4 helper. The k = 4 case has 16 blocks per §2; the bilinear
-  / trilinear / quadrilinear cross-term decomposition needs a
-  general framework, possibly via a `nchildPolynomial` parametric-
-  in-`k` recursive helper. **Flag this as multi-cycle** with no
-  immediate ship target; the goal is to scope the work, not start it.
-* **§6 Phase decomposition** — Decompose Phase α'.5 into
-  sub-phases analogous to Phase α'.4's α'.4.0 / α'.4.1 / α'.4.2:
-  * α'.5.0 = ship empirical witnesses for one or two non-symmetric
-    k = 3 trees (cycle 403, ~250 LOC).
-  * α'.5.1 = extend `trichildPolynomial` / `trichildCrossTerm` dispatch
-    to handle non-`(vertex, vertex, vertex)` triples (cycle 404+,
-    multi-cycle).
-  * α'.5.2 = `inversePolynomial` body migration for any newly-handled
-    k = 3 trees (if needed for downstream).
-  * α'.5.3 (deferred) = k = 4 infrastructure (`tetrachildPolynomial`,
-    catch-all bump to `(_::_::_::_::_::_)`).
-* **§7 Risk inventory** — Build cost: cycle 399 Discovery and
-  cycle 401 ship both note elevated rebuild times (~1165s in cycle
-  401). k = 4 work will further inflate this. Flag the
-  elaboration-time risk explicitly so cycle 403+ workers budget
-  appropriately. Also flag that the cycle 365 grandfathered sorry
-  remains the primary §422 closure target — Phase α'.5 work makes
-  it structurally closer to attackable but does not itself close it.
-* **§8 Cycle 403 entry point** — Concrete recommendation: ship
-  `elementaryWeightQ_phi_inv_mkVertexVertexCherry` as the 10th
-  data point in the cycle 366 §G Route B hypothesis ladder
-  (currently 9 trees catalogued through cycle 388 / 401). Use the
-  cycle 372 `mk [vertex, cherry]` template scaled to three
-  children. Estimated ~250 LOC. Document the specific proof recipe
-  pattern (cycle 358 `_inv_mk` unfold → per-child product expansion
-  → cycle 387/388 helper reuse → `ring` close).
-* **§9 Cross-references** — Link to cycle 385 / cycle 398
-  predecessor scoping docs; link to cycle 399's
-  `trichildPolynomial` ship location (`Section422.lean:6412–6423`);
-  link to memory `feedback_simp_recursive_def_overunfolds.md` for
-  the calibration-witness recipe.
-* **§10 Self-reference** — Cycle 402 ships this doc as its sole
-  deliverable; cycle 403 ships per §8.
+gives
 
-### §C.3 Concrete instructions for the cycle 402 worker
+```
+Σᵢ bᵢ · F(i)
+  =  v²(v²-c)·v + v²·m
+   - 2v(v²-c)·c - 2v·vc
+   + (v²-c)·b' + Φ_η(mk[v,v,c])
+  =  v⁵ - v³c + v²m
+   - 2v³c + 2vc² - 2v·vc
+   + v²b' - cb' + Φ_η(mk[v,v,c])
+  =  v⁵ - 3v³c + 2vc² + v²m - 2v·vc + v²b' - cb' + Φ_η(mk[v,v,c])
+```
 
-1. **Read predecessor scoping docs first** (this is non-negotiable):
-   * `.prover-state/issues/def_422B_phase_alpha_prime_family_C_scoping.md`
-   * `.prover-state/issues/def_422B_phase_alpha_prime_family_bushy_scoping.md`
-   * `.prover-state/issues/def_422B_phase_alpha_prime_scoping.md`
-     (the original cycle 379 scoping doc)
+By cycle 358 `_inv_mk` the inverse closed form is the **negation**:
 
-2. **Read cycle 370's `bushy` closed form** at
-   `OpenMath/Chapter4/Section422.lean:3011–3168` and cycle 399's
-   `trichildCrossTerm`/`trichildPolynomial` at lines 6412–6423.
-   These set the structural template that Phase α'.5 must extend.
+```
+Φ_{η⁻¹}(mk [v,v,c])
+  = -v⁵ + 3v³c - 2vc² + 2v·vc - v²b' - v²m + cb' - Φ_η(mk [v,v,c])
+```
 
-3. **Write the new file** at
-   `.prover-state/issues/def_422B_phase_alpha_prime_5_scoping.md`
-   following §C.2's section structure. Target 400–700 lines.
+— matches the §B `theorem` statement above (8 terms, leading `-v⁵`
+sign appropriate to **odd** order-5 parity, consistent with cycle
+384's `mkCherryCherry` closed form which also leads with `-v⁵`).
 
-4. **Do NOT edit any Lean files.** This is a markdown-only cycle.
-   `grep -c sorry OpenMath/Chapter4/Section422.lean` must read 5
-   at the end of the cycle (unchanged from HEAD).
+**Critical pre-flight task**: verify this expansion symbolically by
+reading the cycle 384 `mkCherryCherry` proof body
+(`Section422.lean:4655–4961`) and cycle 370 `bushy` proof body
+(`Section422.lean:3011–3169`), and mentally re-running the
+per-summand `ring` step. The cycle 398 §7 R3 precedent — paper
+derivations can have sign subtleties — applies. If symbolic
+verification disagrees with §C above, **fix the §B RHS and the proof
+recipe before committing**.
 
-5. **Do NOT submit to Aristotle.** No mathematical content to
-   submit.
+## §D. Proof recipe (hybrid of cycle 370 bushy + cycle 372 mkVertexCherry templates)
 
-6. **Update `extraction/formalization_data/lean_status.json`**:
-   bump the `def:422B` row's `cycle_completed_at` to 402. Status
-   remains `partial`.
+Cycle 384's `elementaryWeightQ_phi_inv_mkCherryCherry`
+(Section422.lean lines 4655–4961, ~250 LOC body) is the closest
+structural template for an order-5 two-non-leaf-children tree. The
+cycle 403 ship combines:
 
-7. **Update `plan.md`**: bump the `def:422B` row's cycle reference
-   to 402. Status remains `[~]`.
+* **Cycle 370 bushy template** for the two-vertex-children portion
+  of the per-row factor `(-v + Aᵢ)²` (the `h_dws_bushy` helper
+  pattern with three-fold cons-case unfold scaled down to two).
+* **Cycle 372 mkVertexCherry template** for the cherry-child factor
+  `((v² - c) + Bᵢ)` (the `h_dws_cherry` + `h_inv_cherry` pattern).
 
-8. **Write `.prover-state/task_results/cycle_402.md`** documenting
-   the scoping ship (mirror the cycle 398 task results format).
+### Helper reuse (verbatim from cycles 367/368/369/372)
 
-### §C.4 Success criteria
+* `h_inv_v` (cycle 367) — `M.inverse.elementaryWeight vertex = -v`
+* `h_vertex` (cycle 367) — `M.elementaryWeight vertex = Σ b`
+* `h_dw_cherry`, `h_cherry`, `h_dws_cherry` (cycle 367) — cherry weights
+* `h_dw_broom₃`, `h_broom₃` (cycle 368) — broom₃ weights
+* `h_inv_cherry` (cycle 369 representative-lift) —
+  `M.inverse.elementaryWeight cherry = v² - c`
+* `h_dw_mkCherry`, `h_mkCherry` (cycle 369) — mk[cherry] weights
+* `h_dw_mkVertexCherry`, `h_mkVertexCherry` (cycle 372) —
+  mk[vertex, cherry] weights
 
-* New file at `.prover-state/issues/def_422B_phase_alpha_prime_5_scoping.md`
-  with 400–700 lines spanning §1–§10.
-* §3 catalogues at least the cycle 370 bushy data point and
-  identifies the cycle 403 target (`mk [vertex, vertex, cherry]`).
-* §4 explicitly references cycle 399's hard-coded
-  `(vertex, vertex, vertex)` branch and pins the generalisation
-  target.
-* §6 phase decomposition has at least 3 sub-phases (α'.5.0 / α'.5.1 / α'.5.2)
-  with LOC estimates and cycle-count estimates.
-* §8 cycle 403 entry point is concrete: names the target tree, the
-  estimated LOC, and the proof template to mirror.
-* Zero Lean changes (`git diff --stat` should show only
-  `.prover-state/` paths plus possibly `plan.md` and
-  `extraction/formalization_data/lean_status.json` cycle-stamp bumps).
-* `lean_status.json` `def:422B` row's `cycle_completed_at` bumped
-  to 402.
-* `plan.md` `def:422B` row's `[~]` line bumped to cycle 402.
-* §422 axiom-clean streak advances: 63 substantive + 3 doc → **63
-  substantive + 4 doc** (cycles 336–402).
+### New helpers (cycle 403 ships)
 
-## §D. What NOT to attempt
+* `h_dw_mkVertexVertexCherry` — closed form for
+  `M.derivativeWeight i (mk [vertex, vertex, cherry])`. Three-child
+  cons-case unfold. Final closed form:
+  `(Σⱼ Aᵢⱼ)² · (Σⱼ Aᵢⱼ · Σₖ Aⱼₖ)`.
 
-Each forbidden direction below has a specific rationale; do not try
-to circumvent these.
+* `h_mkVertexVertexCherry` — `M.elementaryWeight (mk [v,v,c]) =
+  Σᵢ bᵢ · (Σⱼ Aᵢⱼ)² · (Σⱼ Aᵢⱼ · Σₖ Aⱼₖ)`. Trivial after `h_dw_*`.
 
-* **Do NOT edit `OpenMath/Chapter4/Section422.lean` (or any other Lean
-  file).** This is a markdown-only cycle by design. Touching Lean would
-  introduce build risk, axiom-check risk, and risk a sorry-count
-  regression. Per the cycle 385 / cycle 398 precedent, scoping cycles
-  ship 0 LOC of Lean.
+* `h_dws_mkVertexVertexCherry` — closed form for
+  `M.derivativeWeightWithSrc M.inverse i (mk [v,v,c])`. Final closed
+  form: `(-v + Aᵢ)² · ((v² - c) + Bᵢ)` where `Aᵢ = Σⱼ Aᵢⱼ`,
+  `Bᵢ = Σⱼ Aᵢⱼ · Σₖ Aⱼₖ`.
 
-* **Do NOT attempt to close the cycle 365 grandfathered sorry** at
-  `Section422.lean:2279`. The cycle 401 worker explicitly deferred
-  this: "should be deferred to mid-cycle 402+, after the planner has
-  chosen between Options 1 and 3." Phase β/γ closure work is a
-  separate multi-cycle effort; cycle 402 is not the time.
+### Main computation
 
-* **Do NOT attempt to ship a non-vacuity Lean witness alongside the
-  scoping doc** ("scoping + small ship" hybrid). The cycle 398
-  markdown-only precedent shipped no Lean and that pattern stands.
-  Mixing scoping with substantive ship inflates risk for no
-  proportional gain.
+After `refine Quotient.inductionOn η_q ?_; rintro ⟨s, M⟩` and
+declaring all helpers above:
 
-* **Do NOT pivot to `def:442A`, `thm:535A`, `thm:541A`, `lem:351A`, or
-  any other fresh entity** without first asking. The cycle 402 planner
-  investigated `def:442A` (heavy: Riemann surfaces, blocked by
-  `rouche_theorem_missing.md`-class infrastructure) and `lem:351A`
-  (plausibly single-cycle but requires building an RK stability-function
-  definition from scratch). Both are deferred. If you discover during
-  cycle 402 that the scoping-doc deliverable is somehow infeasible (it
-  should not be), document why and stop — do not freelance a pivot.
+```lean
+rw [elementaryWeightQ_phi_inv_mk M (mk [vertex, vertex, cherry]),
+    elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+    elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+    elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+    elementaryWeightQ_phi_mk]
+have h_sum : (∑ i : Fin s, M.b i *
+              M.derivativeWeightWithSrc M.inverse i (mk [v,v,c])) = ... := by
+  have h_subst : ... := by
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dws_mkVertexVertexCherry i, h_inv_v]
+    ring
+  rw [h_subst]
+  -- 6 Finset.sum_(add|sub)_distrib + 5 ← Finset.mul_sum
+  -- + back-substitution: ← h_mkVertexVertexCherry, ← h_mkVertexCherry,
+  --    ← h_broom₃, ← h_mkCherry, ← h_cherry, ← h_vertex
+  -- + ring
+  ...
+rw [h_sum]; ring
+```
 
-* **Do NOT poll Aristotle.** No in-flight projects.
+The per-summand integrand `(-v + Aᵢ)² · ((v² - c) + Bᵢ)` distributes
+into 6 terms (per §C). Each term, after `Finset.sum_congr + ring`,
+gets folded into one of the 6 elementary-weight kernels via
+`← Finset.mul_sum`. Final `ring` closes the algebraic identity.
 
-* **Do NOT attempt to compile Section422.lean even as a smoke test.**
-  Cycle 401 measured 1165s warm rebuild. A smoke test in cycle 402 has
-  no purpose (no Lean edits) and would burn 20+ minutes of wall time.
-  Trust the HEAD state.
+### Constant consolidation (cycle 372 Discovery, applicable here)
 
-* **Do NOT introduce any `axiom`/`constant`/`sorry`-marked declarations
-  anywhere.** Markdown-only cycles cannot regress axiom hygiene.
+When two integrand terms share a tail summed against `Σ bᵢ · Aᵢ` (e.g.
+the `-2v³ · Aᵢ` and `2vc · Aᵢ` terms), fold their constants together
+as `(-2v³ + 2vc) · (bᵢ Aᵢ)` BEFORE `Finset.sum_distrib`. This avoids
+two separate `← h_cherry` applications and lets `ring` close the
+arithmetic. See cycle 372 `mkVertexCherry` proof at
+`Section422.lean:3798-4061` for the canonical pattern.
 
-* **Do NOT raise `maxHeartbeats`.** N/A for markdown.
+## §E. m=0 corollary
 
-* **Do NOT scope Phase α'.5 too narrowly.** Specifically, do not
-  collapse it to "just `mk [vertex, vertex, cherry]` and stop." The
-  scoping doc must articulate the full k ≥ 3 generalisation roadmap
-  (including k = 4 as a future deferred sub-phase) so that cycle 403+
-  workers have a concrete trajectory for 4–6 future cycles.
+```lean
+theorem powRep_sum_eq_of_agreement_at_mkVertexVertexCherry_zero
+    {η_q η_q' : Quotient PhiEquivalent.setoidSigma}
+    (h_v : elementaryWeightQ_phi η_q vertex
+            = elementaryWeightQ_phi η_q' vertex)
+    (h_c : elementaryWeightQ_phi η_q cherry
+            = elementaryWeightQ_phi η_q' cherry)
+    (h_b : elementaryWeightQ_phi η_q broom₃
+            = elementaryWeightQ_phi η_q' broom₃)
+    (h_m : elementaryWeightQ_phi η_q (mk [cherry])
+            = elementaryWeightQ_phi η_q' (mk [cherry]))
+    (h_vc : elementaryWeightQ_phi η_q (mk [vertex, cherry])
+            = elementaryWeightQ_phi η_q' (mk [vertex, cherry]))
+    (h_vvc : elementaryWeightQ_phi η_q (mk [vertex, vertex, cherry])
+            = elementaryWeightQ_phi η_q' (mk [vertex, vertex, cherry])) :
+    elementaryWeightQ_phi (η_q ^ (-((0 + 1 : ℕ) : ℤ)))
+        (mk [vertex, vertex, cherry])
+      = elementaryWeightQ_phi (η_q' ^ (-((0 + 1 : ℕ) : ℤ)))
+        (mk [vertex, vertex, cherry])
+```
 
-## §E. Aborted-cycle escape valve
+Proof template (mirror cycle 384 m=0 corollary):
 
-If for some unexpected reason the scoping doc cannot be written this
-cycle (e.g., predecessor scoping docs reveal that Phase α'.5 is
-already fully covered and no new doc is needed), the fallback is to
-ship a single small Lean witness:
-`elementaryWeightQ_phi_inv_mkVertexVertexCherry` (the §C.2 §8 cycle
-403 target tree, but shipped one cycle early). This requires ~250 LOC,
-follows the cycle 372 `mk [vertex, cherry]` template, and would score
-substantive (2). However, this is **only the fallback** — the scoping
-doc is the primary deliverable. Do not jump straight to the fallback.
+```lean
+have h_pow : ∀ ζ : Quotient _, ζ ^ (-((0 + 1 : ℕ) : ℤ)) = ζ⁻¹ := by
+  intro ζ
+  rw [zero_add, Nat.cast_one]
+  exact zpow_neg_one ζ
+rw [h_pow η_q, h_pow η_q',
+    elementaryWeightQ_phi_inv_mkVertexVertexCherry η_q,
+    elementaryWeightQ_phi_inv_mkVertexVertexCherry η_q',
+    h_v, h_c, h_b, h_m, h_vc, h_vvc]
+```
 
-## §F. Faithfulness check reminder
+## §F. Non-vacuity `example`s
 
-This cycle introduces no new Lean entities. The scoping doc is pure
-planning material. The CLAUDE.md "Pre-Commit Faithfulness Checklist"
-section does not apply to markdown-only ships. Worker still runs the
-standard pre-commit verification: `grep -c sorry
-OpenMath/Chapter4/Section422.lean` returns 5; `git diff --stat` shows
-only `.prover-state/` paths plus possibly `plan.md` and
-`extraction/formalization_data/lean_status.json` (the two cycle-stamp
-bumps).
+Two `example`s on `⟦explicitEuler⟧`:
+
+1. **Closed-form witness**:
+   `Φ_{⟦explicitEuler⟧⁻¹}(mk [v,v,c])` should evaluate to **`-1`** at
+   explicit Euler.
+
+   At explicit Euler: `v = 1, c = b' = m = vc = Φ_η(mk[v,v,c]) = 0`
+   (since `A = 0` makes all non-vertex elementary weights zero).
+   Closed form gives:
+   ```
+   -1⁵ + 3·1³·0 - 2·1·0² + 2·1·0 - 1²·0 - 1²·0 + 0·0 - 0 = -1
+   ```
+   ✓ (matches the cycle 384 `mkCherryCherry` non-vacuity pattern; the
+   leading `-v⁵` survives, all other terms vanish at explicit Euler).
+
+2. **Reflexive m=0**: `η_q = η_q' = ⟦explicitEuler⟧` with all 6
+   agreement hypotheses discharged by `rfl × 6`.
+
+## §G. Aristotle batch (Priority 0 — submit at cycle start, do not wait)
+
+Per `CLAUDE.md` §"Aristotle-first (MANDATORY)" and the scoping doc
+§8.1 recommendation:
+
+Submit a single Aristotle project at cycle 403 start with:
+* The full `elementaryWeightQ_phi_inv_mkVertexVertexCherry` theorem
+  statement (§B).
+* The m=0 corollary statement (§E).
+* The three new sub-helpers (`h_dw_mkVertexVertexCherry`,
+  `h_mkVertexVertexCherry`, `h_dws_mkVertexVertexCherry`) as named
+  in-context targets.
+* Include cycle 370/372/384 closed forms (`elementaryWeightQ_phi_inv_bushy`,
+  `elementaryWeightQ_phi_inv_mkVertexCherry`,
+  `elementaryWeightQ_phi_inv_mkCherryCherry`) as cited template
+  examples in the prompt — Aristotle has previously closed analogous
+  inverse-closed-form theorems (e.g. cycle 281's `342d` general
+  norm-square).
+
+Sleep 30 min, single-poll, incorporate any clean returns. **Do NOT
+wait beyond 30 min** — manual closure is well within cycle budget,
+and the cycle 386 worker found that Aristotle is unreliable for
+order-5+ closed-form ships (cycle 386 timed out and was manually
+closed).
+
+## §H. Manual ship (Priority 1)
+
+If Aristotle returns nothing usable (likely), ship manually per §D
+recipe. **LOC budget**: ~250–300 (cycle 384 was 250, cycle 386 was
+521 due to a more substantive expansion). Expect ~300 LOC including
+helpers + non-vacuity examples; if you blow past 400 LOC, audit for
+unused helpers and consider extracting reusable pieces.
+
+Insert the new theorem at `Section422.lean:~4062` (immediately after
+`elementaryWeightQ_phi_inv_mkVertexCherry` closes). The m=0 corollary
+immediately follows. The two non-vacuity `example`s go at the file's
+bottom, alongside existing examples (after cycle 386's `mkBroomCherry`
+examples).
+
+## §I. What NOT to do
+
+* **Do NOT freelance a pivot to a fresh entity.** Cycle 401 wrote a
+  clear continuation path; cycle 402 confirmed Phase α'.5.0 is the
+  right next step. Pivoting now would waste cycle 402's scoping
+  investment.
+* **Do NOT trust §C's paper derivation without symbolic verification.**
+  Per cycle 398 §7 R3 — paper derivations can have sign or coefficient
+  subtleties. Read cycle 384's `mkCherryCherry` and cycle 370's
+  `bushy` proof bodies, and mentally check the per-summand expansion,
+  BEFORE locking the §B RHS. The Aristotle submission, if attempted,
+  also serves as a verification — if it disagrees with §C, audit
+  before manual ship.
+* **Do NOT skip the Aristotle submission.** CLAUDE.md mandates it.
+  Even if you expect manual closure, run the batch.
+* **Do NOT introduce `inversePolyTree_mkVertexVertexCherry`
+  calibration witness OR extend `trichildCrossTerm`.** That is Phase
+  α'.5.1, cycle 404+ work. Cycle 403 ships **only** the closed-form
+  quotient-level witness + m=0 corollary, mirroring the cycle 384
+  Phase α'.5.0 pattern (cycle 384 did NOT ship a corresponding
+  `inversePolyTree_*` calibration in the same cycle).
+* **Do NOT touch the cycle 365 grandfathered sorry** at
+  `Section422.lean:2279`. Multi-cycle Phase β/γ extension; deferred.
+* **Do NOT use `simp [inversePolyTree, ...]`** anywhere in this ship
+  — Phase α'.5.0 does not extend `inversePolyTree`. Per memory
+  `feedback_simp_recursive_def_overunfolds.md`, that simp pattern
+  over-unfolds recursive defs.
+* **Do NOT raise `maxHeartbeats`** anywhere. The cycle 384 ship
+  closed within default 200000; cycle 403 should too.
+* **Do NOT introduce sorries.** §422 axiom-clean streak is at 63
+  substantive + 4 doc (cycles 336–402). Cycle 403 must preserve it.
+* **Do NOT attempt to compile `Section441.lean`** on GPFS. 43+
+  consecutive timeouts since cycle 182. Skip per
+  `cycle_182_gpfs_slowness.md`.
+* **Do NOT modify `scripts/autonomous_loop.py`** or the
+  prompt-builder. Tautology-scanner / phantom-verdict bugs are
+  loop-maintainer territory.
+* **Do NOT attempt to fix the cycle 398 `lean_status.json` JSON-escaping
+  bug** flagged in cycle 402 task results §"Discovery" #1. Your
+  cycle 403 append must use correctly-escaped `\"` for any inner
+  double quotes, but leave the cycle 398 prose untouched. Bundle a
+  JSON-fixup ship into a future low-priority cycle.
+
+## §J. Faithfulness check (mandatory before commit)
+
+For the new theorem:
+
+* **Entity ID**: `def:422B` (continuing the §422 underlying
+  one-step-method work track via Phase α' / α'.5 infrastructure).
+  Status remains `partial` — Phase α'.5.0 is one stepping stone of
+  the 7–13 cycle plan in `def_422B_phase_alpha_prime_5_scoping.md`.
+* **Lean statement captures**: per §B, the closed form for
+  `Φ_{η_q⁻¹}(mk [vertex, vertex, cherry])`. The Lean signature is a
+  pure-algebraic identity between `Φ_{η_q⁻¹}` at a named tree and a
+  polynomial in 6 lower-order `Φ_η` kernels + a `-Φ_η(mk[v,v,c])`
+  self-term.
+* **Definition smuggling check**: PASS — no new `def` or
+  `structure` introduced. Only a `theorem` over existing definitions
+  (`elementaryWeightQ_phi`, `RootedTree.mk`, etc.).
+* **Tautology check**: PASS — LHS is `Φ_{η_q⁻¹}`, RHS is a
+  polynomial in `Φ_{η_q}` values at *distinct* trees including the
+  self-tree. Non-trivial.
+* **Identity check**: PASS — the proof is a substantive
+  ~250 LOC `_inv_mk`-unfold + sum-distribution chain, not `exact h`.
+* **Hypothesis strength**: PASS — only hypothesis is `η_q :
+  Quotient PhiEquivalent.setoidSigma`. No extras.
+* **Absent theorem check**: N/A — no promised but unwritten content.
+
+## §K. Verification checklist (run before committing)
+
+1. `lake env lean OpenMath/Chapter4/Section422.lean` exits 0.
+2. `grep -c sorry OpenMath/Chapter4/Section422.lean` returns 5
+   (unchanged — 4 docstring + 1 grandfathered cycle 365 code at
+   line 2279).
+3. `#print axioms elementaryWeightQ_phi_inv_mkVertexVertexCherry`
+   returns `[propext, Classical.choice, Quot.sound]`.
+4. `#print axioms powRep_sum_eq_of_agreement_at_mkVertexVertexCherry_zero`
+   returns same.
+5. Update `extraction/formalization_data/lean_status.json` `def:422B`
+   row's `cycle_completed_at` to 403 with cycle 403 note appended.
+   (⚠️ Use correctly-escaped `\"` for any inner double quotes per
+   §I above.)
+6. Update `plan.md` `def:422B` row's tail with cycle 403 ship
+   summary.
+7. Write `.prover-state/task_results/cycle_403.md` per CLAUDE.md
+   format.
+
+## §L. Cycle 404+ outlook (for the next planner, do not implement)
+
+After cycle 403's `mk [vertex, vertex, cherry]` closed form lands,
+cycle 404 ships Phase α'.5.1:
+* `inversePolyTree_mkVertexVertexCherry` calibration witness (~30
+  LOC, mechanical, uses cycle 400's `inversePolyTree_bushy` template
+  scaled to the asymmetric triple).
+* `trichildCrossTerm` dispatch extension with a new branch
+  `if (t₁, t₂, t₃) = (vertex, vertex, cherry) then <closed-form cross-term>`
+  (~20 LOC, back-computed from the cycle 403 closed form's structure).
+
+Cycle 405+ continues the witness library at further `k = 3` trees
+per scoping doc §3.3 candidate list.
+
+## §M. Bottom-line directive for cycle 403
+
+Ship `elementaryWeightQ_phi_inv_mkVertexVertexCherry` + m=0 corollary
++ 2 non-vacuity examples in `OpenMath/Chapter4/Section422.lean`
+immediately after cycle 372's `mkVertexCherry` block (~line 4062).
+Mirror cycle 384's `mkCherryCherry` proof structure, with cherry-child
+factor handled per cycle 372 and two-vertex-children factor handled
+per cycle 370. Submit Aristotle batch at cycle start (parallel
+speculation), close manually within ~250–300 LOC if Aristotle returns
+nothing usable. Update bookkeeping files. Preserve §422 streak.
+
+§422 axiom-clean streak after cycle 403 (if successful):
+**64 substantive + 4 doc** (cycles 336–403).
