@@ -1,425 +1,404 @@
-# Cycle 390 Strategy
+# Cycle 392 strategy — Phase α'.4.1 P5: `monochildCrossTerm` infrastructure + `inversePolyTree_mkBroom₃` calibration
 
-## §A. Status verification (run first, ~3 min)
+## §A. Big picture
 
-1. `git log --oneline -1` — confirm HEAD is `2d079b6` (cycle 389).
-2. `grep -c sorry OpenMath/Chapter4/Section422.lean` — confirm 5
-   (4 docstring refs + 1 grandfathered code sorry at line 2272).
-3. `wc -l OpenMath/Chapter4/Section422.lean` — confirm ~7321 LOC.
+Cycle 391 closed Phase α'.4.2 partial migration of `mk [vertex, cherry]`
+in `inversePolynomial`. Cycle 391's task-results §"Suggested next
+approach" recommended cycle 392 ship the **`monochildCrossTerm`
+infrastructure** — the single-child non-leaf cross-term machinery —
+to fix `inversePolyTree`'s `mk [c]` branch at non-leaf children.
 
-If any disagrees, stop and re-read `task_results/cycle_389.md`.
+The structural gap:
 
-## §B. Audit findings — cycle 389 worker's option 2 recommendation is PARTIALLY BLOCKED
+* `inversePolyTree (mk [broom₃]) f` currently evaluates to
+  `v⁴ − 2v²c + vb' − M_broom₃` via the single-child branch
+  `-(v · inversePolyTree broom₃ f) - f (mk [broom₃])`.
+* Cycle 371's closed form is `v⁴ − 3v²c + vb' + 2vm − M_broom₃`.
+* **Delta: `−v²c + 2vm`**, where `v = f vertex`, `c = f cherry`,
+  `m = f (mk [cherry])`, `M_broom₃ = f (mk [broom₃])`.
 
-The cycle 389 task results §"Suggested next approach" recommended
-option 2 (Phase α'.4.2 migration of `inversePolynomial`'s remaining
-two Family C branches `mk [broom₃]` and `mk [vertex, cherry]` to
-dispatch through `inversePolyTree`). **The recommendation is half-right
-but missed a structural blocker for `mk [broom₃]`.**
+This delta is the per-pair `monochildCrossTerm broom₃ f` value
+parallel to cycle 387's `bichildCrossTerm`. Cycle 392 ships the
+infrastructure (def + cycle 371 calibration witness). The actual
+Phase α'.4.2 migration of `inversePolynomial`'s `mk [broom₃]` branch
+is the cycle 393 follow-up (1-cycle mechanical, parallel of cycle
+391's `mk [vertex, cherry]` migration).
 
-### Paper-algebra verification (do not skip)
+No Aristotle results pending; sorry count stable at 5 (4 docstring +
+1 grandfathered cycle 365 sorry at line 2279). §422 axiom-clean
+streak: **54 substantive + 2 doc** (336–391). Target: extend to
+**55 substantive + 2 doc** with cycle 392 ship.
 
-`inversePolyTree (mk [broom₃]) f` dispatches via cycle 387's
-single-child case at `Section422.lean:6347-6349`:
+## §B. Priority 1 — DELIVERABLE
 
-```
-| mk [c], f => -(f vertex * inversePolyTree c f) - f (mk [c])
-```
+Five concrete ships in `OpenMath/Chapter4/Section422.lean` (after
+cycle 387's `bichildCrossTerm` block, line ~6283, before
+`bichildPolynomial` at line ~6333):
 
-Computing for `c = broom₃` with cycle 389's
-`inversePolyTree broom₃ f = -v³ + 2vc - b'`:
-
-  `inversePolyTree (mk [broom₃]) f`
-    = `-(v · (-v³ + 2vc - b')) - f(mk [broom₃])`
-    = `v⁴ - 2v²c + vb' - M_mkBroom`
-
-But cycle 371's `elementaryWeightQ_phi_inv_mkBroom₃` closed form
-gives **`v⁴ - 3v²c + vb' + 2vm - M_mkBroom`**.
-
-They differ by `-v²c + 2vm`. The recursion is **wrong** at this case
-because the single-child case in `inversePolyTree` only handles
-single-leaf children correctly — it has no cross-term machinery for
-single non-leaf children. **`mk [broom₃]` migration is structurally
-blocked** and would require either a new `monochildCrossTerm` helper
-or a fundamental refactor of `inversePolyTree`'s single-child branch.
-
-Conversely, `inversePolyTree (mk [vertex, cherry]) f` dispatches via
-cycle 387's binary case to `bichildPolynomial vertex cherry (-v) (v²-c) f`.
-Working this out:
-
-  `bichildPolynomial vertex cherry (-v) (v² - c) f`
-    = `-(v · (-v) · (v² - c)) - (-v) · f(mk [cherry])
-       - (v² - c) · f(mk [vertex]) + bichildCrossTerm vertex cherry f
-       - f(mk [vertex, cherry])`
-    = `v²(v² - c) + v · m - (v² - c) · c + cross-term - V`
-    (using `mk [vertex] = cherry`)
-    = `v⁴ - 2v²c + c² + vm + cross-term - V`
-
-Cycle 372 target: `v⁴ - 3v²c + c² + vb' + vm - V`.
-
-So `bichildCrossTerm vertex cherry f` must equal **`-v²c + vb'`**
-(equivalently: `-(f vertex)² · f cherry + f vertex · f broom₃`).
-With this branch added to `bichildCrossTerm`, the binary case
-**works** — migration of `mk [vertex, cherry]` becomes feasible.
-
-### Cycle 390 plan: complete the binary case first; defer single-child
-
-Don't attempt to fix the single-child case in cycle 390 (multi-cycle
-infrastructure work — needs design of `monochildCrossTerm` plus
-recomputing every existing single-child branch). Instead, ship the
-straightforward continuation of cycles 388/389:
-
-**Cycle 390 ship: Phase α'.4.1 P4 — `(vertex, cherry)` cross-term +
-`inversePolyTree_mkVertexCherry` calibration witness.**
-
-This continues the cycle 388 / 389 pattern (each adds one
-`bichildCrossTerm` branch + one calibration witness) and unblocks
-**half** of Phase α'.4.2 migration for cycle 391.
-
-## §C. Priority 1 — DELIVERABLES
-
-Three sub-deliverables, all in `OpenMath/Chapter4/Section422.lean`,
-all axiom-clean target `[propext, Classical.choice, Quot.sound]`.
-Follow this exact order:
-
-### C.1 — P1: refine `bichildCrossTerm` for `(vertex, cherry)` pair
-
-**Location**: `Section422.lean:6271-6297` (current `bichildCrossTerm`
-definition with two `if-then-else` branches: `(cherry, cherry)` and
-`(broom₃, cherry)`).
-
-**Action**: insert a third `else if` branch between the
-`(broom₃, cherry)` branch and the final `else 0`. The value (derived
-in §B above) is:
+### B.1. New def `monochildCrossTerm c f : ℝ` (~30 LOC)
 
 ```lean
-  else if t₁ = RootedTree.vertex ∧ t₂ = RootedTree.cherry then
+/-- *Phase α'.4.1 (cycle 392) — single-child non-leaf cross-term.*
+
+Given a child subtree `c : RT` and an elementary-weight function
+`f : RT → ℝ`, `monochildCrossTerm c f` is the per-`c` polynomial
+correction term that must be added to the naive single-child
+`mk [c]` body `-(v · inversePolyTree c f) - f (mk [c])` so that
+`inversePolyTree (mk [c]) f` matches the closed form for
+`Φ_{η⁻¹}(mk [c])`.
+
+Empirical dispatch:
+
+* `c = vertex` → `0`. Validated by cycle 367's `cherry = mk [vertex]`
+  closed form `v² - c`, which matches the naive body `-(v · -v) - f
+  cherry = v² - c` directly; no correction needed.
+* `c = broom₃` → `-(v² · c) + 2v · m`, where `m = f (mk [cherry])`.
+  Validated by cycle 371's `mk [broom₃]` closed form `v⁴ - 3v²c +
+  vb' + 2vm - M_broom₃`, which differs from the naive body
+  `-(v · (-v³ + 2vc - b')) - M_broom₃ = v⁴ - 2v²c + vb' - M_broom₃`
+  by exactly `-(v² · c) + 2v · m`.
+* Other `c` → `0` (default; refined in cycle 393+ as more
+  single-child non-leaf witnesses surface, e.g., `mk [cherry]`,
+  `mk [bushy]`, `mk [mk [cherry]]`).
+
+Mirror of cycle 387's `bichildCrossTerm` design for the
+single-child case. Phase α'.4.1 P5 deliverable. -/
+noncomputable def monochildCrossTerm (c : RT) (f : RT → ℝ) : ℝ :=
+  if c = RootedTree.broom₃ then
     -((f RootedTree.vertex) ^ 2 * f RootedTree.cherry)
-      + f RootedTree.vertex * f RootedTree.broom₃
+      + 2 * f RootedTree.vertex *
+          f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+  else 0
 ```
 
-**Important**: this branch must come AFTER `(broom₃, cherry)`
-(neither condition can match the other due to `broom₃ ≠ vertex`,
-so the order doesn't affect semantics, but matching the
-cycle-389-strategy convention of listing branches in the order they
-were shipped keeps git blame clean).
+Place this immediately after the `bichildCrossTerm` def (line ~6312)
+and before the `bichildPolynomial` def docstring (line ~6314).
 
-**Docstring update**: append a sentence to the cycle 386/388/389
-docstring noting "Cycle 390 ships the `(vertex, cherry)` cross-term
-back-computed from cycle 372's
-`elementaryWeightQ_phi_inv_mkVertexCherry` closed form by
-subtracting the `bichildPolynomial` backbone at
-`(inv_v, inv_c) = (-v, v² - c)`. Value: `-v²c + vb'`."
+### B.2. Refactor `inversePolyTree`'s `[c]` branch (~3 LOC change)
 
-### C.2 — P2: ship calibration witness `inversePolyTree_mkVertexCherry`
-
-**Location**: place IMMEDIATELY after cycle 389's
-`inversePolyTree_mkBroomCherry` (around `Section422.lean:6481+`).
-
-**Statement**:
+The current branch (line 6362–6364):
 
 ```lean
-/-- *Phase α'.4.1 P4 (cycle 390) — calibration witness for
-`mk [vertex, cherry]` (asymmetric leaf+non-leaf two-children,
-order 4).*
+  | OpenMath.Chapter3.Section310.RootedTree.mk [c], f =>
+      -(f RootedTree.vertex * inversePolyTree c f)
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk [c])
+```
 
-Confirms `inversePolyTree (mk [vertex, cherry]) f` evaluates to
-cycle 372's `elementaryWeightQ_phi_inv_mkVertexCherry` 6-term
-closed form under `f = elementaryWeightQ_phi η_q`:
+becomes:
 
-`Φ_{η_q⁻¹}(mk [vertex, cherry])
-  = v⁴ - 3v²c + c² + v·b' + v·m - Φ_η(mk [vertex, cherry])`
+```lean
+  | OpenMath.Chapter3.Section310.RootedTree.mk [c], f =>
+      -(f RootedTree.vertex * inversePolyTree c f)
+        + monochildCrossTerm c f
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk [c])
+```
 
-where `v, c, b', m = Φ_η` at `vertex, cherry, broom₃, mk [cherry]`.
+Update the def's docstring to mention the cycle 392 cross-term
+refinement (parallel to cycle 387's binary-children docstring).
 
-This is the 4th calibration witness in the Phase α'.4.1 ladder
-(after `vertex`/cycle 387, `cherry`/cycle 387, `mk [cherry, cherry]`/
-cycle 388, `broom₃`/cycle 389, `mk [broom₃, cherry]`/cycle 389).
-Combined with the C.1 cross-term refinement, it certifies the
-recursive `inversePolyTree` evaluates correctly at this Family C
-binary-children order-4 tree. -/
-theorem inversePolyTree_mkVertexCherry (f : RT → ℝ) :
-    inversePolyTree
-        (OpenMath.Chapter3.Section310.RootedTree.mk
-          [RootedTree.vertex, RootedTree.cherry]) f
-      = (f RootedTree.vertex) ^ 4
-        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
-        + (f RootedTree.cherry) ^ 2
-        + f RootedTree.vertex * f RootedTree.broom₃
-        + f RootedTree.vertex *
-            f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
-        - f (OpenMath.Chapter3.Section310.RootedTree.mk
-              [RootedTree.vertex, RootedTree.cherry]) := by
-  rw [inversePolyTree,
-      inversePolyTree_vertex,
-      inversePolyTree_cherry]
-  unfold bichildPolynomial
-  rw [show bichildCrossTerm RootedTree.vertex RootedTree.cherry f
-        = -((f RootedTree.vertex) ^ 2 * f RootedTree.cherry)
-          + f RootedTree.vertex * f RootedTree.broom₃ by
-    unfold bichildCrossTerm
-    rw [if_neg (by decide : ¬ (RootedTree.vertex = RootedTree.cherry
-                                 ∧ RootedTree.cherry = RootedTree.cherry))]
-    rw [if_neg (by decide : ¬ (RootedTree.vertex = RootedTree.broom₃
-                                 ∧ RootedTree.cherry = RootedTree.cherry))]
-    rw [if_pos ⟨rfl, rfl⟩]]
-  -- The unfolded `bichildPolynomial` LHS has `f(mk [vertex])` and
-  -- `f(mk [cherry])` literally; we want to fold `mk [vertex] = cherry`
-  -- before `ring`. Use a `show` to expose the post-unfold goal in
-  -- folded form, then `ring`.
-  show -(f RootedTree.vertex * -(f RootedTree.vertex)
-            * ((f RootedTree.vertex) ^ 2 - f RootedTree.cherry))
-        - -(f RootedTree.vertex)
-            * f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
-        - ((f RootedTree.vertex) ^ 2 - f RootedTree.cherry)
-            * f RootedTree.cherry
-        + (-((f RootedTree.vertex) ^ 2 * f RootedTree.cherry)
-            + f RootedTree.vertex * f RootedTree.broom₃)
-        - f (OpenMath.Chapter3.Section310.RootedTree.mk
-              [RootedTree.vertex, RootedTree.cherry])
-      = _
+### B.3. Re-verify cycle 387's `inversePolyTree_cherry`
+
+Cycle 387's calibration (line ~6386) currently closes via
+`rw [inversePolyTree, inversePolyTree_vertex]; ring`. After B.2,
+the `inversePolyTree` unfold produces an extra `+ monochildCrossTerm
+vertex f` term. Two cases:
+
+**Case A (likely)**: `ring` still closes because `monochildCrossTerm
+vertex f` reduces definitionally to `0` (the `if-then-else` reduces
+when the discriminator is `vertex ≠ broom₃`). Try first.
+
+**Case B (fallback)**: if `ring` doesn't reduce the `if-then-else`,
+insert one `rw` to fold `monochildCrossTerm vertex f = 0` first.
+Recipe:
+
+```lean
+theorem inversePolyTree_cherry (f : RT → ℝ) :
+    inversePolyTree RootedTree.cherry f
+      = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry := by
+  show inversePolyTree
+      (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.vertex]) f
+        = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry
+  rw [inversePolyTree, inversePolyTree_vertex,
+      show monochildCrossTerm RootedTree.vertex f = 0 by
+        unfold monochildCrossTerm; rw [if_neg (by decide)]]
   ring
 ```
 
-**Critical**: the `show` block exposes the unfolded
-`bichildPolynomial` LHS in folded form (substituting
-`mk [vertex] = cherry` definitionally via `rfl`-level Lean
-reduction). If the `show` shape doesn't match Lean's actual
-unfolded form, use `lean_term_goal` after `unfold bichildPolynomial`
-to inspect the current goal state and adjust the `show` accordingly.
-
-**Fallback A** (if `show` block fails to match): drop the `show`
-entirely and try a direct `rw [show
-(OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.vertex] : RT)
-= RootedTree.cherry from rfl]` before `ring`. The `rfl`-level fold
-of `mk [vertex] = cherry` should let `ring` close the rest.
-
-**Fallback B** (if `ring` can't close): decompose into intermediate
-named `have` steps mirroring cycle 388/389's recipe. The identity is
-degree-4 in 6 indeterminates (`v, c, b', m, mk[vertex, cherry]`,
-plus the `mk [cherry]` weight as `m`); well within `ring`'s default
-budget (cycle 389 closed a degree-6 9-indeterminate identity in one
-`ring` call), so Fallback B is unlikely to be needed.
-
-### C.3 — P3 (stretch, OPTIONAL): partial Phase α'.4.2 migration for `mk [vertex, cherry]`
-
-If C.1 and C.2 both close cleanly AND `#print axioms` confirms
-axiom-clean, attempt the **partial Phase α'.4.2 migration** for
-the `mk [vertex, cherry]` branch of `inversePolynomial` only.
-
-**Action**: at `Section422.lean:6601-6610`, replace the explicit
-polynomial body of the `mk [vertex, cherry]` branch:
+### B.4. New calibration witness `inversePolyTree_mkBroom₃` (~30 LOC)
 
 ```lean
-  else if t = OpenMath.Chapter3.Section310.RootedTree.mk
-              [RootedTree.vertex, RootedTree.cherry] then
-    (f RootedTree.vertex) ^ 4
-      - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
-      + (f RootedTree.cherry) ^ 2
-      + f RootedTree.vertex * f RootedTree.broom₃
-      + f RootedTree.vertex *
-          f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
-      - f (OpenMath.Chapter3.Section310.RootedTree.mk
-            [RootedTree.vertex, RootedTree.cherry])
-```
+/-- *Phase α'.4.1 (cycle 392) — `mk [broom₃]` calibration witness.*
 
-with:
-
-```lean
-  else if t = OpenMath.Chapter3.Section310.RootedTree.mk
-              [RootedTree.vertex, RootedTree.cherry] then
+`inversePolyTree (mk [broom₃]) f` matches cycle 371's
+`elementaryWeightQ_phi_inv_mkBroom₃` closed form verbatim
+(under `f = elementaryWeightQ_phi η_q`). The proof unfolds the
+single-child branch of `inversePolyTree`, rewrites the recursive
+`inversePolyTree broom₃ f` via `inversePolyTree_broom₃`, then
+exposes `monochildCrossTerm broom₃ f` via its if-then-else branch
+firing (`if_pos rfl`) and closes by `ring`. -/
+theorem inversePolyTree_mkBroom₃ (f : RT → ℝ) :
     inversePolyTree
-        (OpenMath.Chapter3.Section310.RootedTree.mk
-          [RootedTree.vertex, RootedTree.cherry]) f
+      (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]) f
+      = (f RootedTree.vertex) ^ 4
+        - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
+        + f RootedTree.vertex * f RootedTree.broom₃
+        + 2 * f RootedTree.vertex *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.broom₃]) := by
+  rw [inversePolyTree, inversePolyTree_broom₃]
+  rw [show monochildCrossTerm RootedTree.broom₃ f
+        = -((f RootedTree.vertex) ^ 2 * f RootedTree.cherry)
+          + 2 * f RootedTree.vertex *
+              f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        by unfold monochildCrossTerm; rw [if_pos rfl]]
+  ring
 ```
 
-Then ship a bridge theorem:
+Place this immediately after cycle 389's `inversePolyTree_broom₃`
+calibration (line ~6442) and before the cycle 388
+`inversePolyTree_mkCherryCherry` block (line ~6454). This keeps the
+calibration order: single-child → multi-child.
 
-```lean
-/-- *Phase α'.4.2 partial (cycle 390) — Family C bridge migration
-for `mk [vertex, cherry]`.* Parallel to cycles 381 (Family A) and
-383 (Family B). The migration is partial because `mk [broom₃]`
-remains as an explicit polynomial body — its migration requires
-single-child non-leaf cross-term infrastructure deferred to
-cycle 391+. -/
-theorem inversePolyTree_mkVertexCherry_eq_inversePolynomial (f : RT → ℝ) :
-    inversePolyTree
-        (OpenMath.Chapter3.Section310.RootedTree.mk
-          [RootedTree.vertex, RootedTree.cherry]) f
-      = inversePolynomial
-          (OpenMath.Chapter3.Section310.RootedTree.mk
-            [RootedTree.vertex, RootedTree.cherry]) f := by
-  unfold inversePolynomial
-  rw [if_neg (by decide), if_neg (by decide), if_neg (by decide),
-      if_neg (by decide), if_neg (by decide), if_neg (by decide),
-      if_pos rfl]
-```
+### B.5. Issue file update (`def_422B_phase_alpha_prime_scoping.md`)
 
-(Six `if_neg` discharges for vertex/cherry/broom₃/mk[cherry]/bushy/
-mk[broom₃] inequality, then `if_pos rfl` for the matched
-`mk [vertex, cherry]` branch.) After migration the RHS body **IS**
-`inversePolyTree ... f`, so both sides are syntactically equal — the
-`if_pos rfl` step closes the goal completely.
+Append a "Cycle 392 update" subsection (parallel to the existing
+cycle 381/382/383 update subsections in
+`.prover-state/issues/def_422B_phase_alpha_prime_scoping.md`)
+documenting:
 
-**Skip C.3 if there are ANY surprises in C.1 / C.2** — the migration
-adds rewiring risk:
+* Phase α'.4.1 P5 ship: `monochildCrossTerm` def + `inversePolyTree_mkBroom₃`
+  calibration.
+* `monochildCrossTerm` infrastructure now in place for Family A
+  non-leaf chain migrations (cycle 393+ targets: `mk [broom₃]`,
+  `mk [bushy]`, `mk [mk [cherry]]`).
+* Phase α'.4.2 migration of `inversePolynomial`'s `mk [broom₃]`
+  branch deferred to cycle 393 (mechanical 1-step parallel of cycle
+  391's `mk [vertex, cherry]` migration).
+* §422 streak update: 54 → 55 substantive + 2 doc.
 
-* the existing calibration witnesses for `mk [vertex, cherry]`
-  (from cycle 377 era at `Section422.lean:~4250-4290`, search for
-  `elementaryWeightQ_phi_inv_eq_inversePolynomial_mkVertexCherry`)
-  may have proofs that consume the old explicit polynomial body and
-  break under migration. Need to re-verify these stay axiom-clean.
-* Phase γ `inversePolynomial_eq_of_subtree_agreement` (search for
-  this theorem in `Section422.lean`, likely around line 4400-4500)
-  has 8-way `by_cases` over the trees in `inversePolynomial`'s
-  pattern-match; one branch handles `mk [vertex, cherry]`. After
-  migration, this branch needs an extra `rw
-  [inversePolyTree_mkVertexCherry]` step to substitute the recursive
-  form's value before the standard agreement argument closes.
+## §C. Verification protocol (cycle 391 §F precedent)
 
-Cycle 391 ships the migration as its dedicated deliverable if C.3
-is skipped this cycle.
+After all B.1–B.4 edits land:
 
-## §D. NOT-do list for cycle 390
+1. `lake env lean OpenMath/Chapter4/Section422.lean`
+   — expected: exit 0, single sorry warning at line 2279 (cycle 365
+   grandfathered). Cycle 391 precedent: ~10 min.
 
-* **Do NOT** attempt to fix the single-child non-leaf case
-  (`mk [broom₃]` dispatch in `inversePolyTree`). This requires
-  designing a `monochildCrossTerm` helper and recomputing every
-  existing single-child branch (cycle 381's Family A migration
-  consumers in particular). Multi-cycle infrastructure work,
-  out-of-scope for cycle 390.
+2. `lake build OpenMath.Chapter4.Section422`
+   — refresh `.olean` cache for the axiom-check round. Cycle 391
+   precedent: ~8 min.
 
-* **Do NOT** attempt `mk [broom₃]` migration in `inversePolynomial`.
-  Per §B above, `inversePolyTree (mk [broom₃]) f` evaluates to
-  `v⁴ - 2v²c + vb' - M_mkBroom`, which **does not** match cycle
-  377's explicit body `v⁴ - 3v²c + vb' + 2vm - M_mkBroom`.
-  Migration would silently break the semantics of `inversePolynomial`
-  on this tree (any consumer that relies on it being correct for
-  `mk [broom₃]` would start failing).
+3. `#print axioms` (via a separate scratch file) on:
+   * `OpenMath.Chapter4.Section422.monochildCrossTerm` (new def —
+     should report no axioms or `[propext]` only)
+   * `OpenMath.Chapter4.Section422.inversePolyTree_vertex` (cycle
+     387 — verify regression-clean)
+   * `OpenMath.Chapter4.Section422.inversePolyTree_cherry` (cycle
+     387 — VERIFY regression-clean after B.2 refactor)
+   * `OpenMath.Chapter4.Section422.inversePolyTree_broom₃` (cycle
+     389 — verify regression-clean, uses binary-child branch so
+     should be unaffected)
+   * `OpenMath.Chapter4.Section422.inversePolyTree_mkCherryCherry`
+     (cycle 388 — binary-child, unaffected)
+   * `OpenMath.Chapter4.Section422.inversePolyTree_mkBroomCherry`
+     (cycle 389 — binary-child, unaffected)
+   * `OpenMath.Chapter4.Section422.inversePolyTree_mkVertexCherry`
+     (cycle 390 — binary-child, unaffected)
+   * `OpenMath.Chapter4.Section422.inversePolyTree_mkBroom₃` (NEW
+     cycle 392 — should report `[propext, Classical.choice,
+     Quot.sound]` only)
+   * `OpenMath.Chapter4.Section422.inversePolyTree_mkVertexCherry_eq_inversePolynomial`
+     (cycle 391 bridge — verify regression-clean)
 
-* **Do NOT** add a `(vertex, broom₃)`, `(broom₃, vertex)`, or
-  `(broom₃, broom₃)` branch to `bichildCrossTerm`. Cycle 389
-  worker's option 1 (`broom₃, broom₃`) was correctly flagged as
-  multi-cycle (requires shipping a `mk [broom₃, broom₃]` order-7
-  closed form via `elementaryWeightQ_phi_inv_*` first). Cycle 390
-  ships only the `(vertex, cherry)` branch.
+   Expected: `[propext, Classical.choice, Quot.sound]` on every
+   non-def output (axioms typically empty on `def`s).
 
-* **Do NOT** ship any Phase β bridges this cycle. Cycle 389
-  worker's option 3 (4 Phase β bridges for Family C closed forms
-  to elementaryWeightQ_phi form) is broader than option 2 and lacks
-  the immediate consumer that option 2 partial migration provides.
-  Defer to cycle 392+.
+4. `grep -c sorry OpenMath/Chapter4/Section422.lean`
+   — expected: 5 (unchanged: 4 docstring + 1 code sorry at line
+   2279).
 
-* **Do NOT** modify the grandfathered cycle 365 sorry at line
-  2272 of `Section422.lean`. It's the cycle 367+ Phase β/γ-completion
-  multi-cycle target; not in scope.
+## §D. Pitfalls anticipated (and mitigations)
 
-* **Do NOT** introduce `axiom` or `constant` declarations.
+### D.1. `ring` over `monochildCrossTerm vertex f`
 
-* **Do NOT** raise `maxHeartbeats` above the default 200000.
-  If `ring` stalls on P2's identity (low risk per cycle 389's
-  precedent — degree-6 9-indeterminate identity closed in one
-  `ring` call), use Fallback B in §C.2.
+After B.2, cycle 387's `inversePolyTree_cherry` proof's
+`rw [inversePolyTree, inversePolyTree_vertex]; ring` produces a goal
+with `+ monochildCrossTerm vertex f` in it. If `ring` cannot reduce
+this if-then-else, fall back to B.3 Case B (explicit
+`monochildCrossTerm vertex f = 0` rewrite via `if_neg (by decide)`
+before `ring`). Cost: 1 line of extra rewrite.
 
-* **Do NOT** pivot to a fresh entity. Cycle 389's score = 2 confirms
-  the §422 streak is productive; cycle 390 maintains it.
+### D.2. Cycle 388/389/390 binary-child witnesses
 
-* **Do NOT** edit `scripts/autonomous_loop.py` (loop-maintainer
-  territory per `CLAUDE.md`).
+`inversePolyTree_mkCherryCherry`, `inversePolyTree_mkBroomCherry`,
+`inversePolyTree_mkVertexCherry` all use the `[c₁, c₂]` binary-child
+branch via `bichildPolynomial`, not the `[c]` single-child branch.
+**They should be UNAFFECTED by B.2** because B.2 modifies only the
+single-child branch. Verify by `#print axioms` (Step 3 above).
 
-## §E. Risk assessment
+### D.3. Cycle 391's `mk [vertex, cherry]` migration
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| `show` block shape mismatch in P2 | medium | Inspect goal with `lean_term_goal` and adjust; Fallback A drops `show` for a `rw` of `mk [vertex] = cherry` |
-| `ring` can't close P2 identity | low | Identity is degree-4 in 6 indeterminates; cycle 389 closed degree-6 9-indeterminate identities in one `ring` call |
-| `by decide` fails on `(vertex = cherry ∧ _)` etc. | very low | Cycles 388/389 used `by decide` successfully for analogous `RT × RT` pair inequalities |
-| P1 introduces if-branch ordering bug | very low | Cycle 388/389 added two branches without ordering issues; the third branch is structurally similar |
-| Hidden `bichildCrossTerm` simp side-effects on cycle 388/389 calibration witnesses | low | §G compile + verification protocol explicitly re-checks `#print axioms` on the cycle 388/389 witnesses after C.1 |
-| Compile time exceeds 6 min for full file rebuild | medium | Cycle 389's full rebuild took 309s; cycle 390 adds ~50 LOC so expect ~330s. If exceeds 600s, decompose C.2 into a private helper. |
-| C.3 migration breaks downstream cycle 377-era calibration witnesses | medium-low (if attempted) | Skip C.3 at the first sign of trouble; cycle 391 handles it. The bridge theorem itself is one-line `rfl` after migration. |
+The cycle 391-touched theorems
+(`inversePolyTree_mkVertexCherry_eq_inversePolynomial` and its
+downstream consumers in `inversePolynomial_eq_of_subtree_agreement`
+and the calibration witness) all consume the binary-child branch
+indirectly through `inversePolynomial`'s `mk [vertex, cherry]` body
+which now dispatches to `inversePolyTree (mk [vertex, cherry]) f`.
+Since `mk [vertex, cherry]` is binary, **unaffected by B.2**.
 
-## §F. Compile + verification protocol
+### D.4. Termination check
 
-After each of C.1, C.2, C.3 (if pursued):
+The new `monochildCrossTerm` does NOT recurse into `inversePolyTree`.
+It only calls `f` (the elementary-weight function argument) at
+named small trees (`vertex`, `cherry`, `mk [cherry]`). So
+`inversePolyTree`'s termination (Lean's default `sizeOf` measure on
+the tree argument) is preserved after B.2.
 
-1. `lake build OpenMath.Chapter4.Section422` — must exit 0.
-2. `grep -c sorry OpenMath/Chapter4/Section422.lean` — must report
-   exactly **5** (4 docstring refs + 1 grandfathered code sorry).
-3. After C.1: `#print axioms inversePolyTree_mkCherryCherry`
-   AND `#print axioms inversePolyTree_mkBroomCherry` — both
-   must report `[propext, Classical.choice, Quot.sound]`
-   (regression check that the cross-term extension doesn't
-   break cycles 388/389 calibration witnesses).
-4. After C.2: `#print axioms inversePolyTree_mkVertexCherry` must
-   report `[propext, Classical.choice, Quot.sound]`.
-5. After C.3 (if pursued): `#print axioms
-   inversePolyTree_mkVertexCherry_eq_inversePolynomial` AND each
-   of the cycle-377-era `elementaryWeightQ_phi_inv_eq_inversePolynomial_mkVertexCherry`
-   theorems AND `inversePolynomial_eq_of_subtree_agreement` —
-   all must report `[propext, Classical.choice, Quot.sound]`.
+### D.5. Default `else 0` for unmatched `c`
 
-If ANY check fails, document in `task_results/cycle_390.md` and
-roll back the failing piece. Sorry count must stay at 5 — that's
-the supervisor policy hard line.
+`monochildCrossTerm` returns `0` for `c ∉ {broom₃}`, including
+`c = bushy`, `c = mk [cherry]`, etc. This means `inversePolyTree
+(mk [bushy]) f`, `inversePolyTree (mk [mk [cherry]]) f`, etc. will
+still differ from cycle 370/378's closed forms. **Cycle 392 ships
+infrastructure only; further `monochildCrossTerm` branches are cycle
+393+ targets.** Phase α'.4.1 docstring should make this clear.
 
-## §G. Bookkeeping at cycle end
+### D.6. `monochildCrossTerm` definition placement
 
-* `lean_status.json` — `def:422B` row stays `partial`,
-  `cycle_completed_at` → 390. **Do NOT** add `inversePolyTree`
-  itself as a new entity row; it's internal infrastructure for
-  the deferred `def:422B` recursion.
-* `plan.md` — update the §422 paragraph (currently ends at cycle
-  389) with one new sentence: "Cycle 390 ships Phase α'.4.1 P4
-  `(vertex, cherry)` cross-term refinement + `inversePolyTree_mkVertexCherry`
-  calibration witness, completing the binary-children cross-term
-  library for Family C order-4 trees."
-  (If C.3 also ships, append: "Phase α'.4.2 partial migration of
-  `mk [vertex, cherry]` branch in `inversePolynomial` to dispatch
-  through `inversePolyTree`.")
-* `task_results/cycle_390.md` — standard format (Worked on, Approach,
-  Result, Faithfulness check, Dead ends, Discovery, Suggested next
-  approach).
+Place B.1 *immediately after* `bichildCrossTerm`'s definition (line
+~6312) and *before* `bichildPolynomial`'s docstring (line ~6314).
+This gives the file a symmetric structure: both cross-terms first
+(`bichildCrossTerm`, `monochildCrossTerm`), then both polynomials
+(but actually we don't introduce a `monochildPolynomial` — keep it
+inlined into `inversePolyTree`'s `[c]` branch).
 
-## §H. Cycle 391+ outlook
+## §E. What NOT to attempt (explicit dead-end fences)
 
-After cycle 390:
+* **Do NOT** add more than the `c = broom₃` branch to
+  `monochildCrossTerm` in this cycle. Other branches (`c = bushy`,
+  `c = mk [cherry]`, `c = mk [mk [cherry]]`, etc.) require their
+  own per-tree calibration witnesses, which is cycle 393+ work.
+* **Do NOT** attempt the Phase α'.4.2 migration of
+  `inversePolynomial`'s `mk [broom₃]` branch in cycle 392. That is
+  the cycle 393 deliverable — defer to keep the cycle scope focused.
+* **Do NOT** refactor `bichildPolynomial` to use
+  `monochildCrossTerm`. The two helpers are independent (different
+  arity). Keep them separate.
+* **Do NOT** modify cycle 391's `inversePolyTree_mkVertexCherry_eq_inversePolynomial`
+  bridge or the `inversePolynomial` body for `mk [vertex, cherry]`.
+* **Do NOT** touch the cycle 365 grandfathered sorry at line 2279.
+  That closure requires the full Phase α'.4 recursion (Families A,
+  B, C all migrated, plus k ≥ 3 children) — multi-cycle work.
+* **Do NOT** submit to Aristotle. The deliverable is pure manual
+  closure (mechanical if-then-else infrastructure + one calibration
+  witness that mirrors the cycle 389 broom₃ proof recipe).
+* **Do NOT** add `simp` attributes to `monochildCrossTerm`. Cycle
+  382's Discovery shows `simp [recursive-def, name-eq-thm]`
+  over-unfolds; targeted `rw` is the consistent pattern.
+* **Do NOT** introduce a `monochildPolynomial` helper paralleling
+  `bichildPolynomial`. The single-child case is already compact
+  inline in `inversePolyTree`'s `[c]` branch (3 lines); adding a
+  helper would inflate without benefit.
 
-* **Cycle 391 entry point (primary)**: design and ship the
-  `monochildCrossTerm` infrastructure to fix `inversePolyTree`'s
-  single-child non-leaf case (~150 LOC). This unblocks `mk [broom₃]`
-  migration in cycle 392+ and completes the Family C migration
-  story. Concretely: extend the single-child case in `inversePolyTree`
-  to call `monochildCrossTerm c f` (similar to `bichildCrossTerm`
-  for binary), back-compute the values from cycles 369/371/378
-  closed forms.
+## §F. LOC budget and exit criteria
 
-* **Cycle 391 alternative**: if cycle 390 ships only C.1+C.2,
-  cycle 391 can ship C.3 (Phase α'.4.2 partial migration for
-  `mk [vertex, cherry]`) as its primary deliverable, deferring
-  `monochildCrossTerm` to cycle 392+.
+* B.1 (`monochildCrossTerm` def): ~30 LOC including docstring.
+* B.2 (`inversePolyTree` body refactor): +3 LOC net.
+* B.3 (re-verify `inversePolyTree_cherry`): 0 LOC if Case A works,
+  +1 LOC if Case B needed.
+* B.4 (`inversePolyTree_mkBroom₃` calibration): ~30 LOC.
+* B.5 (issue file update): ~30 LOC (markdown only, not counted in
+  Lean LOC budget).
+* **Total Lean LOC delta: ~63 LOC** (within ~80 LOC budget).
 
-* **Cycle 392+**: complete `mk [broom₃]` migration via
-  `monochildCrossTerm`; ship Phase β bridges for Family C
-  closed forms (broader option 3 from cycle 389); attack the
-  cycle 365 grandfathered sorry once full Family C migration lands.
+Exit criteria (all must hold):
 
-The cycle 389 worker's option 1 (`broom₃, broom₃` cross-term) and
-option 3 (Phase β bridges) remain on the post-cycle-390 menu but
-both grow tangentially — option 1 requires a multi-cycle order-7
-closed-form ship; option 3 is broad. Cycle 390's focused
-single-cross-term addition preserves the cycle 388/389 axiom-clean
-pattern and sets up the partial migration that's the lowest-risk
-single-cycle deliverable on the §422 ladder.
+1. `lake env lean OpenMath/Chapter4/Section422.lean` exits 0 with
+   single cycle 365 sorry warning.
+2. `lake build OpenMath.Chapter4.Section422` exits 0.
+3. `grep -c sorry` = 5 (unchanged).
+4. New theorem `inversePolyTree_mkBroom₃` axiom-clean
+   (`[propext, Classical.choice, Quot.sound]`).
+5. All seven existing calibration witnesses
+   (`_vertex`, `_cherry`, `_broom₃`, `_mkCherryCherry`,
+   `_mkBroomCherry`, `_mkVertexCherry`,
+   `_mkVertexCherry_eq_inversePolynomial`) re-verify axiom-clean.
+6. Cycle 391's `inversePolynomial` body for `mk [vertex, cherry]`
+   untouched.
+7. Issue file update appended.
 
-## §I. Summary
+## §G. Graceful degradation
 
-**Cycle 390 ships**: one new `else if` branch in `bichildCrossTerm`
-for `(vertex, cherry)` (~6 LOC) + one new `theorem
-inversePolyTree_mkVertexCherry` (~50 LOC including docstring) +
-optionally one-line migration of `inversePolynomial`'s
-`mk [vertex, cherry]` branch + one-line bridge theorem (~15 LOC
-if C.3 pursued). Both new public symbols axiom-clean
-`[propext, Classical.choice, Quot.sound]`; sorry count unchanged at
-5; §422 streak advances to **53 substantive + 2 doc** cycles
-(336–390).
+If the `ring` step in cycle 387's `inversePolyTree_cherry` does NOT
+close even after B.3 Case B, the issue is a deeper reduction failure
+in the `if_neg`-discharged `monochildCrossTerm` body. Mitigations
+in order:
+
+1. Try `simp only [monochildCrossTerm, if_neg (by decide)]; ring`
+   instead of two separate `rw`s.
+2. Try `conv_lhs => rw [show monochildCrossTerm RootedTree.vertex
+   f = 0 from by ...]` to scope the rewrite cleanly.
+3. As a last resort, split `monochildCrossTerm` into two named
+   theorems `monochildCrossTerm_vertex` (= `0`) and
+   `monochildCrossTerm_broom₃` (= explicit formula), and use those
+   instead of the if-then-else dispatch in calibrations.
+
+If B.4's `inversePolyTree_mkBroom₃` proof doesn't close on first
+attempt, the most likely issue is the `show` form not matching the
+LHS after the `rw [inversePolyTree, inversePolyTree_broom₃]` step.
+Mitigation: insert a `show` block to canonicalise the goal before
+the `monochildCrossTerm` rewrite. Cycle 389 `inversePolyTree_broom₃`
+uses two `show` blocks (lines 6423 and 6434) for similar purposes;
+follow that pattern if needed.
+
+If the cycle stalls completely (>2 hours without a clean compile),
+**ship B.1 + B.2 + B.3 only** (skip B.4); cycle 393 picks up the
+calibration. Sorry count unchanged; the infrastructure ships axiom-
+clean even without the new witness. This is the cycle 391 Step 5
+precedent (consumer breakage handled in-cycle, calibration deferred
+to next).
+
+## §H. Cycle 393+ outlook
+
+After cycle 392 ships `monochildCrossTerm` + `inversePolyTree_mkBroom₃`,
+the natural next deliverables are:
+
+* **Cycle 393 (Family A migration #1)**: ship Phase α'.4.2
+  migration of `inversePolynomial`'s `mk [broom₃]` branch via a
+  bridge theorem `inversePolyTree_mkBroom₃_eq_inversePolynomial`
+  + consumer updates (calibration witness + Phase β bridge + Phase
+  γ branch). Mechanical 1-cycle ship parallel to cycle 391. ~45 LOC.
+
+* **Cycle 394 (extend `monochildCrossTerm`)**: add a branch for
+  `c = mk [cherry]`. Cycle 378's closed form for `mk [mk [cherry]]`
+  is `v⁴ - 3v²c + c² + 2vm - M_mkMkCherry`. Compute the delta from
+  the naive body and ship `monochildCrossTerm_mkCherry`. Then ship
+  `inversePolyTree_mkMkCherry` calibration.
+
+* **Cycle 395 (Family A migration #2)**: ship Phase α'.4.2 migration
+  of `inversePolynomial`'s `mk [mk [cherry]]` branch.
+
+* **Cycle 396 (extend `monochildCrossTerm` for `c = bushy`)**: ship
+  branch for `mk [bushy]` (Family A, cycle 370 closed form
+  generalisation).
+
+* **Cycles 397+**: Phase α'.4.2 migrations of `inversePolynomial`'s
+  `bushy`, `broom₃`, etc. branches (Family B is already done by
+  cycle 383). Eventually all 8 ladder trees use the recursive
+  `inversePolyTree` dispatch, and the cycle 365 grandfathered sorry
+  becomes attackable via the unified recursive `inversePolyTree`.
+
+The cycle 365 sorry closure is still ~10+ cycles out per cycle 391
+projection.
+
+## §I. Self-reference
+
+Cycle 392 worker: ship B.1–B.4 in order, verify with §C protocol,
+update §B.5 issue file. Report all five exit criteria as either
+PASS or specify the graceful-degradation fallback used.
+
+Expected runtime: ~30 min wall (2× `lake env lean` + 1× `lake build`
++ axiom check round + minor edits per §C precedent).
+
+§422 streak target: **54 → 55 substantive + 2 doc** (336–392).
