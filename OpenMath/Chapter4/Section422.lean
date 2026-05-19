@@ -6796,7 +6796,8 @@ noncomputable def inversePolynomial (t : RT) (f : RT → ℝ) : ℝ :=
   else if t = RootedTree.broom₃ then
     inversePolyBroom 2 f
   else if t = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry] then
-    inversePolyChain 2 f
+    inversePolyTree
+      (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) f
   else if t = RootedTree.bushy then
     inversePolyBroom 3 f
   else if t = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃] then
@@ -6872,7 +6873,7 @@ example (f : RT → ℝ) :
         (by decide :
           OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
             ≠ RootedTree.broom₃),
-      if_pos rfl, inversePolyChain_two]
+      if_pos rfl, inversePolyTree_mkCherry]
 
 /-- *Phase α.2 (cycle 377) — bushy calibration witness.*
 
@@ -7070,14 +7071,16 @@ theorem inversePolyChain_one_eq_inversePolynomial (f : RT → ℝ) :
   rw [if_neg (by decide : RootedTree.cherry ≠ RootedTree.vertex),
       if_pos rfl]
 
-/-- *Phase α'.1 (cycle 380) — Family A bridge at depth 2 (`mk [cherry]`).*
+/-- *Phase α'.1 (cycle 380, updated cycle 396) — Family A bridge at depth 2 (`mk [cherry]`).*
 
 Verifies that the recursive `inversePolyChain 2` matches the
 existing pattern-match `inversePolynomial (mk [cherry])`.
 Both routes reduce to `-(f vertex)³ + 2·f vertex·f cherry − f (mk [cherry])`:
 `inversePolyChain` via the depth-2 convolution recursion (using
-`inversePolyChain_one`), `inversePolynomial` via cycle 374's
-`mk [cherry]` branch (3 `if_neg`s before `if_pos rfl`). -/
+`inversePolyChain_two`), `inversePolynomial` via cycle 396's
+post-migration `mk [cherry]` branch dispatching through
+`inversePolyTree` (3 `if_neg`s before `if_pos rfl`, then
+`inversePolyTree_mkCherry` to expose the closed form). -/
 theorem inversePolyChain_two_eq_inversePolynomial (f : RT → ℝ) :
     inversePolyChain 2 f
       = inversePolynomial
@@ -7095,7 +7098,7 @@ theorem inversePolyChain_two_eq_inversePolynomial (f : RT → ℝ) :
         (by decide :
           OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
             ≠ RootedTree.broom₃),
-      if_pos rfl]
+      if_pos rfl, inversePolyChain_two, inversePolyTree_mkCherry]
 
 /-- *Phase α'.1 (cycle 380) — Family A bridge at depth 3 (`mk [mk [cherry]]`).*
 
@@ -7268,6 +7271,37 @@ theorem inversePolyTree_mkBroom₃_eq_inversePolynomial (f : RT → ℝ) :
             ≠ RootedTree.bushy),
       if_pos rfl]
 
+/-- *Phase α'.4.2 (cycle 396) — Family A bridge at `mk [cherry]`.*
+
+Verifies that the recursive `inversePolyTree (mk [cherry]) f` matches
+the post-migration `inversePolynomial (mk [cherry]) f` body. Mechanical
+mirror of cycle 393's `inversePolyTree_mkBroom₃_eq_inversePolynomial`.
+The `mk [cherry]` branch is the 4th in `inversePolynomial`'s chain
+(after `vertex`, `cherry`, `broom₃`), so three `if_neg` discharges
+precede the final `if_pos rfl` that exposes the recursive
+`inversePolyTree` call. After cycle 396's body migration, both sides
+literally reduce to `inversePolyTree (mk [cherry]) f` and the bridge
+closes by the implicit `rfl` after the `rw` cascade. -/
+theorem inversePolyTree_mkCherry_eq_inversePolynomial (f : RT → ℝ) :
+    inversePolyTree
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) f
+      = inversePolynomial
+          (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) f := by
+  unfold inversePolynomial
+  rw [if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.vertex),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.cherry),
+      if_neg
+        (by decide :
+          OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+            ≠ RootedTree.broom₃),
+      if_pos rfl]
+
 /-! ### Phase β.1 (cycle 375) — per-tree bridges between `elementaryWeightQ_phi η_q⁻¹` and `inversePolynomial`
 
 For each tree `t` in the four-tree ladder
@@ -7358,7 +7392,7 @@ theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_mkCherry
         (by decide :
           OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
             ≠ RootedTree.broom₃),
-      if_pos rfl, inversePolyChain_two]
+      if_pos rfl, inversePolyTree_mkCherry]
   exact elementaryWeightQ_phi_inv_mkCherry η_q
 
 /-- *Phase β.2 (cycle 377) — bushy bridge.*
@@ -7669,7 +7703,7 @@ theorem inversePolynomial_eq_of_subtree_agreement
             OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
               ≠ RootedTree.broom₃),
         if_pos rfl,
-        inversePolyChain_two, inversePolyChain_two, hv, hc, hm]
+        inversePolyTree_mkCherry, inversePolyTree_mkCherry, hv, hc, hm]
   by_cases h_bushy : t = RootedTree.bushy
   · subst h_bushy
     have hv : f RootedTree.vertex = g RootedTree.vertex :=
