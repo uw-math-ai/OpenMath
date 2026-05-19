@@ -1270,3 +1270,85 @@ C. **Pivot to a fresh entity** (low-medium): with `def:422B`
 D. **BDF3 / Adams-Bashforth sanity expansion** (low, sideline):
    expand the §404 LMM non-vacuity surface. Useful palate-
    cleanser, no §422 closure compounding.
+
+## §10 Cycle 397 update — Phase α'.4.2 `mk [mk [cherry]]` migration
+
+**Status: SHIPPED.** Cycle 397 closes the 4th Phase α'.4.2
+ladder-tree migration (after cycles 391 `mk [vertex, cherry]`,
+393 `mk [broom₃]`, 396 `mk [cherry]`). Mechanical mirror of
+cycle 396 with three substitutions:
+
+* `mk [cherry]` → `mk [mk [cherry]]`
+* `inversePolyChain 2 / _two` → `inversePolyChain 3 / _three`
+* `inversePolyTree_mkCherry` → `inversePolyTree_mkMkCherry`
+
+**Six edits** (all in `Section422.lean`):
+
+1. **Step B (body migration)**: `inversePolynomial`'s 8th
+   `if-then-else` branch (`mk [mk [cherry]]`) body changed from
+   `inversePolyChain 3 f` to
+   `inversePolyTree (mk [mk [cherry]]) f`.
+
+2. **Step A (new bridge)**:
+   `inversePolyTree_mkMkCherry_eq_inversePolynomial` inserted
+   immediately after cycle 396's
+   `inversePolyTree_mkCherry_eq_inversePolynomial`. Seven
+   `if_neg` discharges (vertex, cherry, broom₃, mk [cherry],
+   bushy, mk [broom₃], mk [vertex, cherry]) + `if_pos rfl`.
+   After Step B both sides literally reduce to
+   `inversePolyTree (mk [mk [cherry]]) f`, closing by implicit
+   `rfl`.
+
+3. **Step C (Phase α.2 calibration example update)**: cycle
+   374's `mk [mk [cherry]]` calibration `example`'s trailing
+   `inversePolyChain_three` swapped for
+   `inversePolyTree_mkMkCherry`.
+
+4. **Step D (Phase β.4 bridge update)**:
+   `elementaryWeightQ_phi_inv_eq_inversePolynomial_mkMkCherry`
+   (cycle 378) similarly retrofitted.
+
+5. **Step E (Phase γ branch update — twice)**: in
+   `inversePolynomial_eq_of_subtree_agreement` `mk [mk [cherry]]`
+   arm, both `inversePolyChain_three` occurrences (one per `f`
+   side, one per `g` side) replaced with
+   `inversePolyTree_mkMkCherry`.
+
+6. **Step F (cycle 380 bridge derivative fix)**:
+   `inversePolyChain_three_eq_inversePolynomial`'s proof body
+   appended with `inversePolyChain_three, inversePolyTree_mkMkCherry`
+   so both routes (`inversePolyChain 3 f` LHS,
+   `inversePolyTree (mk [mk [cherry]]) f` RHS post-Step-B) reduce
+   to the cycle 378 closed form `v⁴ − 3v²c + c² + 2vm − M_mc`.
+   Theorem statement unchanged.
+
+**Verification**: `lake build OpenMath.Chapter4.Section422`
+exits 0 (built in 200 s); `grep -c sorry` returns 5 (unchanged
+— 4 docstring + 1 grandfathered cycle 365 code at line 2272);
+all 6 verification symbols
+(`inversePolyTree_mkMkCherry_eq_inversePolynomial`,
+`elementaryWeightQ_phi_inv_eq_inversePolynomial_mkMkCherry`,
+`inversePolynomial_eq_of_subtree_agreement`,
+`inversePolyChain_three_eq_inversePolynomial`,
+`inversePolyTree_mkMkCherry`, `inversePolyTree_mkCherry`)
+return `[propext, Classical.choice, Quot.sound]`.
+
+**§422 axiom-clean streak**: 59 → **60 substantive + 2 doc**
+(cycles 336–397).
+
+**Phase α'.4.2 progress**: 5 of 9 ladder trees routed through
+`inversePolyTree`. Remaining: `bushy` (requires extending
+`inversePolyTree`'s arity-3 case from `0` to a closed form;
+cycle 398+ scope, needs its own scoping doc Phase α'.4.3).
+`vertex`/`cherry`/`broom₃` are currently still on
+`inversePolyChain k` / `inversePolyBroom k`; technically these
+also remain to be migrated but the dispatch is already in
+canonical form and the migration would be a trivial recipe
+mirror.
+
+**Cycle 398 entry**: tackle `bushy` migration.
+`bushy = mk [vertex, vertex, vertex]` is a three-leaf-children
+tree; `inversePolyTree`'s current `(_ :: _ :: _ :: _)` recursive
+case dispatches to `0`. A substantive cycle requiring a
+`trichildPolynomial` helper analogous to cycle 387's
+`bichildPolynomial` and likely a brief scoping doc.
