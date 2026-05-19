@@ -6330,17 +6330,24 @@ Empirical dispatch:
   vb' + 2vm - M_broom₃`, which differs from the naive body
   `-(v · (-v³ + 2vc - b')) - M_broom₃ = v⁴ - 2v²c + vb' - M_broom₃`
   by exactly `-(v² · c) + 2v · m`.
-* Other `c` → `0` (default; refined in cycle 393+ as more
+* `c = cherry` → `v · c` where `c = f cherry`. Validated by cycle
+  369's `mk [cherry]` closed form `-v³ + 2vc - m`, which differs
+  from the naive body `-(v · (v² - c)) - m = -v³ + vc - m` by
+  exactly `+v · c`. Cycle 394 deliverable.
+* Other `c` → `0` (default; refined in cycle 395+ as more
   single-child non-leaf witnesses surface, e.g., `mk [cherry]`,
   `mk [bushy]`, `mk [mk [cherry]]`).
 
 Mirror of cycle 387's `bichildCrossTerm` design for the
-single-child case. Phase α'.4.1 P5 deliverable. -/
+single-child case. Phase α'.4.1 P5 deliverable; cycle 394
+extends with the `cherry` branch. -/
 noncomputable def monochildCrossTerm (c : RT) (f : RT → ℝ) : ℝ :=
   if c = RootedTree.broom₃ then
     -((f RootedTree.vertex) ^ 2 * f RootedTree.cherry)
       + 2 * f RootedTree.vertex *
           f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+  else if c = RootedTree.cherry then
+    f RootedTree.vertex * f RootedTree.cherry
   else 0
 
 /-- *Phase α'.4.1 (cycle 387) — binary-children polynomial helper.*
@@ -6427,7 +6434,7 @@ theorem inversePolyTree_cherry (f : RT → ℝ) :
         = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry
   rw [inversePolyTree, inversePolyTree_vertex,
       show monochildCrossTerm RootedTree.vertex f = 0 by
-        unfold monochildCrossTerm; rw [if_neg (by decide)]]
+        unfold monochildCrossTerm; rw [if_neg (by decide), if_neg (by decide)]]
   show -(f RootedTree.vertex * -f RootedTree.vertex) + 0 - f RootedTree.cherry
         = (f RootedTree.vertex) ^ 2 - f RootedTree.cherry
   ring
@@ -6504,6 +6511,29 @@ theorem inversePolyTree_mkBroom₃ (f : RT → ℝ) :
           + 2 * f RootedTree.vertex *
               f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
         by unfold monochildCrossTerm; rw [if_pos rfl]]
+  ring
+
+/-- *Phase α'.4.1 (cycle 394) — `mk [cherry]` calibration witness.*
+
+`inversePolyTree (mk [cherry]) f` matches cycle 369's
+`elementaryWeightQ_phi_inv_mkCherry` closed form `-v³ + 2vc - m`
+(under `f = elementaryWeightQ_phi η_q`). The proof unfolds the
+single-child branch of `inversePolyTree`, rewrites the recursive
+`inversePolyTree cherry f` via `inversePolyTree_cherry`, exposes
+`monochildCrossTerm cherry f` via the cycle 394 `else if c = cherry`
+branch (one `if_neg` for the `broom₃` discharge, then `if_pos rfl`),
+and closes by `ring`. -/
+theorem inversePolyTree_mkCherry (f : RT → ℝ) :
+    inversePolyTree
+      (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) f
+      = -(f RootedTree.vertex) ^ 3
+        + 2 * f RootedTree.vertex * f RootedTree.cherry
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) := by
+  rw [inversePolyTree, inversePolyTree_cherry]
+  rw [show monochildCrossTerm RootedTree.cherry f
+        = f RootedTree.vertex * f RootedTree.cherry by
+        unfold monochildCrossTerm
+        rw [if_neg (by decide), if_pos rfl]]
   ring
 
 /-- *Phase α'.4.1 (cycle 388) — `mk [cherry, cherry]` calibration witness.*
