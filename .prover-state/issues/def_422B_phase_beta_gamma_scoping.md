@@ -777,3 +777,92 @@ since cycle 365 — restoring the §422 cluster to a clean axiom-clean
 baseline ahead of any future Phase D.3.c / D.3.d work (linear
 residual + underlying-one-step-method recursion per cycle 357's
 master plan).
+
+## §12 Cycle 497 closure update — Phase γ shipped, R6.B FALSE
+
+### §12.1 What shipped
+
+Cycle 497 shipped **Phase γ** (`inversePolyTree_eq_of_subtree_agreement`) plus
+three private cross-term helpers:
+
+* `monochildCrossTerm_eq_of_subtree_agreement`
+* `bichildCrossTerm_eq_of_subtree_agreement`
+* `trichildCrossTerm_eq_of_subtree_agreement`
+
+The main theorem is proved by strong induction on `t.order` via
+`Nat.strong_induction_on`, dispatching to the appropriate cross-term
+helper + IH at each child + `h_closed` at the self-term / `f vertex`
+across the 5 pattern-match arms of `inversePolyTree` (`mk []`,
+`mk [c]`, `mk [c₁,c₂]`, `mk [c₁,c₂,c₃]`, `mk (_::_::_::_::_)`).
+
+§422 streak: 69 substantive + 5 doc → **70 substantive + 5 doc**
+(cycles 336–497). All new theorems axiom-clean. Sorry count unchanged
+at 5 (4 docstring + 1 grandfathered cycle 365 code sorry).
+
+### §12.2 R6.B is FALSE — Phase β.2 as scoped cannot close
+
+§5.2's R6.B claim
+> `mk (_::_::_::_::_)` arm needs new `_inv_mk_quadchild_zero`
+> infrastructure asserting `Φ_{η⁻¹}(mk (c₁::c₂::c₃::c₄::cs)) = 0`
+
+is **false**. Cycle 358's `elementaryWeightQ_phi_inv_mk`
+(`Section422.lean:582`) gives, for `t = mk children`:
+```
+Φ_{⟦M⟧⁻¹}(mk children)
+  = -Σᵢ M.b i · M.derivativeWeightWithSrc M.inverse i (mk children)
+```
+For arbitrary `mk [c₁,…,c_k]` with `k ≥ 4`,
+`derivativeWeightWithSrc M.inverse i (mk children)` expands to
+`Πℓ (M.inverse.eW c_ℓ + Σⱼ A_ij · M.inverse.dW j c_ℓ)`, which is
+**generically nonzero** (e.g. take all `c_ℓ = vertex`: the per-row
+factor is `-v + Σⱼ A_ij · (-v)` which is nonzero in general). There
+is no structural mechanism forcing this product to 0.
+
+Meanwhile `inversePolyTree`'s `mk (_::_::_::_::_)` arm returns the
+default value `0` (Section422.lean:9732). So the Phase β.2 equality
+`Φ_{η⁻¹}(t) = inversePolyTree t (Φ_η ·)` is **false on quadchild+
+trees** until `inversePolyTree` is extended to `k ≥ 4`.
+
+### §12.3 Recommended path forward
+
+The cycle 365 sorry cannot be closed by Phase β.2 alone. Required
+prerequisite: **Phase α'.5.2/3 (extend `inversePolyTree` to k ≥ 4)** —
+a multi-cycle (3–5 cycles per cycle 402's scoping doc §6.4) effort
+that mirrors the k=2 (cycle 387) and k=3 (cycle 399 + 491–494)
+infrastructure ladder. Specifically:
+
+* **Phase α'.5.2**: scoping doc for `tetrachildPolynomial` and
+  `tetrachildCrossTerm` (mirrors cycle 402's pattern). Markdown only.
+* **Phase α'.5.2.0**: ship `tetrachildPolynomial` definition + the
+  k=4 arm extension of `inversePolyTree`. Add an `bushy = mk [v,v,v,v]`
+  calibration witness as a first non-trivial validator.
+* **Phase α'.5.2.k** (cycles 498+1+k): incrementally build out k=4
+  cross-term witnesses analogous to cycles 491–494's k=3 ladder.
+* **Phase α'.5.3**: same for k ≥ 5 if needed by the eventual
+  consumer (`thm:422A`).
+
+Only after `inversePolyTree` is total in the relevant sense can a
+re-scoped Phase β.2 attempt the cycle 365 sorry closure. The
+Phase γ infrastructure shipped in cycle 497 (this update) will
+remain useful: any future structural-induction lift will need to
+restrict `h_closed` from `t` to each child of `t`, which is exactly
+what `inversePolyTree_eq_of_subtree_agreement` enables.
+
+### §12.4 Effect on subsequent cycle 498 planning
+
+Cycle 498's planner should choose between:
+
+* **Option A (recommended)**: Phase α'.5.2 scoping doc —
+  `tetrachildPolynomial` + `tetrachildCrossTerm` infrastructure
+  design. Markdown only, ~600 LOC. Mirror the cycle 402 scoping
+  precedent.
+* **Option B**: continue Phase α'.5.1 ladder with one more k=3
+  witness (mechanical, ~250–500 LOC).
+* **Option C**: pivot to a fresh entity per
+  `cycle_336_pivot_options.md` (def:451A, def:442A, thm:535A,
+  thm:541A).
+
+The cycle 497 worker recommends Option A: it advances the §422
+cluster's strategic direction toward eventual cycle 365 sorry
+closure, while remaining within the standard "scoping doc as
+markdown-only ship" precedent.

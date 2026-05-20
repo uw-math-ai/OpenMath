@@ -1,0 +1,6 @@
+import OpenMath.Chapter4.Section422
+
+#print axioms OpenMath.Chapter4.Section422.inversePolyTree_eq_of_subtree_agreement
+#print axioms OpenMath.Chapter4.Section422.monochildCrossTerm_eq_of_subtree_agreement
+#print axioms OpenMath.Chapter4.Section422.bichildCrossTerm_eq_of_subtree_agreement
+#print axioms OpenMath.Chapter4.Section422.trichildCrossTerm_eq_of_subtree_agreement

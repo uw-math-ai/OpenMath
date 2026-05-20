@@ -11606,6 +11606,583 @@ theorem elementaryWeightQ_phi_inv_eq_inversePolyTree_on_ladder
   · rw [elementaryWeightQ_phi_inv_mkVertexVertexBroom₃,
         inversePolyTree_mkVertexVertexBroom₃]
 
+/-! ### Phase γ (cycle 497) — closed-subtree agreement for `inversePolyTree`
+
+The Phase γ deliverable for the recursive `inversePolyTree` def. Mirrors
+cycle 376's `inversePolynomial_eq_of_subtree_agreement` at the
+pattern-match recursive level: each non-default branch of
+`inversePolyTree` (and the cross-term helpers it delegates to) is a
+polynomial in `f` evaluated at subtrees of order ≤ the matched tree's
+order, so closed-subtree agreement of `f` and `g` propagates to
+equality of `inversePolyTree t f` and `inversePolyTree t g`.
+
+The default branch (`mk (_::_::_::_::_)`, k ≥ 4) returns `0` on both
+sides; closed-subtree agreement is vacuous there.
+
+This is the Phase γ deliverable per the cycle 495 scoping doc §5.3.
+Downstream cycle 498+ Phase α'.5.2/3 work (extending `inversePolyTree`
+to k ≥ 4) will rely on this lemma to thread the recursion hypothesis
+through the eventual `underlyingOneStepMethod_aux` recursion. -/
+
+/-- *Phase γ (cycle 497) — `monochildCrossTerm` respects closed-subtree
+agreement of its weight function.*
+
+If `f g : RT → ℝ` agree on every subtree `s` with
+`s.order ≤ (mk [c]).order`, then
+`monochildCrossTerm c f = monochildCrossTerm c g`.
+
+Each non-default branch of `monochildCrossTerm` (cycles 392/394/395)
+references `f` at named subtrees (`vertex`, `cherry`, `mk [cherry]`)
+all of order ≤ `(mk [c]).order`. The default branch (other `c`) is
+`0 = 0`. -/
+private theorem monochildCrossTerm_eq_of_subtree_agreement
+    (c : RT) (f g : RT → ℝ)
+    (h_closed : ∀ s : RT,
+        s.order ≤ (OpenMath.Chapter3.Section310.RootedTree.mk [c]).order →
+        f s = g s) :
+    monochildCrossTerm c f = monochildCrossTerm c g := by
+  unfold monochildCrossTerm
+  by_cases h_broom : c = RootedTree.broom₃
+  · subst h_broom
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hmc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    rw [if_pos rfl, if_pos rfl, hv, hc, hmc]
+  by_cases h_cherry : c = RootedTree.cherry
+  · subst h_cherry
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    rw [if_neg (by decide : RootedTree.cherry ≠ RootedTree.broom₃),
+        if_neg (by decide : RootedTree.cherry ≠ RootedTree.broom₃),
+        if_pos rfl, if_pos rfl, hv, hc]
+  by_cases h_mkc :
+      c = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+  · subst h_mkc
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hmc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    rw [if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+              ≠ RootedTree.broom₃),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+              ≠ RootedTree.cherry),
+        if_pos rfl,
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+              ≠ RootedTree.broom₃),
+        if_neg
+          (by decide :
+            OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+              ≠ RootedTree.cherry),
+        if_pos rfl, hv, hc, hmc]
+  · rw [if_neg h_broom, if_neg h_cherry, if_neg h_mkc,
+        if_neg h_broom, if_neg h_cherry, if_neg h_mkc]
+
+/-- *Phase γ (cycle 497) — `bichildCrossTerm` respects closed-subtree
+agreement of its weight function.*
+
+If `f g : RT → ℝ` agree on every subtree `s` with
+`s.order ≤ (mk [c₁, c₂]).order`, then
+`bichildCrossTerm c₁ c₂ f = bichildCrossTerm c₁ c₂ g`.
+
+Each non-default branch of `bichildCrossTerm` (cycles 387/388/390)
+references `f` at named subtrees (subset of `{vertex, cherry, broom₃,
+mk [cherry], mk [vertex, cherry], mk [cherry, cherry], mk [vertex,
+broom₃]}`) all of order ≤ `(mk [c₁, c₂]).order`. The default branch
+(other `(c₁, c₂)`) is `0 = 0`. -/
+private theorem bichildCrossTerm_eq_of_subtree_agreement
+    (c₁ c₂ : RT) (f g : RT → ℝ)
+    (h_closed : ∀ s : RT,
+        s.order ≤ (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂]).order →
+        f s = g s) :
+    bichildCrossTerm c₁ c₂ f = bichildCrossTerm c₁ c₂ g := by
+  unfold bichildCrossTerm
+  by_cases h_cc : c₁ = RootedTree.cherry ∧ c₂ = RootedTree.cherry
+  · obtain ⟨h₁, h₂⟩ := h_cc
+    subst h₁; subst h₂
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    have hvc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    rw [if_pos ⟨rfl, rfl⟩, if_pos ⟨rfl, rfl⟩, hv, hc, hb, hvc]
+  by_cases h_bc : c₁ = RootedTree.broom₃ ∧ c₂ = RootedTree.cherry
+  · obtain ⟨h₁, h₂⟩ := h_bc
+    subst h₁; subst h₂
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    have hmc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hvc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hcc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.cherry, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.cherry, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hvb :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.broom₃])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.broom₃]) :=
+      h_closed _ (by decide)
+    rw [if_neg (by decide :
+            ¬ (RootedTree.broom₃ = RootedTree.cherry ∧
+              RootedTree.cherry = RootedTree.cherry)),
+        if_pos ⟨rfl, rfl⟩,
+        if_neg (by decide :
+            ¬ (RootedTree.broom₃ = RootedTree.cherry ∧
+              RootedTree.cherry = RootedTree.cherry)),
+        if_pos ⟨rfl, rfl⟩,
+        hv, hc, hb, hmc, hvc, hcc, hvb]
+  by_cases h_vc : c₁ = RootedTree.vertex ∧ c₂ = RootedTree.cherry
+  · obtain ⟨h₁, h₂⟩ := h_vc
+    subst h₁; subst h₂
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    rw [if_neg (by decide :
+            ¬ (RootedTree.vertex = RootedTree.cherry ∧
+              RootedTree.cherry = RootedTree.cherry)),
+        if_neg (by decide :
+            ¬ (RootedTree.vertex = RootedTree.broom₃ ∧
+              RootedTree.cherry = RootedTree.cherry)),
+        if_pos ⟨rfl, rfl⟩,
+        if_neg (by decide :
+            ¬ (RootedTree.vertex = RootedTree.cherry ∧
+              RootedTree.cherry = RootedTree.cherry)),
+        if_neg (by decide :
+            ¬ (RootedTree.vertex = RootedTree.broom₃ ∧
+              RootedTree.cherry = RootedTree.cherry)),
+        if_pos ⟨rfl, rfl⟩,
+        hv, hc, hb]
+  · rw [if_neg h_cc, if_neg h_bc, if_neg h_vc,
+        if_neg h_cc, if_neg h_bc, if_neg h_vc]
+
+/-- *Phase γ (cycle 497) — `trichildCrossTerm` respects closed-subtree
+agreement of its weight function.*
+
+If `f g : RT → ℝ` agree on every subtree `s` with
+`s.order ≤ (mk [c₁, c₂, c₃]).order`, then
+`trichildCrossTerm c₁ c₂ c₃ f = trichildCrossTerm c₁ c₂ c₃ g`.
+
+Each non-default branch of `trichildCrossTerm` (cycles 399/491–494)
+references `f` at named subtrees all of order ≤ `(mk [c₁, c₂, c₃]).order`.
+The default branch (other `(c₁, c₂, c₃)`) is `0 = 0`. -/
+private theorem trichildCrossTerm_eq_of_subtree_agreement
+    (c₁ c₂ c₃ : RT) (f g : RT → ℝ)
+    (h_closed : ∀ s : RT,
+        s.order ≤ (OpenMath.Chapter3.Section310.RootedTree.mk
+                      [c₁, c₂, c₃]).order →
+        f s = g s) :
+    trichildCrossTerm c₁ c₂ c₃ f = trichildCrossTerm c₁ c₂ c₃ g := by
+  unfold trichildCrossTerm
+  by_cases h_vvv : c₁ = RootedTree.vertex ∧ c₂ = RootedTree.vertex
+      ∧ c₃ = RootedTree.vertex
+  · obtain ⟨h₁, h₂, h₃⟩ := h_vvv
+    subst h₁; subst h₂; subst h₃
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    rw [if_pos ⟨rfl, rfl, rfl⟩, if_pos ⟨rfl, rfl, rfl⟩, hv, hb]
+  by_cases h_vvc : c₁ = RootedTree.vertex ∧ c₂ = RootedTree.vertex
+      ∧ c₃ = RootedTree.cherry
+  · obtain ⟨h₁, h₂, h₃⟩ := h_vvc
+    subst h₁; subst h₂; subst h₃
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    have hbu : f RootedTree.bushy = g RootedTree.bushy :=
+      h_closed RootedTree.bushy (by decide)
+    have hvc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    rw [if_neg (by decide :
+            ¬ (RootedTree.vertex = RootedTree.vertex ∧
+              RootedTree.vertex = RootedTree.vertex ∧
+              RootedTree.cherry = RootedTree.vertex)),
+        if_pos ⟨rfl, rfl, rfl⟩,
+        if_neg (by decide :
+            ¬ (RootedTree.vertex = RootedTree.vertex ∧
+              RootedTree.vertex = RootedTree.vertex ∧
+              RootedTree.cherry = RootedTree.vertex)),
+        if_pos ⟨rfl, rfl, rfl⟩,
+        hv, hc, hb, hbu, hvc]
+  by_cases h_vcc : c₁ = RootedTree.vertex ∧ c₂ = RootedTree.cherry
+      ∧ c₃ = RootedTree.cherry
+  · obtain ⟨h₁, h₂, h₃⟩ := h_vcc
+    subst h₁; subst h₂; subst h₃
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    have hbu : f RootedTree.bushy = g RootedTree.bushy :=
+      h_closed RootedTree.bushy (by decide)
+    have hvc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hvvc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hccc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.cherry, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.cherry, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    rw [if_neg (by decide :
+            ¬ (RootedTree.vertex = RootedTree.vertex ∧
+              RootedTree.cherry = RootedTree.vertex ∧
+              RootedTree.cherry = RootedTree.vertex)),
+        if_neg (by decide :
+            ¬ (RootedTree.vertex = RootedTree.vertex ∧
+              RootedTree.cherry = RootedTree.vertex ∧
+              RootedTree.cherry = RootedTree.cherry)),
+        if_pos ⟨rfl, rfl, rfl⟩,
+        if_neg (by decide :
+            ¬ (RootedTree.vertex = RootedTree.vertex ∧
+              RootedTree.cherry = RootedTree.vertex ∧
+              RootedTree.cherry = RootedTree.vertex)),
+        if_neg (by decide :
+            ¬ (RootedTree.vertex = RootedTree.vertex ∧
+              RootedTree.cherry = RootedTree.vertex ∧
+              RootedTree.cherry = RootedTree.cherry)),
+        if_pos ⟨rfl, rfl, rfl⟩,
+        hv, hc, hb, hbu, hvc, hvvc, hccc]
+  by_cases h_vvmc : c₁ = RootedTree.vertex ∧ c₂ = RootedTree.vertex
+      ∧ c₃ = OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]
+  · obtain ⟨h₁, h₂, h₃⟩ := h_vvmc
+    subst h₁; subst h₂; subst h₃
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    have hbu : f RootedTree.bushy = g RootedTree.bushy :=
+      h_closed RootedTree.bushy (by decide)
+    have hmc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hvc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hvvc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hvmc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex,
+               OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex,
+               OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]) :=
+      h_closed _ (by decide)
+    rw [if_neg (by decide),
+        if_neg (by decide),
+        if_neg (by decide),
+        if_pos ⟨rfl, rfl, rfl⟩,
+        if_neg (by decide),
+        if_neg (by decide),
+        if_neg (by decide),
+        if_pos ⟨rfl, rfl, rfl⟩,
+        hv, hc, hb, hbu, hmc, hvc, hvvc, hvmc]
+  by_cases h_vvb : c₁ = RootedTree.vertex ∧ c₂ = RootedTree.vertex
+      ∧ c₃ = RootedTree.broom₃
+  · obtain ⟨h₁, h₂, h₃⟩ := h_vvb
+    subst h₁; subst h₂; subst h₃
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hc : f RootedTree.cherry = g RootedTree.cherry :=
+      h_closed RootedTree.cherry (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    have hbu : f RootedTree.bushy = g RootedTree.bushy :=
+      h_closed RootedTree.bushy (by decide)
+    have hmc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hvc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hvvc :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry]) :=
+      h_closed _ (by decide)
+    have hvb :
+        f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.broom₃])
+          = g (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.broom₃]) :=
+      h_closed _ (by decide)
+    rw [if_neg (by decide),
+        if_neg (by decide),
+        if_neg (by decide),
+        if_neg (by decide),
+        if_pos ⟨rfl, rfl, rfl⟩,
+        if_neg (by decide),
+        if_neg (by decide),
+        if_neg (by decide),
+        if_neg (by decide),
+        if_pos ⟨rfl, rfl, rfl⟩,
+        hv, hc, hb, hbu, hmc, hvc, hvvc, hvb]
+  · rw [if_neg h_vvv, if_neg h_vvc, if_neg h_vcc, if_neg h_vvmc, if_neg h_vvb,
+        if_neg h_vvv, if_neg h_vvc, if_neg h_vcc, if_neg h_vvmc, if_neg h_vvb]
+
+/-- *Phase γ (cycle 497) — `inversePolyTree` respects closed-subtree
+agreement of its weight function.*
+
+If `f g : RT → ℝ` agree on every subtree `s` with `s.order ≤ t.order`
+(including `s = t`), then `inversePolyTree t f = inversePolyTree t g`.
+
+The proof is strong induction on `t.order`. For each pattern-match
+arm of `inversePolyTree` (cycles 387/399):
+
+* `mk []` (vertex, order 1): RHS is `-f vertex`; closure at
+  `vertex ≤ mk []` is `le_refl`.
+* `mk [c]` (single-child): RHS is `-(f vertex · inversePolyTree c f)
+  + monochildCrossTerm c f - f (mk [c])`. Apply IH at `c`
+  (using `c.order < (mk [c]).order` from `order_lt_of_mem_children`),
+  apply `monochildCrossTerm_eq_of_subtree_agreement`, and close
+  remaining `f vertex`, `f (mk [c])` via `h_closed`.
+* `mk [c₁, c₂]` (binary): analogous to single-child but with two IHs
+  plus `bichildCrossTerm_eq_of_subtree_agreement`.
+* `mk [c₁, c₂, c₃]` (triple): analogous with three IHs plus
+  `trichildCrossTerm_eq_of_subtree_agreement`.
+* `mk (_::_::_::_::_)` (k ≥ 4): both sides return `0`; `rfl` closes.
+
+This is the Phase γ deliverable for `inversePolyTree`. -/
+theorem inversePolyTree_eq_of_subtree_agreement
+    (t : RT) (f g : RT → ℝ)
+    (h_closed : ∀ s : RT, s.order ≤ t.order → f s = g s) :
+    inversePolyTree t f = inversePolyTree t g := by
+  suffices h : ∀ n : ℕ, ∀ (t : RT) (f g : RT → ℝ),
+      t.order ≤ n →
+      (∀ s : RT, s.order ≤ t.order → f s = g s) →
+      inversePolyTree t f = inversePolyTree t g from
+    h t.order t f g (le_refl _) h_closed
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n IH =>
+    intro t f g h_t_order h_closed
+    rcases t with ⟨children⟩
+    match children with
+    | [] =>
+        show -f RootedTree.vertex = -g RootedTree.vertex
+        rw [h_closed RootedTree.vertex (le_refl _)]
+    | [c] =>
+        show -(f RootedTree.vertex * inversePolyTree c f)
+              + monochildCrossTerm c f
+              - f (OpenMath.Chapter3.Section310.RootedTree.mk [c])
+            = -(g RootedTree.vertex * inversePolyTree c g)
+              + monochildCrossTerm c g
+              - g (OpenMath.Chapter3.Section310.RootedTree.mk [c])
+        have hc_lt :
+            c.order < (OpenMath.Chapter3.Section310.RootedTree.mk [c]).order :=
+          RootedTree.order_lt_of_mem_children (List.mem_singleton.mpr rfl)
+        have h_closed_c : ∀ s : RT, s.order ≤ c.order → f s = g s := fun s hs =>
+          h_closed s (Nat.le_of_lt (Nat.lt_of_le_of_lt hs hc_lt))
+        have hIH : inversePolyTree c f = inversePolyTree c g :=
+          IH c.order (Nat.lt_of_lt_of_le hc_lt h_t_order) c f g (le_refl _) h_closed_c
+        have hmono : monochildCrossTerm c f = monochildCrossTerm c g :=
+          monochildCrossTerm_eq_of_subtree_agreement c f g h_closed
+        have hv : f RootedTree.vertex = g RootedTree.vertex :=
+          h_closed RootedTree.vertex (RootedTree.order_pos _)
+        have hself :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c]) :=
+          h_closed _ (le_refl _)
+        rw [hv, hIH, hmono, hself]
+    | [c₁, c₂] =>
+        show bichildPolynomial c₁ c₂
+              (inversePolyTree c₁ f) (inversePolyTree c₂ f) f
+            = bichildPolynomial c₁ c₂
+              (inversePolyTree c₁ g) (inversePolyTree c₂ g) g
+        have hc₁_lt :
+            c₁.order < (OpenMath.Chapter3.Section310.RootedTree.mk
+                          [c₁, c₂]).order :=
+          RootedTree.order_lt_of_mem_children (List.mem_cons_self)
+        have hc₂_lt :
+            c₂.order < (OpenMath.Chapter3.Section310.RootedTree.mk
+                          [c₁, c₂]).order :=
+          RootedTree.order_lt_of_mem_children
+            (List.mem_cons_of_mem _ (List.mem_singleton.mpr rfl))
+        have h_closed_c₁ : ∀ s : RT, s.order ≤ c₁.order → f s = g s := fun s hs =>
+          h_closed s (Nat.le_of_lt (Nat.lt_of_le_of_lt hs hc₁_lt))
+        have h_closed_c₂ : ∀ s : RT, s.order ≤ c₂.order → f s = g s := fun s hs =>
+          h_closed s (Nat.le_of_lt (Nat.lt_of_le_of_lt hs hc₂_lt))
+        have hIH₁ : inversePolyTree c₁ f = inversePolyTree c₁ g :=
+          IH c₁.order (Nat.lt_of_lt_of_le hc₁_lt h_t_order)
+            c₁ f g (le_refl _) h_closed_c₁
+        have hIH₂ : inversePolyTree c₂ f = inversePolyTree c₂ g :=
+          IH c₂.order (Nat.lt_of_lt_of_le hc₂_lt h_t_order)
+            c₂ f g (le_refl _) h_closed_c₂
+        have hbi : bichildCrossTerm c₁ c₂ f = bichildCrossTerm c₁ c₂ g :=
+          bichildCrossTerm_eq_of_subtree_agreement c₁ c₂ f g h_closed
+        have hv : f RootedTree.vertex = g RootedTree.vertex :=
+          h_closed RootedTree.vertex (RootedTree.order_pos _)
+        have hmkt₁ :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₁])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₁]) := by
+          apply h_closed
+          show (OpenMath.Chapter3.Section310.RootedTree.mk [c₁]).order ≤
+              (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂]).order
+          rw [RootedTree.order_eq, RootedTree.order_eq]
+          simp [List.map, List.sum_cons]
+        have hmkt₂ :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₂])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₂]) := by
+          apply h_closed
+          show (OpenMath.Chapter3.Section310.RootedTree.mk [c₂]).order ≤
+              (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂]).order
+          rw [RootedTree.order_eq, RootedTree.order_eq]
+          simp [List.map, List.sum_cons]
+        have hself :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂]) :=
+          h_closed _ (le_refl _)
+        unfold bichildPolynomial
+        rw [hv, hIH₁, hIH₂, hbi, hmkt₁, hmkt₂, hself]
+    | [c₁, c₂, c₃] =>
+        show trichildPolynomial c₁ c₂ c₃
+              (inversePolyTree c₁ f) (inversePolyTree c₂ f)
+              (inversePolyTree c₃ f) f
+            = trichildPolynomial c₁ c₂ c₃
+              (inversePolyTree c₁ g) (inversePolyTree c₂ g)
+              (inversePolyTree c₃ g) g
+        have hc₁_lt :
+            c₁.order < (OpenMath.Chapter3.Section310.RootedTree.mk
+                          [c₁, c₂, c₃]).order :=
+          RootedTree.order_lt_of_mem_children (List.mem_cons_self)
+        have hc₂_lt :
+            c₂.order < (OpenMath.Chapter3.Section310.RootedTree.mk
+                          [c₁, c₂, c₃]).order :=
+          RootedTree.order_lt_of_mem_children
+            (List.mem_cons_of_mem _ (List.mem_cons_self))
+        have hc₃_lt :
+            c₃.order < (OpenMath.Chapter3.Section310.RootedTree.mk
+                          [c₁, c₂, c₃]).order :=
+          RootedTree.order_lt_of_mem_children
+            (List.mem_cons_of_mem _
+              (List.mem_cons_of_mem _ (List.mem_singleton.mpr rfl)))
+        have h_closed_c₁ : ∀ s : RT, s.order ≤ c₁.order → f s = g s := fun s hs =>
+          h_closed s (Nat.le_of_lt (Nat.lt_of_le_of_lt hs hc₁_lt))
+        have h_closed_c₂ : ∀ s : RT, s.order ≤ c₂.order → f s = g s := fun s hs =>
+          h_closed s (Nat.le_of_lt (Nat.lt_of_le_of_lt hs hc₂_lt))
+        have h_closed_c₃ : ∀ s : RT, s.order ≤ c₃.order → f s = g s := fun s hs =>
+          h_closed s (Nat.le_of_lt (Nat.lt_of_le_of_lt hs hc₃_lt))
+        have hIH₁ : inversePolyTree c₁ f = inversePolyTree c₁ g :=
+          IH c₁.order (Nat.lt_of_lt_of_le hc₁_lt h_t_order)
+            c₁ f g (le_refl _) h_closed_c₁
+        have hIH₂ : inversePolyTree c₂ f = inversePolyTree c₂ g :=
+          IH c₂.order (Nat.lt_of_lt_of_le hc₂_lt h_t_order)
+            c₂ f g (le_refl _) h_closed_c₂
+        have hIH₃ : inversePolyTree c₃ f = inversePolyTree c₃ g :=
+          IH c₃.order (Nat.lt_of_lt_of_le hc₃_lt h_t_order)
+            c₃ f g (le_refl _) h_closed_c₃
+        have htri : trichildCrossTerm c₁ c₂ c₃ f = trichildCrossTerm c₁ c₂ c₃ g :=
+          trichildCrossTerm_eq_of_subtree_agreement c₁ c₂ c₃ f g h_closed
+        have hv : f RootedTree.vertex = g RootedTree.vertex :=
+          h_closed RootedTree.vertex (RootedTree.order_pos _)
+        have hmkt₁ :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₁])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₁]) := by
+          apply h_closed
+          show (OpenMath.Chapter3.Section310.RootedTree.mk [c₁]).order ≤
+              (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃]).order
+          rw [RootedTree.order_eq, RootedTree.order_eq]
+          simp [List.map, List.sum_cons]
+        have hmkt₂ :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₂])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₂]) := by
+          apply h_closed
+          show (OpenMath.Chapter3.Section310.RootedTree.mk [c₂]).order ≤
+              (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃]).order
+          rw [RootedTree.order_eq, RootedTree.order_eq]
+          simp [List.map, List.sum_cons]
+          omega
+        have hmkt₃ :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₃])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₃]) := by
+          apply h_closed
+          show (OpenMath.Chapter3.Section310.RootedTree.mk [c₃]).order ≤
+              (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃]).order
+          rw [RootedTree.order_eq, RootedTree.order_eq]
+          simp [List.map, List.sum_cons]
+          omega
+        have hself :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃]) :=
+          h_closed _ (le_refl _)
+        unfold trichildPolynomial
+        rw [hv, hIH₁, hIH₂, hIH₃, htri, hmkt₁, hmkt₂, hmkt₃, hself]
+    | _ :: _ :: _ :: _ :: _ => rfl
+
 /-! ### Phase γ (cycle 376) — closed-subtree agreement for `inversePolynomial`
 
 The Phase γ deliverable promised by the cycle 373 scoping doc §5 and
