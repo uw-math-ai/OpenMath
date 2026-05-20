@@ -1698,3 +1698,140 @@ to two cherry children. For future k=4 ladder rungs:
 The §422 cluster's axiom-clean streak now stands at
 **75 substantive + 6 doc** (cycles 336–502); sorry count remains
 at 5 (4 docstring + 1 grandfathered cycle 365 sorry).
+
+## §17 Cycle 503 update — Phase α'.5.2.4 `mk [v, c, c, c]` ship
+
+### §17.1 Ship summary
+
+Cycle 503 shipped Phase α'.5.2.4 in `OpenMath/Chapter4/Section422.lean`
+(~1500 LOC). Five deliverables for the order-8 single-vertex-prefix +
+three-cherry-tail quadruple `mk [vertex, cherry, cherry, cherry]`
+(first k=4 case with three identical cherry children):
+
+* **B.1** `elementaryWeightQ_phi_inv_mkVertexCherryCherryCherry`:
+  quotient-level closed form, **27 monomials in 14 named kernels**.
+  The 14 kernels: `v, c, b', bu, bu₄, m, vc, vvc, vvvc, cc, vcc,
+  vvcc, ccc, vccc`. TWO new kernels surface: `ccc = mk[c,c,c]`
+  (order 7, the symmetric three-cherry analogue of cycle 384's
+  `mk[c,c]`) and the self-kernel `vccc = mk[v,c,c,c]` (order 8).
+* **B.2** `powRep_sum_eq_of_agreement_at_mkVertexCherryCherryCherry_zero`:
+  m=0 corollary with 14 agreement hypotheses.
+* **B.3** new `(v, c, c, c)` branch in `tetrachildCrossTerm` def
+  body. **22-term cross-term**. Notable: THREE kernels cancel
+  between backbone and closed form (`v` via Block (1) `v·(v²-c)³`,
+  `m` via Blocks (3)+(4)+(5) `3v·(v²-c)²·m`, and the self-kernel
+  `vccc` via Block (16) `-vccc`). So only **11 kernels** appear in
+  the cross-term: `c, b', bu, bu₄, cc, ccc, vc, vcc, vvc, vvcc, vvvc`.
+* **B.4** `inversePolyTree_mkVertexCherryCherryCherry` calibration
+  witness (mechanical extension of cycle 502 template; new `if_neg
+  (by decide) × 3, if_pos ⟨rfl, rfl, rfl, rfl⟩` branch dispatch). The
+  single `rw [inversePolyTree_cherry]` rewrites all three cherry-child
+  occurrences in one pass (cycle 400/502 precedent).
+* **B.5** Phase γ extension of `tetrachildCrossTerm_eq_of_subtree_agreement`
+  (mandatory regression scope per cycle 500's Discovery #2 —
+  references **11 cross-term kernels plus polynomial scalar `v`** =
+  12 h_closed hypotheses, all of order ≤ 8 via `by decide`).
+
+Plus two `⟦explicitEuler⟧` non-vacuity examples: closed-form witness
+pinning to `+1` (order 8 even, leading `+v⁸` survives) and the m=0
+reflexive witness on `⟦explicitEuler⟧ = ⟦explicitEuler⟧` via 14 `rfl`s.
+
+### §17.2 Closed form (B.1)
+
+Per-row factor at `(t₁=v, t₂=c, t₃=c, t₄=c)` under
+`inv_v = -v, inv_c = v² - c`:
+```
+(Aᵢ - v) · ((v² - c) - v·Aᵢ + Bᵢ)³
+```
+where `Aᵢ = Σⱼ M.Aᵢⱼ` and `Bᵢ = Σⱼ Aᵢⱼ · Σₖ Aⱼₖ`. Note the `-v·Aᵢ`
+correction per memory `feedback_dws_cherry_factor_includes_v_aᵢ.md`
+— CUBED into the expansion here (vs cycle 502's squared use).
+
+Expansion gives 14 non-zero `(Aᵢ^j · Bᵢ^k)` entries for
+`(j, k) ∈ {0..4} × {0..3}`. Summed against `bᵢ` and back-substituted
+via the 14 kernels, then negated by `Σ inv.b · dws = -Σ b · dws`
+gives a 27-monomial sum (after expanding all polynomial coefficients).
+
+Sanity check at `⟦explicitEuler⟧` (v=1, all higher kernels 0):
+`+1 + 0 - 0 + ... = +1` ✓ (order 8 even-leading pattern, same sign
+as cycle 499's even-order `+v⁵`).
+
+### §17.3 Cross-term value (B.3) and m / v / vccc cancellation
+
+Subtracting `tetrachildPolynomial`'s Blocks 1+2+3+4+5+16 backbone at
+`(v, c, c, c)`:
+
+* Block 1: `-(v · (-v) · (v²-c) · (v²-c) · (v²-c)) = v²·(v²-c)³`
+* Block 2: `-((v²-c)³ · f(mk[v])) = -(v²-c)³ · c`  (since `f(mk[v]) = c`)
+* Blocks 3+4+5: each `-(-v · (v²-c)² · m) = v·(v²-c)²·m`, sum = `3v·(v²-c)²·m`
+* Block 16: `-vccc`
+
+Sum: `v²·(v²-c)³ - (v²-c)³·c + 3v·(v²-c)²·m - vccc`.
+
+The `v²·(v²-c)³` Block (1) coefficient (i.e., `v²` × polynomial in (v,c))
+attaches to the polynomial scalar; the V-kernel contribution in the
+closed form's coefficient `V·(V²-C)³ · V_kernel = V²·(V²-C)³` matches
+exactly. Hence **`v` cancels**.
+
+The B.1 closed form's `m` kernel coefficient is `3V·(V²-C)²` — matching
+the backbone exactly. So **`m` cancels** in the cross-term.
+
+The B.1 closed form's `vccc` self-kernel coefficient is `-1` — matching
+Block (16)'s `-vccc` structurally. So **`vccc` cancels** in the
+cross-term (this is the universal self-kernel cancellation per cycle
+500's "Discovery #2").
+
+Cross-term result: 22 monomials across 11 kernels (excluding the three
+that cancelled). Phase γ extension correspondingly references 12
+kernels (the 11 plus polynomial scalar `v`).
+
+### §17.4 Discovery: cherry-child cancellation pattern
+
+Building on cycle 502's Discovery #1 (`m` cancellation when both
+`t₃ = t₄ = cherry`), cycle 503 confirms the general pattern: **as the
+number of cherry children grows, more kernels cancel structurally**.
+
+Specifically, at `(v, c^k, c^(K-k))`-shaped quadruples (vertex prefix
+of length `K-k` + cherry tail of length `k`), expect the kernels
+`mk[c^0]=v, mk[c^1]=m, mk[c^2]=cc, ..., mk[c^k]` plus the self-kernel
+all to cancel structurally between backbone and closed form.
+
+For cycle 503's `(v, c, c, c)` (k=3): `v`, `m`, `vccc` cancel.
+
+For cycle 504's predicted `(c, c, c, c)` (k=4): expect `v`, `m`, `cc`,
+and the self-kernel `cccc = mk[c,c,c,c]` to cancel. So 4 kernels
+cancel, leaving (CF − 4) cross-term kernels.
+
+### §17.5 Mechanical template for k=4 ladders (cycle 504+ inheritance)
+
+The cycle 502 + 503 ships confirm the cycle 501 template scales smoothly
+to two and three cherry children. For future k=4 ladder rungs:
+
+* Worker should derive per-row factor structure first
+  (`(Aᵢ - v)^p · ((v² - c) - v·Aᵢ + Bᵢ)^q` for `p + q = 4`).
+* Expand symbolically via sympy (cycle 503 confirmed this as the
+  preferred workflow). Symbolic verification catches sign errors
+  and kernel counting errors before they appear in Lean's `ring`.
+* B.5 Phase γ extension must follow the kernel inventory of B.3
+  (the cross-term), NOT B.1 (the closed form), since some kernels
+  cancel between backbone and closed form.
+* For all-cherry-children patterns, expect `mk[c^k]` kernel cancellation
+  for `k = 0..(number of cherry children)` and the self-kernel
+  cancellation per §17.4.
+
+### §17.6 Forward agenda
+
+* **Cycle 504**: Phase α'.5.2.5 candidate per scoping doc §5.3:
+  `(c, c, c, c)` (order 9, symmetric all-cherry — full quartic in Bᵢ,
+  no vertex prefix). Predicted cross-term inventory: 8 kernels
+  (excluding the 4 that cancel per §17.4).
+* **Cycle 505+**: candidates `(v, v, v, mk[c])` (order 7, the `mk[c]`-child
+  analog of cycle 493) and `(v, v, c, mk[c])` (order 8, mixed cherry +
+  `mk[c]` children). These introduce non-leaf children for the
+  quadruple-tree family.
+* **Cycle 506+**: after ~5-6 more witnesses, planner can write a
+  Phase β/γ k=4-extension scoping doc paralleling cycle 495's k=2/3 doc.
+
+The §422 cluster's axiom-clean streak now stands at
+**76 substantive + 6 doc** (cycles 336–503); sorry count remains
+at 5 (4 docstring + 1 grandfathered cycle 365 sorry).
