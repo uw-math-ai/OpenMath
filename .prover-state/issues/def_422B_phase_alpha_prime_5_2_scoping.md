@@ -1835,3 +1835,88 @@ to two and three cherry children. For future k=4 ladder rungs:
 The §422 cluster's axiom-clean streak now stands at
 **76 substantive + 6 doc** (cycles 336–503); sorry count remains
 at 5 (4 docstring + 1 grandfathered cycle 365 sorry).
+
+## §18 Cycle 504 update — Phase α'.5.2.5 ship: `mk [c, c, c, c]`
+
+Cycle 504 shipped the symmetric all-cherry quadruple
+`mk [cherry, cherry, cherry, cherry]` (order 9, k=4), the fifth
+substantive k=4 ship after cycles 499 (`bushy₄`), 501 (`mk[v,v,v,c]`),
+502 (`mk[v,v,c,c]`), and 503 (`mk[v,c,c,c]`). The symmetric quadruple
+ladder is now complete.
+
+### §18.1 Cancellation pattern correction
+
+The cycle 504 strategy predicted FOUR cancellations (`v`, `m`, `cc`,
+`cccc`) extending cycle 503's Discovery #1 generalisation. Sympy
+pre-flight verified only THREE cancellations actually occur:
+`v`, `m`, `cccc`. The strategy's `cc` prediction was based on a
+"bilinear-block level" argument referencing Blocks (6)-(11) in §3.1
+of this scoping doc — but in the current Lean definition, Blocks (6)-(15)
+are wholly absorbed into `tetrachildCrossTerm`, so `cc` remains as a
+free CT coefficient `-6(V²-C)²`.
+
+The corrected cancellation pattern: a kernel `K` cancels iff its B.1
+coefficient is exactly matched by a backbone block. For (c, c, c, c):
+* `v` cancels (Block 1 absorbs it).
+* `m` cancels (Blocks 2+3+4+5 sum to `4(v²-c)^3 · m`, matching B.1's
+  m-coefficient exactly).
+* `cccc` cancels (self-kernel, Block 16 absorbs structurally).
+* `cc, ccc` do NOT cancel — no backbone block contributes these
+  directly. They remain as free CT coefficients.
+
+### §18.2 Cycle 504 deliverables
+
+1. **B.1**: `elementaryWeightQ_phi_inv_mkCherryCherryCherryCherry` —
+   31-monomial closed form in 15 named kernels
+   (`v, c, b', bu, bu₄, m, vc, vvc, vvvc, cc, vcc, vvcc, ccc, vccc, cccc`).
+2. **B.2**: `powRep_sum_eq_of_agreement_at_mkCherryCherryCherryCherry_zero` —
+   Sub-lemma A m=0 specialisation with 14 agreement hypotheses.
+3. **B.3**: 5th `else if` branch in `tetrachildCrossTerm` (25 monomials
+   in 12 kernels: `c, b', bu, bu₄, cc, ccc, vc, vcc, vccc, vvc, vvcc,
+   vvvc`).
+4. **B.4**: `inversePolyTree_mkCherryCherryCherryCherry` calibration
+   witness.
+5. **B.5**: 5th `by_cases h_cccc` branch in
+   `tetrachildCrossTerm_eq_of_subtree_agreement` Phase γ extension
+   (13 agreement hypotheses).
+
+Plus 2 non-vacuity examples at `⟦explicitEuler⟧`: closed-form witness
+pins to `-1` (order 9 odd parity), m=0 witness with 14 `rfl` discharges.
+
+### §18.3 Non-vacuity prediction confirmed
+
+Strategy predicted: order 9 odd parity ⇒ leading `-v⁹` survives at
+`v=1, c=0` ⇒ value `-1`. Confirmed at `⟦explicitEuler⟧`.
+
+### §18.4 Updated cancellation pattern guidance
+
+The cancellation count for (a, b, c, d) with `(p, q)` vertex/cherry
+children is NOT a simple function of (p, q). Empirical pattern:
+
+* (v,v,v,v) (cycle 499): 0 cancellations beyond the standard pattern.
+* (v,v,v,c) (cycle 501): no cancellations.
+* (v,v,c,c) (cycle 502): 1 cancellation (`m`).
+* (v,c,c,c) (cycle 503): 3 cancellations (`v`, `m`, `vccc`).
+* (c,c,c,c) (cycle 504): 3 cancellations (`v`, `m`, `cccc`).
+
+The pattern depends on which backbone blocks have non-trivial kernel
+content. Future cycle workers should run sympy pre-flight to compute
+B.1-minus-backbone explicitly per kernel; do NOT trust intuitive
+predictions.
+
+### §18.5 Forward agenda (revised)
+
+* **Cycle 505+**: candidates per §17.6:
+  * `(v, v, v, mk[c])` (order 7, single-monocchild final position).
+  * `(v, v, c, mk[c])` (order 8, mixed cherry + `mk[c]` children).
+  * `(v, mk[c], c, c)` (order 8, mid-position non-leaf).
+* **Cycle 506-507**: Phase β/γ k=4-extension scoping doc per
+  cycle 495's k=2/3 precedent, now that 5 k=4 calibration witnesses
+  have accumulated (cycles 499/501/502/503/504).
+* **Cycle 508+**: pivot to fresh entity per `cycle_336_pivot_options.md`
+  (def:451A, def:442A, thm:535A, thm:541A) is now credible — the
+  symmetric quadruple ladder is complete.
+
+The §422 cluster's axiom-clean streak now stands at
+**77 substantive + 6 doc** (cycles 336–504); sorry count remains
+at 5 (4 docstring + 1 grandfathered cycle 365 sorry).

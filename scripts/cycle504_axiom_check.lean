@@ -1,0 +1,5 @@
+import OpenMath.Chapter4.Section422
+
+#print axioms OpenMath.Chapter4.Section422.elementaryWeightQ_phi_inv_mkCherryCherryCherryCherry
+#print axioms OpenMath.Chapter4.Section422.powRep_sum_eq_of_agreement_at_mkCherryCherryCherryCherry_zero
+#print axioms OpenMath.Chapter4.Section422.inversePolyTree_mkCherryCherryCherryCherry
