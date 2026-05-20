@@ -17670,27 +17670,36 @@ theorem elementaryWeightQ_phi_inv_eq_inversePolynomial_on_ladder
   · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_mkVertexCherry η_q
   · exact elementaryWeightQ_phi_inv_eq_inversePolynomial_mkMkCherry η_q
 
-/-- *Phase β.1 (cycle 496) — per-tree dispatch theorem for `inversePolyTree`
-over the 14-tree ladder.*
+/-- *Phase β.1 (cycle 496, extended cycle 506) — per-tree dispatch theorem
+for `inversePolyTree` over the 19-tree ladder.*
 
 For each tree `t` in the §422 ladder
 `{vertex, cherry, broom₃, mk [cherry], bushy, mk [broom₃],
 mk [vertex, cherry], mk [mk [cherry]], mk [cherry, cherry],
 mk [broom₃, cherry], mk [vertex, vertex, cherry],
 mk [vertex, cherry, cherry], mk [vertex, vertex, mk [cherry]],
-mk [vertex, vertex, broom₃]}` shipped by cycles 341, 367–372, 378, 384–386,
-403, 491–494, the recursive `inversePolyTree t f` and the quotient-level
-`elementaryWeightQ_phi η_q⁻¹ t` agree under `f = elementaryWeightQ_phi η_q`.
+mk [vertex, vertex, broom₃], bushy₄, mk [vertex, vertex, vertex, cherry],
+mk [vertex, vertex, cherry, cherry], mk [vertex, cherry, cherry, cherry],
+mk [cherry, cherry, cherry, cherry]}` shipped by cycles 341, 367–372,
+378, 384–386, 403, 491–494, 499, 501–504, the recursive
+`inversePolyTree t f` and the quotient-level `elementaryWeightQ_phi η_q⁻¹ t`
+agree under `f = elementaryWeightQ_phi η_q`.
 
 Each branch follows the same template: rewrite the LHS via cycle
 `elementaryWeightQ_phi_inv_<tree>` to its closed form, rewrite the RHS via
-the matching `inversePolyTree_<tree>` calibration (cycles 387–494) to the
+the matching `inversePolyTree_<tree>` calibration (cycles 387–504) to the
 same closed form, and the goal closes definitionally.
 
 This is the **Phase β.1 deliverable** per the cycle 495 scoping doc §5.1.
 It supersedes cycle 377's `inversePolynomial`-targeted version with the
 recursive `inversePolyTree` form, paving the way for Phase β.2 (cycle 497)
-structural induction. -/
+structural induction.
+
+Extended in cycle 506 from 14 to 19 disjuncts to cover the cycle 499
+(`bushy₄`), 501 (`mk [v,v,v,c]`), 502 (`mk [v,v,c,c]`),
+503 (`mk [v,c,c,c]`), 504 (`mk [c,c,c,c]`) k=4 calibration witnesses,
+per scoping doc
+`.prover-state/issues/def_422B_phase_beta_gamma_k4_scoping.md` §9. -/
 theorem elementaryWeightQ_phi_inv_eq_inversePolyTree_on_ladder
     (η_q : Quotient PhiEquivalent.setoidSigma) (t : RT)
     (ht_ladder :
@@ -17716,10 +17725,24 @@ theorem elementaryWeightQ_phi_inv_eq_inversePolyTree_on_ladder
               [RootedTree.vertex, RootedTree.vertex,
                OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]]
       ∨ t = OpenMath.Chapter3.Section310.RootedTree.mk
-              [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) :
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]
+      ∨ t = RootedTree.bushy₄
+      ∨ t = OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.vertex,
+               RootedTree.cherry]
+      ∨ t = OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex,
+               RootedTree.cherry, RootedTree.cherry]
+      ∨ t = OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry,
+               RootedTree.cherry, RootedTree.cherry]
+      ∨ t = OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.cherry, RootedTree.cherry,
+               RootedTree.cherry, RootedTree.cherry]) :
     elementaryWeightQ_phi η_q⁻¹ t
       = inversePolyTree t (elementaryWeightQ_phi η_q) := by
-  rcases ht_ladder with h | h | h | h | h | h | h | h | h | h | h | h | h | h
+  rcases ht_ladder with
+    h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h
   all_goals subst h
   · rw [elementaryWeightQ_phi_inv_vertex, inversePolyTree_vertex]
   · rw [elementaryWeightQ_phi_inv_cherry, inversePolyTree_cherry]
@@ -17739,6 +17762,20 @@ theorem elementaryWeightQ_phi_inv_eq_inversePolyTree_on_ladder
         inversePolyTree_mkVertexVertexMkCherry]
   · rw [elementaryWeightQ_phi_inv_mkVertexVertexBroom₃,
         inversePolyTree_mkVertexVertexBroom₃]
+  -- arm 15: bushy₄ (cycle 499)
+  · rw [elementaryWeightQ_phi_inv_bushy₄, inversePolyTree_bushy₄]
+  -- arm 16: mk [v,v,v,c] (cycle 501)
+  · rw [elementaryWeightQ_phi_inv_mkVertexVertexVertexCherry,
+        inversePolyTree_mkVertexVertexVertexCherry]
+  -- arm 17: mk [v,v,c,c] (cycle 502)
+  · rw [elementaryWeightQ_phi_inv_mkVertexVertexCherryCherry,
+        inversePolyTree_mkVertexVertexCherryCherry]
+  -- arm 18: mk [v,c,c,c] (cycle 503)
+  · rw [elementaryWeightQ_phi_inv_mkVertexCherryCherryCherry,
+        inversePolyTree_mkVertexCherryCherryCherry]
+  -- arm 19: mk [c,c,c,c] (cycle 504)
+  · rw [elementaryWeightQ_phi_inv_mkCherryCherryCherryCherry,
+        inversePolyTree_mkCherryCherryCherryCherry]
 
 /-! ### Phase γ (cycle 497) — closed-subtree agreement for `inversePolyTree`
 

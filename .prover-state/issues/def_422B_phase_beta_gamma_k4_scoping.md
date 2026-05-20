@@ -702,6 +702,42 @@ each). Plus ~30–50 LOC of docstring documenting the extension.
 * §422 axiom-clean streak: **77 substantive + 7 doc** (cycles 336–505).
 * Task results in `.prover-state/task_results/cycle_505.md`.
 
+## §10' Cycle 506 closure — Phase β.1 k=4 dispatch extension shipped
+
+* `Section422.lean` Phase β.1 dispatch theorem
+  `elementaryWeightQ_phi_inv_eq_inversePolyTree_on_ladder`
+  (line 17694, originally cycle 496) extended from **14 to 19 disjuncts**.
+  The 5 new arms cover cycles 499 (`bushy₄`), 501 (`mk [v,v,v,c]`),
+  502 (`mk [v,v,c,c]`), 503 (`mk [v,c,c,c]`), 504 (`mk [c,c,c,c]`).
+  Each new arm closes via `rw [elementaryWeightQ_phi_inv_<tree>,
+  inversePolyTree_<tree>]` — the existing arm pattern (no `;ring`
+  needed, since the cycle 499–504 calibration witnesses were designed
+  to mirror their respective closed forms verbatim).
+* LOC delta: +37 LOC (`Section422.lean` 19159 → 19196), well within
+  the strategy's 50–100 LOC budget.
+* Build verification: `time lake env lean OpenMath/Chapter4/Section422.lean`
+  exit 0 in 5m 0s (warm). Only warning is the grandfathered cycle 365
+  sorry at line 2272 (unchanged).
+* Axiom-clean: `#print axioms
+  OpenMath.Chapter4.Section422.elementaryWeightQ_phi_inv_eq_inversePolyTree_on_ladder`
+  returns `[propext, Classical.choice, Quot.sound]` (after `lake build
+  OpenMath.Chapter4.Section422` to refresh the olean per memory
+  `feedback_lake_env_lean_no_olean_update.md`).
+* `lean_status.json` `def:422B.cycle_completed_at`: 505 → 506;
+  `status` remains `partial` (Phase β.2 k ≥ 5 obstruction unchanged).
+* `plan.md` `def:422B` row: cycle 506 closure paragraph appended.
+* `grep -c sorry OpenMath/Chapter4/Section422.lean`: 5 (unchanged —
+  4 docstring + 1 grandfathered cycle 365 at line 2272).
+* §422 axiom-clean streak: 77 substantive + 7 doc → **78 substantive
+  + 7 doc** (cycles 336–506).
+* Task results in `.prover-state/task_results/cycle_506.md`.
+
+**Risk R1 outcome**: `ring` was NOT needed on any of the 5 new arms;
+the calibration witnesses mirror their closed forms verbatim so a
+single `rw [_inv_<tree>, inversePolyTree_<tree>]` closes definitionally
+(consistent with the existing 14 cycle 496 arms, contra the strategy's
+`rw + ring` template suggestion).
+
 ## §11 Cross-references
 
 * `.prover-state/issues/def_422B_phase_beta_gamma_scoping.md` (cycle
