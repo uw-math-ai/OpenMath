@@ -738,6 +738,69 @@ single `rw [_inv_<tree>, inversePolyTree_<tree>]` closes definitionally
 (consistent with the existing 14 cycle 496 arms, contra the strategy's
 `rw + ring` template suggestion).
 
+## §10'' Cycle 507 closure — Phase γ k=4 verification + 5 structural-coverage examples shipped
+
+* `Section422.lean` Phase γ public lemma
+  `inversePolyTree_eq_of_subtree_agreement` (line 18557, originally
+  cycle 497) confirmed axiom-clean over the 5-branch
+  `tetrachildCrossTerm_eq_of_subtree_agreement` cascade.
+* `#print axioms
+  OpenMath.Chapter4.Section422.inversePolyTree_eq_of_subtree_agreement`
+  returns `[propext, Classical.choice, Quot.sound]` — NO `sorryAx`
+  contamination (verified after `lake build OpenMath.Chapter4.Section422`
+  to refresh the olean per memory
+  `feedback_lake_env_lean_no_olean_update.md`).
+* 5 structural-coverage `example` declarations shipped (one per cycle
+  499–504 tree):
+  - `bushy₄` (cycle 499, `(v,v,v,v)` branch)
+  - `mk [v, v, v, cherry]` (cycle 501, `(v,v,v,c)` branch)
+  - `mk [v, v, cherry, cherry]` (cycle 502, `(v,v,c,c)` branch)
+  - `mk [v, cherry, cherry, cherry]` (cycle 503, `(v,c,c,c)` branch)
+  - `mk [cherry, cherry, cherry, cherry]` (cycle 504, `(c,c,c,c)`
+    branch)
+  Each instantiates the public lemma with trivial-agreement
+  `(fun _ _ => rfl)` at the constant-zero weight function. Because
+  `f = g` syntactically, the hypothesis discharges by definitional
+  equality regardless of any `s.order ≤ t.order` side condition.
+* Each example structurally exercises the `mk [c₁, c₂, c₃, c₄]` arm
+  dispatch from `inversePolyTree_eq_of_subtree_agreement` into the
+  corresponding `tetrachildCrossTerm_eq_of_subtree_agreement` branch
+  without unification or motive errors. Trees written with explicit
+  `OpenMath.Chapter3.Section310.RootedTree.mk` namespace per cycle 374
+  namespace-resolution discovery (the top-level `RootedTree.mk`
+  resolves to Mathlib's `_root_.RootedTree.mk`, not the OpenMath one).
+* LOC delta: +103 LOC (`Section422.lean` 19196 → 19299, slightly
+  above the strategy's 75–100 LOC budget due to the four-line
+  qualified-namespace tree literals on the four non-`bushy₄` arms).
+* Build verification: `time lake env lean
+  OpenMath/Chapter4/Section422.lean` exit 0 in 5m 40s (warm). Only
+  warning is the grandfathered cycle 365 sorry at line 2272
+  (unchanged).
+* `lean_status.json` `def:422B.cycle_completed_at`: 506 → 507;
+  `status` remains `partial` (Phase β.2 k ≥ 5 obstruction unchanged).
+* `plan.md` `def:422B` row: cycle 507 closure paragraph appended;
+  cycle 506 worker's "Cycle 507 entry point" stub replaced.
+* `grep -c sorry OpenMath/Chapter4/Section422.lean`: 5 (unchanged —
+  4 docstring + 1 grandfathered cycle 365 at line 2272).
+* §422 axiom-clean streak: 78 substantive + 7 doc → **79 substantive
+  + 7 doc** (cycles 336–507).
+* Task results in `.prover-state/task_results/cycle_507.md`.
+
+**Risk outcome**: The strategy's low-probability scenario (cycle 497
+worker's integration of the 5 tetrachild branches in
+`tetrachildCrossTerm_eq_of_subtree_agreement` left a hidden gap)
+did NOT occur — the public lemma was already axiom-clean by
+construction, so Step 2's `#print axioms` check served as confirmation
+rather than rescue. The trivial-agreement example template worked as
+designed; no unification or motive errors arose on any of the 5
+arms.
+
+**Cycle 508 entry point**: per §6.3, ship the markdown-only Path (b)
+`nchildPolynomial` parametric-recursion scoping doc (~600–900 LOC
+markdown, ZERO Lean delta). This unblocks the long-term path to
+cycle 365's grandfathered sorry closure (cycle 509+ implementation
+over 10–15 cycles).
+
 ## §11 Cross-references
 
 * `.prover-state/issues/def_422B_phase_beta_gamma_scoping.md` (cycle

@@ -19193,4 +19193,107 @@ theorem inversePolynomial_eq_of_subtree_agreement
         if_neg h_bushy, if_neg h_mkBroom, if_neg h_mkVertexCherry,
         if_neg h_mkMkCherry]
 
+/-! ### Phase γ k=4 structural-coverage examples (cycle 507)
+
+The cycle 497 Phase γ public lemma
+`inversePolyTree_eq_of_subtree_agreement` was extended in parallel with
+each cycle 500/501/502/503/504 `tetrachildCrossTerm` branch (the
+`mk [c₁, c₂, c₃, c₄]` arm dispatches to
+`tetrachildCrossTerm_eq_of_subtree_agreement`, whose 5-branch cascade
+mirrors the cycle 499–504 `(v^p, c^q)` ladder). Cycle 507 confirmed
+the Phase γ public lemma remains axiom-clean after the cascade is in
+place (`#print axioms` returns `[propext, Classical.choice, Quot.sound]`).
+
+The 5 examples below provide structural coverage — one per cycle
+499–504 tree — by instantiating the public lemma at each four-child
+shape with the trivial agreement hypothesis `(fun _ _ => rfl)`
+(since `f = g` syntactically). They verify Phase γ is callable at
+each k=4 tree without unification or motive errors. -/
+
+/-- *Phase γ k=4 coverage at `bushy₄`* (cycle 507, cycle 499 tree).
+Exercises the Phase γ public lemma's `mk [c₁, c₂, c₃, c₄]` arm
+dispatch into the `(v, v, v, v)` branch of
+`tetrachildCrossTerm_eq_of_subtree_agreement`. -/
+example :
+    inversePolyTree RootedTree.bushy₄ (fun _ => (0 : ℝ))
+      = inversePolyTree RootedTree.bushy₄ (fun _ => (0 : ℝ)) :=
+  inversePolyTree_eq_of_subtree_agreement
+    RootedTree.bushy₄ _ _ (fun _ _ => rfl)
+
+/-- *Phase γ k=4 coverage at `mk [v, v, v, cherry]`* (cycle 507, cycle
+501 tree). Exercises the `(v, v, v, c)` branch of
+`tetrachildCrossTerm_eq_of_subtree_agreement`. -/
+example :
+    inversePolyTree
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.vertex,
+            RootedTree.cherry])
+        (fun _ => (0 : ℝ))
+      = inversePolyTree
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.vertex, RootedTree.vertex,
+              RootedTree.cherry])
+          (fun _ => (0 : ℝ)) :=
+  inversePolyTree_eq_of_subtree_agreement
+    (OpenMath.Chapter3.Section310.RootedTree.mk
+      [RootedTree.vertex, RootedTree.vertex, RootedTree.vertex,
+        RootedTree.cherry]) _ _ (fun _ _ => rfl)
+
+/-- *Phase γ k=4 coverage at `mk [v, v, cherry, cherry]`* (cycle 507,
+cycle 502 tree). Exercises the `(v, v, c, c)` branch of
+`tetrachildCrossTerm_eq_of_subtree_agreement`. -/
+example :
+    inversePolyTree
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex,
+            RootedTree.cherry, RootedTree.cherry])
+        (fun _ => (0 : ℝ))
+      = inversePolyTree
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.vertex,
+              RootedTree.cherry, RootedTree.cherry])
+          (fun _ => (0 : ℝ)) :=
+  inversePolyTree_eq_of_subtree_agreement
+    (OpenMath.Chapter3.Section310.RootedTree.mk
+      [RootedTree.vertex, RootedTree.vertex,
+        RootedTree.cherry, RootedTree.cherry]) _ _ (fun _ _ => rfl)
+
+/-- *Phase γ k=4 coverage at `mk [v, cherry, cherry, cherry]`*
+(cycle 507, cycle 503 tree). Exercises the `(v, c, c, c)` branch of
+`tetrachildCrossTerm_eq_of_subtree_agreement`. -/
+example :
+    inversePolyTree
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry,
+            RootedTree.cherry, RootedTree.cherry])
+        (fun _ => (0 : ℝ))
+      = inversePolyTree
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry,
+              RootedTree.cherry, RootedTree.cherry])
+          (fun _ => (0 : ℝ)) :=
+  inversePolyTree_eq_of_subtree_agreement
+    (OpenMath.Chapter3.Section310.RootedTree.mk
+      [RootedTree.vertex, RootedTree.cherry,
+        RootedTree.cherry, RootedTree.cherry]) _ _ (fun _ _ => rfl)
+
+/-- *Phase γ k=4 coverage at `mk [cherry, cherry, cherry, cherry]`*
+(cycle 507, cycle 504 tree). Exercises the `(c, c, c, c)` branch of
+`tetrachildCrossTerm_eq_of_subtree_agreement`. -/
+example :
+    inversePolyTree
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.cherry, RootedTree.cherry,
+            RootedTree.cherry, RootedTree.cherry])
+        (fun _ => (0 : ℝ))
+      = inversePolyTree
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.cherry, RootedTree.cherry,
+              RootedTree.cherry, RootedTree.cherry])
+          (fun _ => (0 : ℝ)) :=
+  inversePolyTree_eq_of_subtree_agreement
+    (OpenMath.Chapter3.Section310.RootedTree.mk
+      [RootedTree.cherry, RootedTree.cherry,
+        RootedTree.cherry, RootedTree.cherry]) _ _ (fun _ _ => rfl)
+
 end OpenMath.Chapter4.Section422
