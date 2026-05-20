@@ -10060,7 +10060,76 @@ noncomputable def trichildPolynomial
     + trichildCrossTerm t₁ t₂ t₃ f
     - f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁, t₂, t₃])
 
-/-- *Phase α'.4.1 (cycle 387, extended cycle 399) — recursive inverse-polynomial on rooted trees.*
+/-- *Phase α'.5.2.1 (cycle 500) — quadruple-children cross-term per-quadruple dispatch.*
+
+For a quadruple-children tree `mk [t₁, t₂, t₃, t₄]`, this helper packages
+the bilinear + trilinear + quadrilinear cross-term contributions from the
+16 = 2⁴ block expansion of `Φ_{η_q⁻¹}(mk [t₁, t₂, t₃, t₄])` after the
+backbone Blocks (1)–(5) and the self-term Block (16) have been absorbed
+into `tetrachildPolynomial`.
+
+Empirical dispatch:
+
+* `(vertex, vertex, vertex, vertex)` →
+  `-6 · (f vertex)² · f broom₃ + 4 · f vertex · f bushy`.
+  Back-computed from cycle 499's `elementaryWeightQ_phi_inv_bushy₄`
+  closed form `-v⁵ + 4v³c − 6v²b' + 4vB − bushy₄` after subtracting the
+  `tetrachildPolynomial` backbone at `(inv_v, inv_v, inv_v, inv_v) =
+  (-v, -v, -v, -v)`. The four Block (2)/(3)/(4)/(5) bilinear self-term
+  contributions each evaluate to `+v³ · f cherry`; their sum
+  `+4v³ · f cherry` cancels against the closed form's `+4v³c`,
+  leaving Block (6)–(15)'s combined `(−6v²b' + 4vB)` as the
+  cross-term residual.
+* Other quadruples → `0` (default; refined in cycle 501+ Phase α'.5.2.k
+  as more quadruple-child witnesses surface).
+
+Mirror of cycle 399's `trichildCrossTerm` design for the quadruple-child
+case. Phase α'.5.2.1 P1 deliverable. -/
+noncomputable def tetrachildCrossTerm
+    (t₁ t₂ t₃ t₄ : RT) (f : RT → ℝ) : ℝ :=
+  if t₁ = RootedTree.vertex ∧ t₂ = RootedTree.vertex
+      ∧ t₃ = RootedTree.vertex ∧ t₄ = RootedTree.vertex then
+    -6 * (f RootedTree.vertex) ^ 2 * f RootedTree.broom₃
+      + 4 * f RootedTree.vertex * f RootedTree.bushy
+  else
+    0
+
+/-- *Phase α'.5.2.1 (cycle 500) — quadruple-children polynomial helper.*
+
+Given four subtrees `t₁ t₂ t₃ t₄ : RT`, their recursively-known
+`inversePolyTree` values `inv₁, inv₂, inv₃, inv₄ : ℝ`, and an
+elementary-weight function `f : RT → ℝ`,
+`tetrachildPolynomial t₁ t₂ t₃ t₄ inv₁ inv₂ inv₃ inv₄ f` is the
+closed-form polynomial-in-`f` that (after the cycle 500+ calibration
+work) reproduces `Φ_{η⁻¹}(mk [t₁, t₂, t₃, t₄])`'s value under
+`f = Φ_η`.
+
+The shape is the 16-block decomposition reorganised:
+
+* `-(v · inv₁ · inv₂ · inv₃ · inv₄)` — Block (1) (pure quadruple subtree-inverse
+  product), with a leading negation matching the cycle 380/387/399 recurrence
+  sign convention.
+* `-(inv₂ · inv₃ · inv₄ · f (mk [t₁]))` — Block (2).
+* `-(inv₁ · inv₃ · inv₄ · f (mk [t₂]))` — Block (3) (symmetric to Block (2)).
+* `-(inv₁ · inv₂ · inv₄ · f (mk [t₃]))` — Block (4) (symmetric to Block (2)).
+* `-(inv₁ · inv₂ · inv₃ · f (mk [t₄]))` — Block (5) (symmetric to Block (2)).
+* `+ tetrachildCrossTerm t₁ t₂ t₃ t₄ f` — Blocks (6)–(15)
+  bilinear+trilinear+quadrilinear cross-term contributions, packaged as
+  one term.
+* `- f (mk [t₁, t₂, t₃, t₄])` — the self-term, sign `-1` uniform with
+  cycles 367/369/371/378/388/389/390/399 binary/single-child/triple-child
+  witnesses. -/
+noncomputable def tetrachildPolynomial
+    (t₁ t₂ t₃ t₄ : RT) (inv₁ inv₂ inv₃ inv₄ : ℝ) (f : RT → ℝ) : ℝ :=
+  -(f RootedTree.vertex * inv₁ * inv₂ * inv₃ * inv₄)
+    - inv₂ * inv₃ * inv₄ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁])
+    - inv₁ * inv₃ * inv₄ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₂])
+    - inv₁ * inv₂ * inv₄ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₃])
+    - inv₁ * inv₂ * inv₃ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₄])
+    + tetrachildCrossTerm t₁ t₂ t₃ t₄ f
+    - f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁, t₂, t₃, t₄])
+
+/-- *Phase α'.4.1 (cycle 387, extended cycles 399, 500) — recursive inverse-polynomial on rooted trees.*
 
 For any rooted tree `t` and elementary-weight function `f : RT → ℝ`,
 `inversePolyTree t f` is the recursive closed-form polynomial in `f`
@@ -10079,7 +10148,10 @@ Dispatch by children-list shape:
 * `mk [c₁, c₂]` (binary): delegates to `bichildPolynomial`.
 * `mk [c₁, c₂, c₃]` (triple): delegates to `trichildPolynomial`
   (cycle 399 extension).
-* `mk (_ :: _ :: _ :: _ :: _)` (k ≥ 4): returns `0` (deferred to Phase α'.5).
+* `mk [c₁, c₂, c₃, c₄]` (quadruple): delegates to `tetrachildPolynomial`
+  (cycle 500 extension).
+* `mk (_ :: _ :: _ :: _ :: _ :: _)` (k ≥ 5): returns `0`
+  (deferred to Phase α'.5.3+).
 
 Termination via Lean's default `sizeOf` measure: each recursive call
 is on a strict subtree (a `List.get` of the children list). -/
@@ -10097,7 +10169,12 @@ noncomputable def inversePolyTree : RT → (RT → ℝ) → ℝ
       trichildPolynomial c₁ c₂ c₃
         (inversePolyTree c₁ f) (inversePolyTree c₂ f)
         (inversePolyTree c₃ f) f
-  | OpenMath.Chapter3.Section310.RootedTree.mk (_ :: _ :: _ :: _ :: _), _ =>
+  | OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃, c₄], f =>
+      tetrachildPolynomial c₁ c₂ c₃ c₄
+        (inversePolyTree c₁ f) (inversePolyTree c₂ f)
+        (inversePolyTree c₃ f) (inversePolyTree c₄ f) f
+  | OpenMath.Chapter3.Section310.RootedTree.mk
+      (_ :: _ :: _ :: _ :: _ :: _), _ =>
       0
 
 /-- *Phase α'.4.1 (cycle 387) — vertex calibration witness.*
@@ -10308,6 +10385,66 @@ theorem inversePolyTree_bushy (f : RT → ℝ) :
         - 3 * (f RootedTree.vertex) ^ 2 * f RootedTree.cherry
         + 3 * f RootedTree.vertex * f RootedTree.broom₃
         - f RootedTree.bushy
+  ring
+
+/-- *Phase α'.5.2.1 (cycle 500) — `bushy₄` calibration witness.*
+
+`inversePolyTree bushy₄ f = -(f vertex)^5 + 4·(f vertex)^3·f cherry
+− 6·(f vertex)^2·f broom₃ + 4·f vertex·f bushy − f bushy₄` matches
+cycle 499's `elementaryWeightQ_phi_inv_bushy₄`. Since `bushy₄ =
+mk [vertex, vertex, vertex, vertex]` (four-child), the proof unfolds
+the quadruple-children branch of `inversePolyTree` (cycle 500),
+rewrites `inversePolyTree vertex f = -f vertex` via
+`inversePolyTree_vertex` four times, expands `tetrachildPolynomial`,
+and observes that the `(vertex, vertex, vertex, vertex)` quadruple
+matches the if-branch of `tetrachildCrossTerm`, evaluating to
+`-6 · (f vertex)² · f broom₃ + 4 · f vertex · f bushy`. Closes by
+`ring` after a `show`-bridge that canonicalises `f (mk [vertex]) ↔
+f cherry` and `f (mk [vertex, vertex, vertex, vertex]) ↔ f bushy₄`.
+Phase α'.5.2.1 P4 deliverable. -/
+theorem inversePolyTree_bushy₄ (f : RT → ℝ) :
+    inversePolyTree RootedTree.bushy₄ f
+      = -(f RootedTree.vertex) ^ 5
+        + 4 * (f RootedTree.vertex) ^ 3 * f RootedTree.cherry
+        - 6 * (f RootedTree.vertex) ^ 2 * f RootedTree.broom₃
+        + 4 * f RootedTree.vertex * f RootedTree.bushy
+        - f RootedTree.bushy₄ := by
+  show inversePolyTree
+      (OpenMath.Chapter3.Section310.RootedTree.mk
+        [RootedTree.vertex, RootedTree.vertex,
+         RootedTree.vertex, RootedTree.vertex]) f
+      = -(f RootedTree.vertex) ^ 5
+        + 4 * (f RootedTree.vertex) ^ 3 * f RootedTree.cherry
+        - 6 * (f RootedTree.vertex) ^ 2 * f RootedTree.broom₃
+        + 4 * f RootedTree.vertex * f RootedTree.bushy
+        - f RootedTree.bushy₄
+  rw [inversePolyTree, inversePolyTree_vertex]
+  unfold tetrachildPolynomial
+  rw [show tetrachildCrossTerm RootedTree.vertex RootedTree.vertex
+            RootedTree.vertex RootedTree.vertex f
+          = -6 * (f RootedTree.vertex) ^ 2 * f RootedTree.broom₃
+            + 4 * f RootedTree.vertex * f RootedTree.bushy by
+        unfold tetrachildCrossTerm
+        rw [if_pos ⟨rfl, rfl, rfl, rfl⟩]]
+  show -(f RootedTree.vertex * -f RootedTree.vertex *
+            -f RootedTree.vertex * -f RootedTree.vertex *
+            -f RootedTree.vertex)
+        - -f RootedTree.vertex * -f RootedTree.vertex *
+            -f RootedTree.vertex * f RootedTree.cherry
+        - -f RootedTree.vertex * -f RootedTree.vertex *
+            -f RootedTree.vertex * f RootedTree.cherry
+        - -f RootedTree.vertex * -f RootedTree.vertex *
+            -f RootedTree.vertex * f RootedTree.cherry
+        - -f RootedTree.vertex * -f RootedTree.vertex *
+            -f RootedTree.vertex * f RootedTree.cherry
+        + (-6 * (f RootedTree.vertex) ^ 2 * f RootedTree.broom₃
+            + 4 * f RootedTree.vertex * f RootedTree.bushy)
+        - f RootedTree.bushy₄
+      = -(f RootedTree.vertex) ^ 5
+        + 4 * (f RootedTree.vertex) ^ 3 * f RootedTree.cherry
+        - 6 * (f RootedTree.vertex) ^ 2 * f RootedTree.broom₃
+        + 4 * f RootedTree.vertex * f RootedTree.bushy
+        - f RootedTree.bushy₄
   ring
 
 /-- *Phase α'.5.1 (cycle 491) — `mk [vertex, vertex, cherry]` calibration witness.*
@@ -12362,6 +12499,40 @@ private theorem trichildCrossTerm_eq_of_subtree_agreement
   · rw [if_neg h_vvv, if_neg h_vvc, if_neg h_vcc, if_neg h_vvmc, if_neg h_vvb,
         if_neg h_vvv, if_neg h_vvc, if_neg h_vcc, if_neg h_vvmc, if_neg h_vvb]
 
+/-- *Phase α'.5.2.1 (cycle 500) — `tetrachildCrossTerm` respects closed-subtree
+agreement of its weight function.*
+
+If `f g : RT → ℝ` agree on every subtree `s` with
+`s.order ≤ (mk [c₁, c₂, c₃, c₄]).order`, then
+`tetrachildCrossTerm c₁ c₂ c₃ c₄ f = tetrachildCrossTerm c₁ c₂ c₃ c₄ g`.
+
+The non-default branch `(vertex, vertex, vertex, vertex)` references
+`f` at `vertex`, `broom₃`, and `bushy`, all of order
+≤ `(mk [vertex, vertex, vertex, vertex]).order = 5`. The default
+branch is `0 = 0`. -/
+private theorem tetrachildCrossTerm_eq_of_subtree_agreement
+    (c₁ c₂ c₃ c₄ : RT) (f g : RT → ℝ)
+    (h_closed : ∀ s : RT,
+        s.order ≤ (OpenMath.Chapter3.Section310.RootedTree.mk
+                      [c₁, c₂, c₃, c₄]).order →
+        f s = g s) :
+    tetrachildCrossTerm c₁ c₂ c₃ c₄ f
+      = tetrachildCrossTerm c₁ c₂ c₃ c₄ g := by
+  unfold tetrachildCrossTerm
+  by_cases h_vvvv : c₁ = RootedTree.vertex ∧ c₂ = RootedTree.vertex
+      ∧ c₃ = RootedTree.vertex ∧ c₄ = RootedTree.vertex
+  · obtain ⟨h₁, h₂, h₃, h₄⟩ := h_vvvv
+    subst h₁; subst h₂; subst h₃; subst h₄
+    have hv : f RootedTree.vertex = g RootedTree.vertex :=
+      h_closed RootedTree.vertex (by decide)
+    have hb : f RootedTree.broom₃ = g RootedTree.broom₃ :=
+      h_closed RootedTree.broom₃ (by decide)
+    have hbu : f RootedTree.bushy = g RootedTree.bushy :=
+      h_closed RootedTree.bushy (by decide)
+    rw [if_pos ⟨rfl, rfl, rfl, rfl⟩, if_pos ⟨rfl, rfl, rfl, rfl⟩,
+        hv, hb, hbu]
+  · rw [if_neg h_vvvv, if_neg h_vvvv]
+
 /-- *Phase γ (cycle 497) — `inversePolyTree` respects closed-subtree
 agreement of its weight function.*
 
@@ -12369,7 +12540,7 @@ If `f g : RT → ℝ` agree on every subtree `s` with `s.order ≤ t.order`
 (including `s = t`), then `inversePolyTree t f = inversePolyTree t g`.
 
 The proof is strong induction on `t.order`. For each pattern-match
-arm of `inversePolyTree` (cycles 387/399):
+arm of `inversePolyTree` (cycles 387/399/500):
 
 * `mk []` (vertex, order 1): RHS is `-f vertex`; closure at
   `vertex ≤ mk []` is `le_refl`.
@@ -12382,7 +12553,9 @@ arm of `inversePolyTree` (cycles 387/399):
   plus `bichildCrossTerm_eq_of_subtree_agreement`.
 * `mk [c₁, c₂, c₃]` (triple): analogous with three IHs plus
   `trichildCrossTerm_eq_of_subtree_agreement`.
-* `mk (_::_::_::_::_)` (k ≥ 4): both sides return `0`; `rfl` closes.
+* `mk [c₁, c₂, c₃, c₄]` (quadruple): analogous with four IHs plus
+  `tetrachildCrossTerm_eq_of_subtree_agreement` (cycle 500 extension).
+* `mk (_::_::_::_::_::_)` (k ≥ 5): both sides return `0`; `rfl` closes.
 
 This is the Phase γ deliverable for `inversePolyTree`. -/
 theorem inversePolyTree_eq_of_subtree_agreement
@@ -12549,7 +12722,102 @@ theorem inversePolyTree_eq_of_subtree_agreement
           h_closed _ (le_refl _)
         unfold trichildPolynomial
         rw [hv, hIH₁, hIH₂, hIH₃, htri, hmkt₁, hmkt₂, hmkt₃, hself]
-    | _ :: _ :: _ :: _ :: _ => rfl
+    | [c₁, c₂, c₃, c₄] =>
+        show tetrachildPolynomial c₁ c₂ c₃ c₄
+              (inversePolyTree c₁ f) (inversePolyTree c₂ f)
+              (inversePolyTree c₃ f) (inversePolyTree c₄ f) f
+            = tetrachildPolynomial c₁ c₂ c₃ c₄
+              (inversePolyTree c₁ g) (inversePolyTree c₂ g)
+              (inversePolyTree c₃ g) (inversePolyTree c₄ g) g
+        have hc₁_lt :
+            c₁.order < (OpenMath.Chapter3.Section310.RootedTree.mk
+                          [c₁, c₂, c₃, c₄]).order :=
+          RootedTree.order_lt_of_mem_children (List.mem_cons_self)
+        have hc₂_lt :
+            c₂.order < (OpenMath.Chapter3.Section310.RootedTree.mk
+                          [c₁, c₂, c₃, c₄]).order :=
+          RootedTree.order_lt_of_mem_children
+            (List.mem_cons_of_mem _ (List.mem_cons_self))
+        have hc₃_lt :
+            c₃.order < (OpenMath.Chapter3.Section310.RootedTree.mk
+                          [c₁, c₂, c₃, c₄]).order :=
+          RootedTree.order_lt_of_mem_children
+            (List.mem_cons_of_mem _
+              (List.mem_cons_of_mem _ (List.mem_cons_self)))
+        have hc₄_lt :
+            c₄.order < (OpenMath.Chapter3.Section310.RootedTree.mk
+                          [c₁, c₂, c₃, c₄]).order :=
+          RootedTree.order_lt_of_mem_children
+            (List.mem_cons_of_mem _
+              (List.mem_cons_of_mem _
+                (List.mem_cons_of_mem _ (List.mem_singleton.mpr rfl))))
+        have h_closed_c₁ : ∀ s : RT, s.order ≤ c₁.order → f s = g s := fun s hs =>
+          h_closed s (Nat.le_of_lt (Nat.lt_of_le_of_lt hs hc₁_lt))
+        have h_closed_c₂ : ∀ s : RT, s.order ≤ c₂.order → f s = g s := fun s hs =>
+          h_closed s (Nat.le_of_lt (Nat.lt_of_le_of_lt hs hc₂_lt))
+        have h_closed_c₃ : ∀ s : RT, s.order ≤ c₃.order → f s = g s := fun s hs =>
+          h_closed s (Nat.le_of_lt (Nat.lt_of_le_of_lt hs hc₃_lt))
+        have h_closed_c₄ : ∀ s : RT, s.order ≤ c₄.order → f s = g s := fun s hs =>
+          h_closed s (Nat.le_of_lt (Nat.lt_of_le_of_lt hs hc₄_lt))
+        have hIH₁ : inversePolyTree c₁ f = inversePolyTree c₁ g :=
+          IH c₁.order (Nat.lt_of_lt_of_le hc₁_lt h_t_order)
+            c₁ f g (le_refl _) h_closed_c₁
+        have hIH₂ : inversePolyTree c₂ f = inversePolyTree c₂ g :=
+          IH c₂.order (Nat.lt_of_lt_of_le hc₂_lt h_t_order)
+            c₂ f g (le_refl _) h_closed_c₂
+        have hIH₃ : inversePolyTree c₃ f = inversePolyTree c₃ g :=
+          IH c₃.order (Nat.lt_of_lt_of_le hc₃_lt h_t_order)
+            c₃ f g (le_refl _) h_closed_c₃
+        have hIH₄ : inversePolyTree c₄ f = inversePolyTree c₄ g :=
+          IH c₄.order (Nat.lt_of_lt_of_le hc₄_lt h_t_order)
+            c₄ f g (le_refl _) h_closed_c₄
+        have htetra : tetrachildCrossTerm c₁ c₂ c₃ c₄ f
+            = tetrachildCrossTerm c₁ c₂ c₃ c₄ g :=
+          tetrachildCrossTerm_eq_of_subtree_agreement c₁ c₂ c₃ c₄ f g h_closed
+        have hv : f RootedTree.vertex = g RootedTree.vertex :=
+          h_closed RootedTree.vertex (RootedTree.order_pos _)
+        have hmkt₁ :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₁])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₁]) := by
+          apply h_closed
+          show (OpenMath.Chapter3.Section310.RootedTree.mk [c₁]).order ≤
+              (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃, c₄]).order
+          rw [RootedTree.order_eq, RootedTree.order_eq]
+          simp [List.map, List.sum_cons]
+        have hmkt₂ :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₂])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₂]) := by
+          apply h_closed
+          show (OpenMath.Chapter3.Section310.RootedTree.mk [c₂]).order ≤
+              (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃, c₄]).order
+          rw [RootedTree.order_eq, RootedTree.order_eq]
+          simp [List.map, List.sum_cons]
+          omega
+        have hmkt₃ :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₃])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₃]) := by
+          apply h_closed
+          show (OpenMath.Chapter3.Section310.RootedTree.mk [c₃]).order ≤
+              (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃, c₄]).order
+          rw [RootedTree.order_eq, RootedTree.order_eq]
+          simp [List.map, List.sum_cons]
+          omega
+        have hmkt₄ :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₄])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₄]) := by
+          apply h_closed
+          show (OpenMath.Chapter3.Section310.RootedTree.mk [c₄]).order ≤
+              (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃, c₄]).order
+          rw [RootedTree.order_eq, RootedTree.order_eq]
+          simp [List.map, List.sum_cons]
+          omega
+        have hself :
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃, c₄])
+              = g (OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃, c₄]) :=
+          h_closed _ (le_refl _)
+        unfold tetrachildPolynomial
+        rw [hv, hIH₁, hIH₂, hIH₃, hIH₄, htetra, hmkt₁, hmkt₂, hmkt₃, hmkt₄, hself]
+    | _ :: _ :: _ :: _ :: _ :: _ => rfl
 
 /-! ### Phase γ (cycle 376) — closed-subtree agreement for `inversePolynomial`
 
