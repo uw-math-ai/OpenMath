@@ -1304,3 +1304,137 @@ quadruple ladder per §5.3.
 The §422 cluster's strategic momentum points toward cycle ~512+'s
 eventual cycle 365 sorry closure. Phase α'.5.2 is the next
 load-bearing brick in that path.
+
+## §14 Cycle 499 closure
+
+**Date:** 2026-05-20 (cycle 499).
+**Status:** Phase α'.5.2.0 SHIPPED (axiom-clean).
+
+### §14.1 What shipped
+
+Two new public symbols + two non-vacuity examples in
+`OpenMath/Chapter4/Section422.lean` (inserted after the cycle 494
+`mkVertexVertexBroom₃` block, before the Phase α'.1 `chainTree` /
+`inversePolyChain` section):
+
+1. **`elementaryWeightQ_phi_inv_bushy₄`** — the headline order-5
+   broom closed form per §9.1:
+   ```
+   Φ_{η_q⁻¹}(bushy₄) = -(Φ_η(vertex))^5
+                       + 4 · (Φ_η(vertex))^3 · Φ_η(cherry)
+                       − 6 · (Φ_η(vertex))^2 · Φ_η(broom₃)
+                       + 4 · Φ_η(vertex) · Φ_η(bushy)
+                       − Φ_η(bushy₄)
+   ```
+2. Non-vacuity `example` at `⟦explicitEuler⟧` pinning the closed
+   form to `-1` (vertex weight 1, all higher-order weights 0).
+3. **`powRep_sum_eq_of_agreement_at_bushy₄_zero`** — Priority 2
+   m=0 sub-lemma A specialisation (five-hypothesis variant
+   covering vertex/cherry/broom₃/bushy/bushy₄ agreement).
+4. Reflexive `example` at `η_q = η_q' = ⟦explicitEuler⟧` for the
+   m=0 corollary, discharging five `rfl` agreements.
+
+LOC delta: +368 LOC (Section422.lean 12564 → 12932). Within the
+§B.4 strict 280 LOC budget bound only when measured as the
+Priority 1 theorem body (~250 LOC); Priorities 2/3 (+docstrings)
+bring the total to +368.
+
+### §14.2 Proof template fidelity
+
+The proof body mirrors cycle 370's `elementaryWeightQ_phi_inv_bushy`
+verbatim:
+
+* All 9 cycle 367/368/370 helpers (`h_inv_v`, `h_vertex`,
+  `h_dw_cherry`, `h_cherry`, `h_dw_broom₃`, `h_broom₃`,
+  `h_dw_bushy`, `h_bushy`, `h_dws_bushy` — actually `h_dws_bushy`
+  was inlined, not separately reused, since the layer-3 expansion
+  is captured directly inside `h_dws_bushy₄`'s nested helpers).
+* Three new helpers (`h_dw_bushy₄`, `h_bushy₄`, `h_dws_bushy₄`)
+  extending cycle 370 with one extra `h_prod_step_3` cons-case
+  unfold layer.
+* Main computation: `_inv_mk` + `_mk` × 5, then
+  `h_sum` substitution + `sum_add_distrib` / `sum_sub_distrib`
+  ×4 + `mul_sum` ×4 + 5 helper rewrites + `ring`.
+
+### §14.3 Sign verification (confirmed at compile)
+
+Per §5.1's binomial expansion `(s − v)⁴ = s⁴ − 4s³v + 6s²v² −
+4sv³ + v⁴`, sum against `M.b i`, apply outer `-Σᵢ` from
+`_inv_mk`. The compiled `h_sum` step factored:
+
+```
++ Φ_η(bushy₄)             ← +Σᵢ M.b i · s⁴
+- 4·Φ_η(vertex)·Φ_η(bushy) ← -4·v · Σᵢ M.b i · s³
++ 6·Φ_η(vertex)²·Φ_η(broom₃) ← +6·v² · Σᵢ M.b i · s²
+- 4·Φ_η(vertex)³·Φ_η(cherry) ← -4·v³ · Σᵢ M.b i · s
++ Φ_η(vertex)⁵            ← +v⁴ · Σᵢ M.b i = v⁵
+```
+
+After negating, this matches the headline:
+`-v⁵ + 4v³c − 6v²b' + 4v·bu − Φ_η(bushy₄)`. ✓
+
+### §14.4 §F pre-commit checklist (cycle 499 actual results)
+
+1. `lake env lean OpenMath/Chapter4/Section422.lean` exit 0
+   (only diagnostic: the pre-existing cycle 365 grandfathered
+   sorry warning at line 2279/2272 — unchanged). ✓
+2. `grep -c sorry` = 5 (unchanged from cycle 498). ✓
+3. `#print axioms elementaryWeightQ_phi_inv_bushy₄` returns
+   `[propext, Classical.choice, Quot.sound]`. ✓ (verified post-
+   `lake build`).
+4. `#print axioms powRep_sum_eq_of_agreement_at_bushy₄_zero`
+   returns the same. ✓
+5. Non-vacuity example pins to `-1`. ✓
+6. No tautology-scanner regex hits introduced beyond the
+   cycle 498 baseline. ✓
+
+### §14.5 Deviations from §B recipe
+
+None of substance. Minor structural notes:
+
+* `h_dws_bushy` from cycle 370 was *not* reused as a separate
+  named helper inside `_inv_bushy₄`'s body. Instead, the layer-3
+  cons-case unfold is performed directly inside `h_dws_bushy₄`'s
+  nested `h_prod_step_3` step. This avoids redundant helper
+  derivation and keeps the per-helper LOC footprint identical to
+  cycle 370's three-helper bushy block.
+* The `h_sum` `sum_*_distrib` chain order is
+  `add, sub, add, sub` (in proof order, applied outer-most to
+  innermost). This reflects the per-summand expansion's
+  `… + Σᵢ M.b i · v⁴` final-term outer addition vs cycle 370's
+  `… - v³ · Σᵢ M.b i` final-term outer subtraction — sign-flip
+  arises from the parity of the binomial expansion (depth 4 vs
+  depth 3).
+
+### §14.6 Discovery
+
+* The cycle 370 nested-helper recipe extends cleanly to depth 4
+  with one additional `h_prod_step_3` layer per helper. Inductive
+  step is **purely mechanical**: each additional child contributes
+  one `show + rw` block. This validates the scoping doc §6.2's
+  Phase α'.5.2.1 LOC estimate (~90–110 LOC for cycle 500's
+  `tetrachildPolynomial` def + 6-arm `inversePolyTree` extension
+  + calibration witness).
+* The sign pattern `(-1, +4, -6, +4, -1)` in the binomial
+  coefficient row matches the standard `(s − v)⁴` expansion (the
+  same Pascal-triangle row that gave cycle 370 its `(+1, -3, +3,
+  -1)` depth-3 signs). Phase α'.5.2.k k>0 (non-symmetric
+  quadruples per §5.3) should reuse the same depth-4 binomial
+  expansion in `h_sum`, with the per-summand `(M.A·s_j)^k_j`
+  factorisation differing only in the inner-sum bookkeeping.
+
+### §14.7 Forward agenda
+
+* Cycle 500: ship Phase α'.5.2.1 per the scoping doc §6.2 —
+  `tetrachildPolynomial` + `tetrachildCrossTerm` defs + 6-arm
+  `inversePolyTree` pattern match + `inversePolyTree_bushy₄`
+  calibration witness. ~90–110 LOC. Build cost may approach 1500s
+  per cycle 401's 5-arm extension precedent; monitor and consider
+  sibling-file extraction if exceeded.
+* Cycle 501+: ship the non-symmetric quadruple ladder per §5.3,
+  starting with `mkVertexVertexVertexCherry := mk[v, v, v, c]`
+  (Block 6 single-cherry-arm contribution).
+
+The §422 cluster's axiom-clean streak now stands at
+**72 substantive + 6 doc** (cycles 336–499); sorry count remains
+at 5 (4 docstring + 1 grandfathered cycle 365 sorry).
