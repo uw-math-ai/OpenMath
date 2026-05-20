@@ -1569,3 +1569,132 @@ The default branch's `if_neg` chain becomes 4 long:
 The §422 cluster's axiom-clean streak now stands at
 **74 substantive + 6 doc** (cycles 336–501); sorry count remains
 at 5 (4 docstring + 1 grandfathered cycle 365 sorry).
+
+## §16 Cycle 502 update — Phase α'.5.2.3 `mk [v, v, c, c]` ship
+
+### §16.1 Ship summary
+
+Cycle 502 shipped Phase α'.5.2.3 in `OpenMath/Chapter4/Section422.lean`
+(~1150 LOC). Five deliverables for the order-7 doubly-asymmetric
+quadruple `mk [vertex, vertex, cherry, cherry]` (first k=4 case
+with two non-leaf children):
+
+* **B.1** `elementaryWeightQ_phi_inv_mkVertexVertexCherryCherry`:
+  quotient-level closed form, **20 monomials in 12 named kernels**.
+  The 12 kernels: `v, c, b', bu, bushy₄, m, vc, vvc, vvvc, cc, vcc,
+  vvcc` (the new self-kernel `vvcc = mk [v,v,c,c]`).
+* **B.2** `powRep_sum_eq_of_agreement_at_mkVertexVertexCherryCherry_zero`:
+  m=0 corollary with 12 agreement hypotheses.
+* **B.3** new `(v, v, c, c)` branch in `tetrachildCrossTerm` def
+  body. **14-term cross-term**. Notable: `m = mk[c]` cancels between
+  the Block (4)+(5) backbone and the B.1 closed form, so only
+  10 kernels appear in the cross-term despite 12 in the closed form.
+* **B.4** `inversePolyTree_mkVertexVertexCherryCherry` calibration
+  witness (mechanical extension of cycle 501 template; new `if_neg
+  (by decide), if_neg (by decide), if_pos ⟨rfl, rfl, rfl, rfl⟩`
+  branch dispatch).
+* **B.5** Phase γ extension of `tetrachildCrossTerm_eq_of_subtree_agreement`
+  (mandatory regression scope per cycle 500's Discovery #2 —
+  references **10 kernels** all of order ≤ 7 via `by decide`).
+
+Plus two `⟦explicitEuler⟧` non-vacuity examples: closed-form witness
+pinning to `-1` (order 7 odd, leading `-v⁷` survives) and the m=0
+reflexive witness on `⟦explicitEuler⟧ = ⟦explicitEuler⟧` via 12 `rfl`s.
+
+### §16.2 Closed form (B.1)
+
+Per-row factor at `(t₁=v, t₂=v, t₃=c, t₄=c)` under
+`inv_v = -v, inv_c = v² - c`:
+```
+(Aᵢ - v)² · ((v² - c) - v·Aᵢ + Bᵢ)²
+```
+where `Aᵢ = Σⱼ M.Aᵢⱼ` and `Bᵢ = Σⱼ Aᵢⱼ · Σₖ Aⱼₖ`. Note the `-v·Aᵢ`
+correction per memory `feedback_dws_cherry_factor_includes_v_aᵢ.md`
+— SQUARED into the expansion here (vs cycle 501's linear use).
+
+Expansion gives 18 monomials in `(Aᵢ^j · Bᵢ^k)` for
+`(j, k) ∈ {0..4} × {0..2}`. Summed against `bᵢ` and back-substituted
+via the 12 kernels, then negated by the `Σ inv.b = -Σ b` substitution:
+
+```
+Φ_{η⁻¹}(mk [v,v,c,c])
+  = -v⁷ + 6v⁵·c - 7v³·c² + 2v·c³
+    - 6v⁴·b' + 6v²·c·b' - c²·b'
+    + 4v³·bu - 2v·c·bu
+    - v²·bushy₄
+    - 2v⁴·m + 2v²·c·m
+    + 6v³·vc - 4v·c·vc
+    - 6v²·vvc + 2c·vvc
+    + 2v·vvvc
+    - v²·cc
+    + 2v·vcc
+    - vvcc
+```
+
+Sanity check at `⟦explicitEuler⟧` (v=1, all higher kernels 0):
+`-1 + 0 - 0 + 0 - ... = -1` ✓ (order 7 odd-leading pattern, opposite
+sign from cycle 501's even-order `+v⁶`).
+
+### §16.3 Cross-term value (B.3) and m-cancellation
+
+Subtracting `tetrachildPolynomial`'s Blocks 1+2+3+4+5+16 backbone at
+`(v, v, c, c)`:
+
+* Block 1: `-(v · (-v) · (-v) · (v²-c) · (v²-c)) = -v⁷ + 2v⁵c - v³c²`
+* Blocks 2+3: `2·(-(-v · (v²-c)² · c)) = 2v⁵c - 4v³c² + 2vc³`
+* Blocks 4+5: `2·(-((-v)·(-v) · (v²-c) · m)) = -2v⁴·m + 2v²·c·m`
+* Block 16: `-vvcc`
+
+Sum: `-v⁷ + 4v⁵c - 5v³c² + 2vc³ - 2v⁴·m + 2v²·c·m - vvcc`.
+
+The B.1 closed form's m terms are exactly `-2v⁴·m + 2v²·c·m` —
+matching the backbone exactly. So **m cancels** in the cross-term:
+
+```
+tetrachildCrossTerm v v c c f
+  = 2v⁵·c - 2v³·c²
+    - 6v⁴·b' + 6v²·c·b' - c²·b'
+    + 4v³·bu - 2v·c·bu
+    - v²·bushy₄
+    + 6v³·vc - 4v·c·vc
+    - 6v²·vvc + 2c·vvc
+    + 2v·vvvc
+    - v²·cc
+    + 2v·vcc
+```
+
+14 terms across 10 kernels. The cycle 502 strategy's table listed
+11 kernels in §B.5 (including m), but after symbolic verification
+only 10 are referenced. Phase γ extension correspondingly references
+10 kernels.
+
+### §16.4 Mechanical template for k=4 ladders (cycle 503+ inheritance)
+
+The cycle 502 ship confirms the cycle 501 template scales smoothly
+to two cherry children. For future k=4 ladder rungs:
+
+* Worker should derive per-row factor structure first
+  (`(Aᵢ - v)^p · ((v² - c) - v·Aᵢ + Bᵢ)^q` for `p + q = 4`).
+* Expand symbolically (paper or Python) to count kernels and monomials
+  before writing Lean code. Strategy estimates may miss kernels.
+* B.5 Phase γ extension must follow the kernel inventory of B.3
+  (the cross-term), NOT B.1 (the closed form), since some kernels
+  cancel between backbone and closed form. Use `simp [RootedTree.order]`
+  / `by decide` to verify all kernels have order ≤ target tree order.
+* For two-cherry-children patterns, expect `m = mk[c]` cancellation
+  via Blocks (4)+(5) matching the closed form's m terms exactly
+  (when both `t₃ = t₄ = cherry`).
+
+### §16.5 Forward agenda
+
+* **Cycle 503**: Phase α'.5.2.4 candidates per scoping doc §5.3:
+  `(v, c, c, c)` (order 8, all three cherry children — full cubic
+  in Bᵢ) is the natural next step. `(c, c, c, c)` (order 9, symmetric
+  all-cherry) is the extreme.
+* **Cycle 504+**: continue ladder. After ~3-5 more witnesses, cycle
+  510+ planner can write a Phase β/γ extension scoping doc paralleling
+  cycle 495's k=2/3 doc.
+
+The §422 cluster's axiom-clean streak now stands at
+**75 substantive + 6 doc** (cycles 336–502); sorry count remains
+at 5 (4 docstring + 1 grandfathered cycle 365 sorry).
