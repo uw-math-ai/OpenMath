@@ -1,230 +1,401 @@
-# Cycle 500 Strategy — Phase α'.5.2.1 ship: `tetrachildPolynomial` + `inversePolyTree` 6-arm extension + `inversePolyTree_bushy₄` calibration
+# Cycle 508 Strategy — Path (b) `nchildPolynomial` scoping doc (markdown-only)
 
 ## §A. Context
 
-Cycle 499 closed Phase α'.5.2.0 axiom-clean: `elementaryWeightQ_phi_inv_bushy₄` (the order-5 broom quotient-level closed form) + m=0 corollary + non-vacuity witnesses. §422 streak: **72 substantive + 6 doc** (cycles 336–499).
+Cycle 507 (`task_results/cycle_507.md`, commit `6076201`) closed
+Phase γ k=4 verification + 5 structural-coverage examples per the
+cycle 506 scoping doc §6.2. The §422 axiom-clean streak now stands
+at **79 substantive + 7 doc** (cycles 336–507).
 
-Per `def_422B_phase_alpha_prime_5_2_scoping.md` §6.2 and the cycle 499 task results §"Suggested next approach", cycle 500 ships Phase α'.5.2.1: the **infrastructure layer** consuming cycle 499's closed form. Four deliverables, all axiom-clean target, ~90–110 LOC total per the scoping doc estimate.
+There is **no real blocker** for cycle 508. The sole code-level
+sorry in the repo is `OpenMath/Chapter4/Section422.lean:2279`
+(cycle 365's `powRep_sum_eq_of_strict_subtree_agreement` general
+body, open for **143 cycles**). It is the long-term Phase β.2 / δ /
+ε target, gated on multi-cycle infrastructure that cycle 508 is
+about to scope.
 
-Single grandfathered sorry at `Section422.lean:2279` (cycle 365's Sub-lemma A body) is **not** addressable this cycle — Phase α'.5.2.1 builds the dispatch infrastructure that Phase β/γ extension (cycle ~510+) will eventually consume to close it.
+Per `def_422B_phase_beta_gamma_k4_scoping.md` §6.3 (cycle 505's
+scoping; reaffirmed in cycle 507's task results "Suggested next
+approach"), **cycle 508's deliverable is the markdown-only
+`nchildPolynomial` parametric-recursion scoping doc** — the
+prerequisite design document for cycle 509+'s 10–15-cycle Lean
+implementation track that eventually closes the cycle 365 sorry.
 
-## §B. Priority 1 — DELIVERABLE (this cycle)
+## §B. Cycle 508 deliverable (single substantive item)
 
-Ship four named symbols in `OpenMath/Chapter4/Section422.lean`, inserted **immediately after `trichildPolynomial`** at line ~10054 (before the current `inversePolyTree` definition at line 10086). Then extend `inversePolyTree` itself and append the calibration witness.
+Ship a new markdown file at
 
-### B.1 — `tetrachildCrossTerm` (~30 LOC)
-
-Mirror cycle 399's `trichildCrossTerm` design (line 9956+). Single `if-then-else` with the `(vertex, vertex, vertex, vertex)` branch populated from cycle 499's closed form; default → 0.
-
-```lean
-/-- *Phase α'.5.2.1 (cycle 500) — quadrilinear cross-term cascade.*
-
-The Block (6)–(15) bilinear + trilinear cross-term contributions to
-`Φ_{η_q⁻¹}(mk [t₁, t₂, t₃, t₄])` after Blocks (1)–(5) and (16) are
-absorbed into `tetrachildPolynomial`. Per cycle 499's
-`elementaryWeightQ_phi_inv_bushy₄` closed form, the symmetric
-`(vertex, vertex, vertex, vertex)` quadruple evaluates to
-`-6·(f vertex)²·f broom₃ + 4·f vertex · f bushy` (the binomial-row-4
-bilinear + trilinear contributions at all-vertex children).
-
-All non-symmetric `k = 4` quadruples currently dispatch to `0` —
-Phase α'.5.2.k (cycles 501+) will refine the cascade with named
-branches as new closed forms ship. -/
-noncomputable def tetrachildCrossTerm
-    (t₁ t₂ t₃ t₄ : RT) (f : RT → ℝ) : ℝ :=
-  if t₁ = RootedTree.vertex ∧ t₂ = RootedTree.vertex
-      ∧ t₃ = RootedTree.vertex ∧ t₄ = RootedTree.vertex then
-    -6 * (f RootedTree.vertex)^2 * f RootedTree.broom₃
-      + 4 * f RootedTree.vertex * f RootedTree.bushy
-  else
-    0
+```
+.prover-state/issues/def_422B_phase_alpha_prime_7_nchildPolynomial_scoping.md
 ```
 
-### B.2 — `tetrachildPolynomial` (~25 LOC)
+(~600–900 LOC markdown, **ZERO Lean delta**, LOW risk).
 
-Mirror cycle 399's `trichildPolynomial` design (line 10054+) with one extra child slot per the scoping doc §4 strawman:
+This file is to the §422 cluster what cycle 402's Phase α'.5
+scoping doc was to the k=3 ladder, and what cycle 498's Phase
+α'.5.2 scoping doc was to the k=4 ladder: a multi-cycle planning
+document that the cycle 509+ Lean implementations consume directly.
 
-```lean
-/-- *Phase α'.5.2.1 (cycle 500) — quadruple-children backbone polynomial.*
+### §B.1 Required sections (template from cycle 498 / 505)
 
-`tetrachildPolynomial t₁ t₂ t₃ t₄ inv₁ inv₂ inv₃ inv₄ f` is the
-closed-form polynomial in `f` and the four child-inverse values
-`inv_ℓ = inversePolyTree tℓ f` that captures the inverse-class
-`Φ_{η_q⁻¹}` at `mk [t₁, t₂, t₃, t₄]`. Per cycle 358's `_inv_mk`
-formula expanded at four children, the per-row product
-`Πℓ (inv_ℓ + S_ℓ(i))` decomposes into 16 = 2⁴ blocks; this
-polynomial absorbs Blocks (1)–(5) and (16) explicitly and packages
-Blocks (6)–(15) via `tetrachildCrossTerm`. Sign convention matches
-cycle 387's `bichildPolynomial` and cycle 399's `trichildPolynomial`. -/
-noncomputable def tetrachildPolynomial
-    (t₁ t₂ t₃ t₄ : RT) (inv₁ inv₂ inv₃ inv₄ : ℝ) (f : RT → ℝ) : ℝ :=
-  -(f RootedTree.vertex * inv₁ * inv₂ * inv₃ * inv₄)
-    - inv₂ * inv₃ * inv₄ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁])
-    - inv₁ * inv₃ * inv₄ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₂])
-    - inv₁ * inv₂ * inv₄ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₃])
-    - inv₁ * inv₂ * inv₃ * f (OpenMath.Chapter3.Section310.RootedTree.mk [t₄])
-    + tetrachildCrossTerm t₁ t₂ t₃ t₄ f
-    - f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁, t₂, t₃, t₄])
-```
+The doc must include the following sections (~11 sections,
+~600–900 LOC total):
 
-### B.3 — Extend `inversePolyTree` recursion (~10 LOC)
+* **§1 Status & blocker** — anchor the doc to the §422 streak state
+  at HEAD (79 substantive + 7 doc, Section422.lean 19299 LOC, sorry
+  count 5 = 4 docstring + 1 grandfathered cycle 365). Explain why
+  the parametric `nchildPolynomial` recursion is the structural
+  resolution for Phase β.2 at k ≥ 5 (cycle 497's R6.B falsity:
+  `inversePolyTree`'s `mk (_::_::_::_::_::_) → 0` catch-all
+  contradicts `Φ_{η⁻¹}(t)`'s generic non-vanishing on quadchild+
+  trees).
 
-At line 10086, **insert** a new fourth arm before the catch-all, and **bump** the catch-all pattern from `(_ :: _ :: _ :: _ :: _)` (k≥4 fires) to `(_ :: _ :: _ :: _ :: _ :: _)` (k≥5 fires now). The 6-arm result:
+* **§2 What needs to be built** — articulate the target signature.
+  Strawman:
 
-```lean
-noncomputable def inversePolyTree : RT → (RT → ℝ) → ℝ
-  | OpenMath.Chapter3.Section310.RootedTree.mk [], f =>
-      -f RootedTree.vertex
-  | OpenMath.Chapter3.Section310.RootedTree.mk [c], f =>
-      -(f RootedTree.vertex * inversePolyTree c f)
-        + monochildCrossTerm c f
-        - f (OpenMath.Chapter3.Section310.RootedTree.mk [c])
-  | OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂], f =>
-      bichildPolynomial c₁ c₂
-        (inversePolyTree c₁ f) (inversePolyTree c₂ f) f
-  | OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃], f =>
-      trichildPolynomial c₁ c₂ c₃
-        (inversePolyTree c₁ f) (inversePolyTree c₂ f)
-        (inversePolyTree c₃ f) f
-  | OpenMath.Chapter3.Section310.RootedTree.mk [c₁, c₂, c₃, c₄], f =>     -- NEW
-      tetrachildPolynomial c₁ c₂ c₃ c₄
-        (inversePolyTree c₁ f) (inversePolyTree c₂ f)
-        (inversePolyTree c₃ f) (inversePolyTree c₄ f) f
-  | OpenMath.Chapter3.Section310.RootedTree.mk
-      (_ :: _ :: _ :: _ :: _ :: _), _ => 0                                 -- bumped
-```
+  ```lean
+  noncomputable def nchildPolynomial : (n : ℕ)
+      → (children : Fin n → RT)
+      → (inv_children : Fin n → ℝ)
+      → (f : RT → ℝ) → ℝ
+  ```
 
-**CRITICAL ordering**: insert the `[c₁, c₂, c₃, c₄]` arm BEFORE the catch-all, and change the catch-all pattern. Lean evaluates patterns top-down; reversing the order makes the catch-all fire first. Mirror cycle 399's catch-all bump precisely.
+  Discuss design choices:
+  - Index by `Fin n` (uniform; matches Mathlib idiom) vs `List RT`
+    (matches current `mk children` constructor; allows `List.foldr`
+    recursion).
+  - Recursion structure: subset-sum expansion over
+    `Finset.powerset (Finset.range n)` (matches cycle 498 §3's
+    16-block decomposition at k=4; generalises to `2^n` blocks);
+    OR fold-over-children with per-child contribution.
+  - Termination: by `n` (decreasing), or by `t.order` (if
+    `nchildPolynomial` is called recursively at children).
 
-**The docstring above `inversePolyTree`** at lines 10066–10085 needs one new bullet listing the `mk [c₁, c₂, c₃, c₄]` arm. Update it.
+* **§3 Block decomposition (general k)** — extend cycle 498's §3
+  16-block table to the general `2^n`-block decomposition. Show
+  how cycle 358's `elementaryWeightQ_phi_inv_mk` formula
+  ```
+  Φ_{⟦M⟧⁻¹}(mk children) = -Σⱼ M.b j · M.derivativeWeightWithSrc M.inverse j (mk children)
+  ```
+  unfolds per-row to `Πℓ (inv_cℓ + S_ℓ(j))` where the product over
+  `ℓ ∈ {1, …, n}` distributes into `2^n` blocks indexed by
+  `S ⊆ {1, …, n}` (selecting either the constant `inv_cℓ` factor or
+  the A-sum `S_ℓ(j)` factor at each position).
 
-### B.4 — `inversePolyTree_bushy₄` calibration witness (~35 LOC)
+* **§4 `nchildPolynomial` strawman** — concrete proposed body.
+  Strawman option A (subset-sum expansion):
 
-Mechanical port of cycle 400's `inversePolyTree_bushy` recipe (line 10277+) with one extra `inversePolyTree_vertex` rewrite slot and the `tetrachildCrossTerm` `if_pos ⟨rfl, rfl, rfl, rfl⟩` dispatch:
+  ```lean
+  noncomputable def nchildPolynomial (n : ℕ) (children : Fin n → RT)
+      (inv_children : Fin n → ℝ) (f : RT → ℝ) : ℝ :=
+    -(f vertex * ∏ i : Fin n, inv_children i)                    -- Block (1) all-const
+    - ∑ ℓ : Fin n,                                                -- Single-A blocks
+        (∏ i ∈ Finset.univ.erase ℓ, inv_children i) * f (mk [children ℓ])
+    + nchildCrossTerm n children f                                -- Mixed cross-term blocks
+    - f (mk (List.ofFn children))                                 -- Self-kernel
+  ```
 
-```lean
-/-- *Phase α'.5.2.1 (cycle 500) — `bushy₄` calibration witness.*
+  Discuss how `nchildCrossTerm` handles the `2^n - n - 2` mixed
+  cross-term blocks (bilinear, trilinear, …, (n−1)-linear, n-linear).
 
-`inversePolyTree bushy₄ f = -(f vertex)^5 + 4·(f vertex)^3·f cherry
-- 6·(f vertex)^2·f broom₃ + 4·f vertex·f bushy - f bushy₄`
-matches cycle 499's `elementaryWeightQ_phi_inv_bushy₄`. Since
-`bushy₄ = mk [vertex, vertex, vertex, vertex]` (four-child), the
-proof unfolds the quadruple-children branch of `inversePolyTree`
-(this cycle), rewrites `inversePolyTree vertex f = -f vertex` via
-`inversePolyTree_vertex` four times, expands `tetrachildPolynomial`,
-and observes that the `(vertex, vertex, vertex, vertex)` quadruple
-matches the if-branch of `tetrachildCrossTerm`. Closes by `ring`
-after a `show`-bridge canonicalising `f (mk [vertex]) ↔ f cherry`
-and `f (mk [vertex, vertex, vertex, vertex]) ↔ f bushy₄`. -/
-theorem inversePolyTree_bushy₄ (f : RT → ℝ) :
-    inversePolyTree RootedTree.bushy₄ f
-      = -(f RootedTree.vertex) ^ 5
-        + 4 * (f RootedTree.vertex) ^ 3 * f RootedTree.cherry
-        - 6 * (f RootedTree.vertex) ^ 2 * f RootedTree.broom₃
-        + 4 * f RootedTree.vertex * f RootedTree.bushy
-        - f RootedTree.bushy₄ := by
-  show inversePolyTree
-      (OpenMath.Chapter3.Section310.RootedTree.mk
-        [RootedTree.vertex, RootedTree.vertex,
-         RootedTree.vertex, RootedTree.vertex]) f
-      = _
-  rw [inversePolyTree, inversePolyTree_vertex]
-  unfold tetrachildPolynomial
-  rw [show tetrachildCrossTerm RootedTree.vertex RootedTree.vertex
-            RootedTree.vertex RootedTree.vertex f
-          = -6 * (f RootedTree.vertex)^2 * f RootedTree.broom₃
-            + 4 * f RootedTree.vertex * f RootedTree.bushy by
-        unfold tetrachildCrossTerm
-        rw [if_pos ⟨rfl, rfl, rfl, rfl⟩]]
-  -- `show` bridge canonicalises mk [vertex] ↔ cherry and
-  -- mk [vertex, vertex, vertex, vertex] ↔ bushy₄ (per memory
-  -- feedback_ring_def_opacity.md - ring cannot see through these
-  -- non-reducible defs without the explicit bridge).
-  -- The exact `show` body must match what Lean's elaborator produces
-  -- post-`unfold tetrachildPolynomial` + `rw`. Read cycle 400's
-  -- `inversePolyTree_bushy` proof at lines 10283–10310 and adapt
-  -- by adding one more `-f vertex` factor per block.
-  show _ = _   -- ← REPLACE with explicit goal-matching shape
-  ring
-```
+* **§5 `nchildCrossTerm` strawman** — propose a dispatch design.
+  Two options:
+  - **Option A (per-tuple `if-then-else` cascade)**: mirror the
+    cycle 387 `bichildCrossTerm` / 399 `trichildCrossTerm` / 500
+    `tetrachildCrossTerm` precedent. Each named tuple
+    `(t₁, …, tₙ)` gets one branch. Per Phase α' cycle 402's §3.3
+    candidate enumeration, this explodes combinatorially for k ≥ 5.
+  - **Option B (recursive on `Finset` of selected positions)**:
+    fold over `Finset.powerset (Finset.range n) \ {∅, singletons,
+    full}` (the cross-term blocks), reusing `bichild`/`trichild`/
+    `tetrachildCrossTerm` for the 2-, 3-, and 4-position subsets,
+    and a new general-k helper for k ≥ 5.
 
-**Critical implementation note**: the inner `show` block must reproduce **exactly** what Lean's elaborator produces after the `unfold tetrachildPolynomial` + `rw` chain. Read cycle 400's working `inversePolyTree_bushy` proof (lines 10277–10310 in `Section422.lean`) for the goal-matching pattern; the cycle 500 version adds one more `* -f RootedTree.vertex` factor per block plus one extra `(-1)^5 = -1` outer-sign adjustment on Block (1). If `ring` fails, the error message names the residual goal — adjust the `show` to match.
+* **§6 Phase α'.7 phase decomposition** — break the cycle 509+
+  implementation into single-cycle deliverables. Strawman:
 
-**Important: `RootedTree.bushy₄`** — cycle 499 added this alias at `Section310.lean` per its task results §"Discovery #3"; verify before B.4 via:
+  | Phase | Cycle | Deliverable | LOC | Risk |
+  |-------|-------|-------------|-----|------|
+  | α'.7.0 | 509 | `nchildPolynomial` signature + base cases (n = 0, 1, 2, 3) reduce to existing `inversePolyTree` arms | 200–300 | MED |
+  | α'.7.1 | 510 | `nchildPolynomial n = 4` calibration witnesses against cycles 499/501/502/503/504 | 150–250 | LOW |
+  | α'.7.2 | 511 | Cycle 358 → `nchildPolynomial` bridge theorem | 300–500 | HIGH |
+  | α'.7.3 | 512+ | k = 5 closed-form witness ship (`mk [v, v, v, v, v]`) + bridge | 300–500 | MED |
+  | α'.7.4 | 513+ | k = 5 non-symmetric ladder (3–5 cycles) | 300–500/cycle | MED |
+  | α'.7.5 | 515+ | `inversePolyTree` 7-arm extension (k=5) + Phase β.1 k=5 dispatch + Phase γ k=5 verification | 300–500/cycle | MED |
+  | α'.7.6 | 518+ | k = 6, 7, ... ladder (or pivot to a tree-order-bounded carve-out) | ... | ... |
+  | Phase β.2 | 520+ | Lift Phase β.1 + γ to arbitrary `t : RT` (cycle 365 closure dependency) | 300–500 | HIGH |
+  | Phase δ | 522+ | Inverse-power lift to `η_q^(-(m+1))` via cycle 495 §5.4 | 300–500 | HIGH |
+  | Phase ε | 524+ | Close cycle 365 sorry | 100–200 | MED |
 
-```bash
-grep -n "bushy₄" OpenMath/Chapter3/Section310.lean
-```
+  Total: 10–15 cycles per the cycle 505 §6.3 estimate.
 
-If absent (unlikely, but defensive), ship the one-line `noncomputable def RootedTree.bushy₄ : RootedTree := mk [vertex, vertex, vertex, vertex]` at the top of B.4's content in `Section422.lean`. Per memory `feedback_ring_def_opacity.md`, `bushy₄` is non-reducible to `ring`, so the `show` bridge in B.4 is mandatory regardless.
+* **§7 LOC budget summary** — table of per-cycle LOC totals,
+  cumulative `Section422.lean` projection (currently 19299, expected
+  to reach ~25000–28000 by Phase ε), warm rebuild cost projection
+  (currently ~5m, expected to reach ~10–15m at file end).
 
-## §C. Priority 2 — Non-vacuity example (5–10 LOC, optional)
+* **§8 Risk inventory** — enumerate 8–12 risks:
+  - R1: `nchildPolynomial` termination obstruction (Mathlib well-founded recursion API at large `n`).
+  - R2: Cycle 358 bridge proof complexity (`2^n`-way case analysis).
+  - R3: Build-cost escalation (`Section422.lean` past 25k LOC).
+  - R4: Cycle 504 cancellation-pattern unpredictability (kernels surface non-monotonically; sympy pre-flight mandatory for every new witness).
+  - R5: Phase β.2 at k ≥ 5 may still need a structural induction beyond what `nchildPolynomial` provides (worst-case: need a `nchildPolynomial_eq_of_subtree_agreement` headline lemma analogous to cycle 497's Phase γ).
+  - R6: Faithfulness divergence — `nchildPolynomial`'s definition may smuggle in design choices that obscure Butcher §422's textbook semantics.
+  - R7: Cycle 365 grandfathered sorry has been open 143+ cycles; obstructions may surface only at attempt time (HIGH).
+  - R8: Tautology scanner false-positive risk on the new file's docstring content (per cycles 500–504 scoring history).
+  - R9 (optional): Pivot pressure — by cycle ~515 the §422 streak will be at ~90 substantive cycles, longest single-entity run in project history. Document explicit decision criteria for when to pivot.
 
-After the calibration witness, add an `example` on `⟦explicitEuler⟧` confirming numerical agreement. At explicit Euler `v = 1, c = b' = bushy = bushy₄ = 0`, the closed form evaluates to `-1` (matches cycle 499's `elementaryWeightQ_phi_inv_bushy₄` non-vacuity value). Same recipe as cycle 499's non-vacuity examples.
+* **§9 Cycle 509 entry point** — concrete first steps for the
+  cycle 509 worker:
+  1. Pre-flight: read cycle 358 `_inv_mk` (`Section422.lean:582`),
+     cycle 387/399/500's `bichild`/`trichild`/`tetrachildPolynomial`
+     definitions, and cycle 498 §3's 16-block decomposition.
+  2. Decide on the `Fin n` vs `List RT` indexing convention
+     (recommend `Fin n` for Mathlib-idiom alignment).
+  3. Ship the `nchildPolynomial` signature + base cases for
+     `n ∈ {0, 1, 2, 3}` that reduce to existing `inversePolyTree`
+     arms by `rfl` or `unfold + ring`.
+  4. Calibration witnesses confirming `n = 0, 1, 2, 3` instances
+     match `inversePolyTree`'s vertex / monochild / bichild /
+     trichild arms (cycles 387/399 precedent).
 
-This is a regression check, NOT a deliverable bar — skip if B.1–B.4 consume the cycle budget.
+* **§10 What this doc does NOT do** — explicit non-deliverables:
+  - Does NOT ship any Lean code.
+  - Does NOT prescribe `nchildCrossTerm`'s exact dispatch shape
+    (left to cycle 511+'s implementation).
+  - Does NOT attempt the cycle 365 sorry closure.
+  - Does NOT touch `Section422.lean` or `lean_status.json`'s
+    `def:422B.status` field (stays `partial`).
+  - Does NOT commit to a specific `nchildPolynomial` termination
+    measure (left as a design decision for cycle 509).
 
-## §D. What NOT to attempt
+* **§11 Cross-references** — link to:
+  - `def_422B_path.md` (cycle 336 overall roadmap).
+  - `def_422B_phase_alpha_prime_5_scoping.md` (cycle 402, k=3 ladder
+    scoping).
+  - `def_422B_phase_alpha_prime_5_2_scoping.md` (cycle 498, k=4
+    ladder scoping; the direct template).
+  - `def_422B_phase_beta_gamma_k4_scoping.md` (cycle 505, the
+    parent scoping that authorised this Path (b) cycle).
+  - `def_422B_phase_D_3_scoping.md` (cycle 357, original Phase D.3
+    plan that introduced cycle 365's sorry).
+  - `def_422B_subLemmaA_inductive_plan.md` (cycle 373, Sub-lemma A
+    inductive plan).
+  - Cycle 499–504 task results (`task_results/cycle_499.md` through
+    `cycle_504.md`) for the k=4 calibration ladder.
+  - Relevant memory files: `feedback_dws_cherry_factor_includes_v_aᵢ.md`,
+    `feedback_cherry_child_cancellation.md`,
+    `feedback_vertex_prefix_cherry_tail_kernels.md`,
+    `feedback_ring_def_opacity.md`,
+    `feedback_simp_recursive_def_overunfolds.md`,
+    `feedback_lake_env_lean_no_olean_update.md`.
 
-1. **Do NOT use `simp [inversePolyTree, inversePolyTree_vertex, …]`** for the calibration proof — per memory `feedback_simp_recursive_def_overunfolds.md`, this over-unfolds the recursive def and the name-equality theorems get linted as unused. The recipe in §B.4 uses targeted `rw` followed by a `show` bridge, then `ring`. Cycle 400's bushy precedent shows exactly this pattern works.
+### §B.2 Bookkeeping deliverables (mechanical)
 
-2. **Do NOT attempt to refine `tetrachildCrossTerm` for non-symmetric quadruples** (e.g. `(v,v,v,c)`, `(v,c,c,c)`). Those are Phase α'.5.2.k cycle 501+ deliverables. The `else → 0` default is intentional — it leaves the calibration ladder one-cycle-per-quadruple consistent with cycles 388/389/390/391 (binary), 403/491/492/493/494 (ternary). Cycle 500 is purely infrastructure.
+1. **`extraction/formalization_data/lean_status.json`**: bump
+   `def:422B.cycle_completed_at` from 507 to 508; append a note to
+   `def:422B.note` reflecting the scoping doc ship. **Do NOT
+   change `status` (stays `partial`).**
 
-3. **Do NOT attempt to ship Phase β.1 / γ extensions** (the 14-tree ladder dispatch theorems, cycle 496/497 precedents) to incorporate `inversePolyTree_bushy₄`. Those are Phase β.2 extension work (cycle ~510+ per scoping doc §6.4) and require the full Phase α'.5.2 ladder to populate first.
+2. **`plan.md`**: append a cycle 508 closure paragraph to the
+   `def:422B` row's note, mirroring the cycle 505/506/507
+   format ("Cycle 508 ships markdown-only Phase α'.7
+   `nchildPolynomial` scoping doc...").
 
-4. **Do NOT attempt to close the cycle 365 grandfathered sorry** at line 2279. Multi-cycle Phase β/γ extension work; Phase α'.5.2.1 is infrastructure for the eventual closure.
+3. **`.prover-state/task_results/cycle_508.md`**: standard 7-section
+   format (Worked on / Approach / Result / Faithfulness check / Dead
+   ends / Discovery / Suggested next approach).
 
-5. **Do NOT submit to Aristotle**. These are pure `noncomputable def`s + a mechanical calibration proof. Cycle 400 closed `inversePolyTree_bushy` in one cycle without Aristotle; the cycle 500 ship is structurally identical with one extra child slot. The mechanical recipe in §B.4 is reliable.
+## §C. What NOT to do this cycle
 
-6. **Do NOT introduce `axiom` or `constant`** anywhere.
+* Do **NOT** modify `OpenMath/Chapter4/Section422.lean` or any
+  other Lean file. Cycle 508 is markdown-only by design (LOW risk
+  cycle to break the cycle 505 → 507 substantive-ship cadence at
+  a natural strategic pivot).
 
-7. **Do NOT raise `maxHeartbeats`** above 200000. If the `ring` step times out on the closed-form algebraic identity, the issue is more likely a `show` mismatch than a genuine elaboration blow-up — re-read the goal and adjust the `show` before considering decomposition.
+* Do **NOT** attempt to close the cycle 365 grandfathered sorry at
+  `Section422.lean:2279`. It is multi-cycle Phase β.2 / δ / ε
+  territory and depends on the very `nchildPolynomial`
+  infrastructure that cycle 508 is scoping.
 
-8. **Do NOT alter the cycle 400 `inversePolyTree_bushy` proof or cycle 387/394/395 `_cherry/_mkCherry/_mkMkCherry` proofs**, even though their patterns no longer pattern-match against the catch-all (since we bumped from k≥4 to k≥5). They all matched on lower-arity arms (0/1/2/3 children), so the catch-all bump is invisible to them. Verify by `lake build OpenMath.Chapter4.Section422` after editing — all existing calibration witnesses should re-compile clean.
+* Do **NOT** extend the Phase α'.5.2 calibration ladder further
+  (no new k=4 witnesses beyond the 5 shipped cycles 499–504). The
+  cycle 504 worker's saturation analysis is dispositive: the
+  symmetric vertex/cherry quadruple ladder is complete; mixed-tail
+  k=4 witnesses (`(v, v, v, mk[c])`, `(v, v, c, mk[c])`,
+  `(v, mk[c], c, c)`, etc.) would add LOC without unlocking new
+  structural patterns.
 
-9. **Do NOT skip the catch-all bump**. If the bump is missed, the new `[c₁, c₂, c₃, c₄]` arm and the unbumped catch-all `(_ :: _ :: _ :: _ :: _)` overlap at `k = 4`. Lean's pattern matcher will either error on non-exhaustive matching or silently pick the catch-all over the new arm, breaking the calibration. Cycle 399's bump (k≥3 → k≥4 catch-all) is the precise template — mirror its pattern.
+* Do **NOT** attempt the cycle 365 sorry via a tree-order-bounded
+  carve-out (Path c in cycle 498 §5.3). That path is contingent on
+  Sub-lemma B's order-bound admissibility, which is itself open
+  and requires a separate scoping pass.
 
-## §E. Build cost mitigation
+* Do **NOT** prescribe the cycle 509+ Lean implementation's exact
+  shape beyond the strawman signature in §B.1 §4–§5. The scoping
+  doc must leave room for the cycle 509 worker to refine the
+  recursion shape based on Lean's well-founded recursion API and
+  Mathlib's `Finset.powerset` ergonomics.
 
-Per cycle 401's measured warm rebuild (1165s with 5-arm `inversePolyTree`), cycle 500's 6-arm extension may push warm rebuild toward ~1400–1500s. Mitigation:
+* Do **NOT** modify `scripts/autonomous_loop.py` or address any
+  tautology-scanner / empty-stuck-on prompt issues — those are
+  loop-maintainer territory per
+  `.prover-state/issues/tautology_scanner_false_positives.md`.
 
-* **Measure after B.3**: run `time lake build OpenMath.Chapter4.Section422` after the recursion extension lands (before B.4). If rebuild exceeds 1500s, document it in task results.
-* **Fallback option** (only if rebuild blows past 2000s): extract `tetrachildPolynomial` and `tetrachildCrossTerm` into a new sibling file `OpenMath/Chapter4/Section422TetraChild.lean` and import. The cycle 281 `Section342NormSqHelpers.lean` is the precedent. DO NOT do this preemptively — only if measured cost demands.
+* Do **NOT** introduce `axiom`/`constant` declarations.
 
-## §F. Pre-flight tasks (do these BEFORE Lean edits)
+* Do **NOT** raise `maxHeartbeats` above 200000 anywhere (this
+  cycle has no Lean changes so this is a no-op constraint, but
+  noted for the cycle 509+ Lean track).
 
-1. **Verify `RootedTree.bushy₄` exists**:
-   ```
-   grep -n "bushy₄" OpenMath/Chapter3/Section310.lean
-   ```
-   Expected: a `noncomputable def` of `bushy₄` at Section310.lean (added cycle 499). If absent, ship the one-line alias inline in §B.4.
+* Do **NOT** pivot to a fresh entity. The §422 cluster's Path (b)
+  scoping is the natural compounding move; cycle 508's
+  markdown-only ship preserves the streak while loading the next
+  phase. Pivot decisions for cycle 509+ are explicitly deferred to
+  §8 R9 of the new scoping doc and to cycle 509's planner.
 
-2. **Read cycle 400's `inversePolyTree_bushy` proof** at `Section422.lean:10277–10310`. The cycle 500 calibration proof in §B.4 is a verbatim extension; the `show` bridge in particular is the most error-prone part and is best understood from the working cycle 400 version. Read it carefully.
+* Do **NOT** Aristotle-batch anything. Cycle 508 is markdown-only;
+  there are no Lean proof obligations to dispatch.
 
-3. **Read cycle 399's `trichildPolynomial` + `trichildCrossTerm`** at `Section422.lean:9956–10063`. These establish the sign convention and the `if-then-else` dispatch pattern. `tetrachildPolynomial` is a verbatim extension by one slot.
+## §D. Approaches explicitly known to fail (do not retry)
 
-4. **Verify cycle 499's `elementaryWeightQ_phi_inv_bushy₄`** is present and its RHS matches the §B.4 closed form. Cross-check the binomial coefficients `-1, +4, -6, +4, -1` and the kernel signs.
+Cycle 508 has no failed Lean approaches to inherit because it is a
+markdown-only cycle. The relevant historical failure modes (do not
+repeat in cycle 509+ Lean track):
 
-5. **`grep -c sorry OpenMath/Chapter4/Section422.lean`** to confirm starting count is **5** (4 docstring + 1 grandfathered code at line 2279).
+* **Cycle 138/139 (`thm:550A` general-n sorry-first)**: rolled back
+  because sorry count rose 0 → 1 without single-cycle closure path.
+  Cycle 508's deliverable is markdown-only, so this rollback risk
+  does not apply now, but cycle 509+'s Lean ships MUST follow the
+  "no sorry-first scaffolds without single-cycle closure" rule.
 
-## §G. Cycle 500 ship checklist
+* **Cycle 149/150 (`def:530B` operator-body sorry-first)**: rolled
+  back because the operator body needed Banach fixed-point
+  machinery the cycle hadn't scoped. Cycle 508's markdown-only ship
+  inherits no body sorries; cycle 509+ must explicitly scope all
+  recursion termination measures before committing definitions.
 
-After all edits:
+* **Cycle 200/201 (`thm:381H` deferred direction)**: rolled back
+  because the sorry-first scaffold's three deferred directions had
+  no single-cycle closure path. Cycle 508 ships only markdown; no
+  sorries change.
 
-- [ ] `Section422.lean` extended by B.1 + B.2 + B.3 + B.4 (~100 LOC).
-- [ ] `lake env lean OpenMath/Chapter4/Section422.lean` exits 0 (only existing cycle 365 sorry warning at line 2279).
-- [ ] `lake build OpenMath.Chapter4.Section422` exits 0.
-- [ ] `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5 (unchanged).
-- [ ] `#print axioms` on all four new public symbols (`tetrachildCrossTerm`, `tetrachildPolynomial`, `inversePolyTree_bushy₄`, plus any new alias if `bushy₄` was added inline) → `[propext, Classical.choice, Quot.sound]` only.
-- [ ] All existing `inversePolyTree_*` calibration witnesses (cycle 387/394/395/396/397/400/401/491–494) regression-pass — `lake build OpenMath.Chapter4` exits 0.
-- [ ] `lean_status.json` `def:422B` row's `cycle_completed_at` bumped from 499 to 500. Status remains `partial`.
-- [ ] `plan.md` `def:422B` row updated with cycle 500 closure annotation.
-- [ ] `task_results/cycle_500.md` documents the ship per the standard template (Worked on / Approach / Result / Faithfulness check / Dead ends / Discovery / Suggested next approach).
+* **`alphaWeight` definition-smuggling precedent (cycle 250)**:
+  defined `α(t) = 1/γ(t)` (smuggled-in shortcut) instead of the
+  textbook combinatorial definition. The cycle 508 scoping doc must
+  explicitly flag `nchildPolynomial`'s design choices as documented
+  divergences if any are made (faithfulness obligation per
+  CLAUDE.md "Pre-Commit Faithfulness Checklist").
 
-## §H. Expected cycle outcomes
+## §E. Cycle 508 success criteria
 
-**Likely (90%)**: ship all four B-section deliverables clean. Total ~100 LOC, axiom-clean, build clean. §422 streak advances to **73 substantive + 6 doc** (cycles 336–500). The cycle 501 worker enters with the `inversePolyTree` 6-arm dispatch fully calibrated at `bushy₄` and ready for the next non-symmetric quadruple closed form (target per scoping doc §5.3: `mk [vertex, vertex, vertex, cherry]`, order 6, ~250–300 LOC for the Phase α'.5.2.k=1 ship combining the closed form + cross-term branch + calibration).
+* New markdown file
+  `.prover-state/issues/def_422B_phase_alpha_prime_7_nchildPolynomial_scoping.md`
+  exists with 600–900 LOC across §1–§11.
 
-**Possible deviation (8%)**: build cost on the 6-arm extension exceeds 2000s and forces the §E sibling-file extraction. In that case, cycle 500 ships the four deliverables across two files; cycle 501's planner re-scopes the LOC budget per the new file layout.
+* `lean_status.json` `def:422B.cycle_completed_at` = 508
+  (status unchanged: `partial`).
 
-**Unlikely (<2%)**: the calibration `ring` step fails to close after the `show` bridge — likely indicates the `unfold tetrachildPolynomial` + `rw` chain produces a different goal shape than cycle 400's bushy template predicts. Remediation: read the `lake env lean` error message, update the `show` block to match the actual goal, retry. If multiple attempts fail (>3 tries within 30 min), the cycle 500 worker may extract Phase β.2 sketch into cycle 501 strategy and ship only B.1–B.3 (deferring the calibration to cycle 501 with the partial recursion extension in place).
+* `plan.md` `def:422B` row has cycle 508 closure paragraph appended.
+
+* `.prover-state/task_results/cycle_508.md` written.
+
+* `OpenMath/` directory **unchanged** (`git diff --stat OpenMath/`
+  returns empty).
+
+* `grep -c sorry OpenMath/Chapter4/Section422.lean` = 5
+  (unchanged — 4 docstring + 1 grandfathered cycle 365 at line
+  2279).
+
+* §422 axiom-clean streak: 79 substantive + 7 doc → **79
+  substantive + 8 doc** (cycles 336–508).
+
+## §F. Faithfulness check (cycle 508)
+
+Per CLAUDE.md's "Pre-Commit Faithfulness Checklist":
+
+* No new `def`, `structure`, `class`, or `theorem` introduced — this
+  is a markdown-only scoping cycle.
+* Sorry count unchanged at 5 (4 docstring + 1 grandfathered code
+  sorry at `Section422.lean:2279`).
+* Sole Lean-adjacent deliverable is the bookkeeping bump in
+  `lean_status.json` (cycle counter only) and `plan.md` (closure
+  paragraph only).
+
+Faithfulness is trivially satisfied (no formal claims made about
+Butcher textbook content; all references to `nchildPolynomial`,
+`Φ_η`, `Φ_{η⁻¹}`, `inversePolyTree`, etc. in the new scoping doc
+are scoping-level discussions of infrastructure design, NOT theorem
+ships).
+
+## §G. Aristotle batch
+
+**Not applicable.** Cycle 508 is markdown-only; there are no Lean
+proof obligations to dispatch.
+
+## §H. Cycle 509 entry point (out of scope for cycle 508, recorded for cycle 509's planner)
+
+Per the new scoping doc's §9, cycle 509's first deliverable will be
+Phase α'.7.0: `nchildPolynomial` signature + base cases (n ∈ {0, 1,
+2, 3}) reducing to existing `inversePolyTree` arms. Estimated 200–
+300 LOC, MED risk (well-founded recursion termination is the main
+unknown).
+
+Cycle 508 worker: do NOT attempt Phase α'.7.0; only ship the
+markdown scoping doc.
+
+## §I. Note on the recurring "empty stuck-on" template phantom
+
+The cycle 507 prompt may again exhibit the empty-stuck-on phantom
+pattern documented across cycles 015 / 040 / 174 / 180 / 248 / 263 /
+491 / 505 / 506 / 507 (10 confirmed instances now). The cycle 508
+worker should NOT diagnose this pattern as a real blocker; the
+scoping doc is the substantive deliverable. If the consultant
+phase fires against cycle 508's markdown-only ship, the standing
+recommendation from `consultant_advice_cycle_248.md` §I and
+`tautology_scanner_false_positives.md` §D3 applies: the supervisor's
+prompt-builder should short-circuit on markdown-only cycles. Worker
+MUST NOT modify `scripts/autonomous_loop.py`.
+
+## §J. Bottom-line directive
+
+Cycle 508 ships **one markdown file**:
+`.prover-state/issues/def_422B_phase_alpha_prime_7_nchildPolynomial_scoping.md`
+(600–900 LOC, §1–§11 per the template in §B.1 above).
+
+Plus the standard bookkeeping (`lean_status.json` cycle counter
+bump, `plan.md` closure paragraph, `task_results/cycle_508.md`).
+
+Zero Lean changes. Sorry count unchanged. §422 streak advances by
+one doc cycle.
+
+Cycle 509+ workers consume the new scoping doc to begin the multi-
+cycle Phase α'.7 Lean implementation track toward eventual closure
+of the cycle 365 grandfathered sorry.
+
+### §J.1 Time budget
+
+Cycle 508 has no Lean compile dependency — total cycle wall time
+should be dominated by writing the scoping doc (~30–60 min for a
+600–900 LOC markdown file with section structure and cross-references
+already specified in §B.1). Bookkeeping is <5 min. No Aristotle
+poll. No `lake build`. Worker should aim to commit and finish
+well under 90 minutes total.
+
+### §J.2 Quality bar for the scoping doc
+
+The scoping doc should be **at least as detailed as cycle 498's
+Phase α'.5.2 scoping** (1922 lines) but **need not exceed cycle 505's
+868-line Phase β/γ k=4 scoping** if the §6 phase-decomposition table
+captures the cycle 509+ plan in tabular form. Target ~600–900 LOC.
+
+The §3 block decomposition section is the most substantive
+mathematical content — devote ~150–250 LOC to it (covering the
+`2^n` block count, the subset-indexing scheme, and the recursive
+expansion of cycle 358's `_inv_mk` formula).
+
+The §6 phase decomposition is the most operationally useful section
+for cycle 509+ workers — devote ~100–200 LOC to a detailed table
+plus per-row commentary on risks and Mathlib hooks.
+
+§§1, 2, 4, 5, 7, 8, 9, 10, 11 each take ~30–80 LOC.
