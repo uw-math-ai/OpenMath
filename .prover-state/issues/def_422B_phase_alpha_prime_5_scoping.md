@@ -954,3 +954,244 @@ insert `show ...` bridges before `ring`.
 Phase α'.5.3 (`k = 4` infrastructure) deferred to cycle 408+ as the
 multi-cycle infrastructure ship that follows once enough `k = 3`
 empirical anchor data has accumulated.
+
+---
+
+## §11 Cycle 491 closure — Phase α'.5.1 P1+P2 ship
+
+**Status: SHIPPED.** Phase α'.5.1 P1+P2 closed at cycle 491.
+
+### §11.1 What shipped
+
+1. **`trichildCrossTerm` extension** (`Section422.lean:7020–7046`).
+   The cycle 399 single-branch body
+   `if (t₁, t₂, t₃) = (vertex, vertex, vertex) then 3·v·b' else 0`
+   extended to a cascade with the second branch
+   `else if (t₁, t₂, t₃) = (vertex, vertex, cherry) then v³c − 3v²·b'
+   + c·b' + v·bushy + 2v·vc else 0`. Back-computed by subtracting
+   `trichildPolynomial` Blocks (1)+(2)+(3)+(4) at
+   `(inv_v, inv_v, inv_c) = (-v, -v, v² − c)` from cycle 403's
+   9-kernel closed form per §B.1 of the cycle 491 strategy doc.
+
+2. **`inversePolyTree_mkVertexVertexCherry`** calibration witness
+   (`Section422.lean:7308–7387`, ~75 LOC inclusive of docstring).
+   The 11th Family C inverse-polynomial calibration witness;
+   confirms that the recursive `inversePolyTree` definition (cycles
+   387/399) evaluates correctly on `mk [vertex, vertex, cherry]`
+   against the cycle 403 quotient-level closed form. Proof recipe
+   per §B.3 of the strategy doc: `rw [inversePolyTree,
+   inversePolyTree_vertex, inversePolyTree_cherry]` (the
+   `_vertex` rewrite fires globally on both `t₁ = t₂ = vertex`
+   occurrences), `unfold trichildPolynomial`, then
+   `rw [show trichildCrossTerm vertex vertex cherry f = … by
+   unfold trichildCrossTerm; rw [if_neg (by decide),
+   if_pos ⟨rfl, rfl, rfl⟩]]`, then a `show … = …` bridge for
+   `f (mk [vertex]) ↔ f cherry` (per memory
+   `feedback_ring_def_opacity.md`), then `ring`.
+
+### §11.2 Regression checks
+
+* `inversePolyTree_bushy` (cycle 400) re-verified axiom-clean:
+  the new `else if (vertex, vertex, cherry)` branch only matches at
+  the second-pattern conjunction `vertex = vertex ∧ vertex = vertex
+  ∧ ?₃ = cherry`; at `?₃ = vertex` the FIRST `if`-branch fires
+  (since `vertex = vertex` for all three components). So
+  `rw [if_pos ⟨rfl, rfl, rfl⟩]` in cycle 400's proof still
+  discharges to the original `3·v·b'` value unchanged.
+* `elementaryWeightQ_phi_inv_mkVertexVertexCherry` (cycle 403)
+  re-verified axiom-clean (no dependency on the cycle 399
+  `trichildCrossTerm` body — it lives in the quotient layer
+  directly, not the polynomial layer).
+* Sorry count unchanged at 5 (4 docstring + 1 grandfathered cycle 365
+  code at `Section422.lean:2279`).
+
+### §11.3 Streak advance
+
+§422 axiom-clean streak: 64 substantive + 4 doc (cycles 336–403)
+→ **65 substantive + 4 doc** (cycles 336–491).
+
+### §11.4 Cycle 492+ outlook
+
+Per §6.2 + §3.3 candidate list, the next Phase α'.5.1 cycle ships
+one more non-symmetric `k = 3` witness — natural candidates:
+
+* `mk [vertex, cherry, cherry]` (order 6, asymmetric two-cherry
+  cluster).
+* `mk [vertex, vertex, broom₃]` (order 6, two-vertex + broom₃
+  cluster).
+* `mk [vertex, vertex, mk [cherry]]` (order 6, two-vertex + `[cherry]`
+  cluster).
+
+Each cycle adds one `else if` branch to `trichildCrossTerm` + one
+`inversePolyTree_*` calibration. Cycle 492's planner picks per
+mathematical interest and proof-complexity estimate; the strategy
+doc §F outlook bullet is the entry point.
+
+## §12 Cycle 492 closure — Phase α'.5.1 P3 ship
+
+### §12.1 What shipped
+
+* **Quotient-level closed form**
+  `elementaryWeightQ_phi_inv_mkVertexCherryCherry` (cycle 492) for
+  the order-6 asymmetric three-children tree
+  `mk [vertex, cherry, cherry]`. The closed form has 14 monomials
+  across 9 named sum-kernels:
+  ```
+  Φ_{η_q⁻¹}(mk [vertex, cherry, cherry])
+     = v⁶ − 5v⁴c + 5v²c² − c³ + 3v³b' − 2vcb' − v²·bushy
+       + 2v³m − 2vcm − 4v²·vc + 2c·vc + 2v·vvc + v·cc − M_vcc
+  ```
+  where `v, c, b', bushy, m, vc, vvc, cc, M_vcc` abbreviate `Φ_η`
+  at vertex, cherry, broom₃, bushy, mk[cherry], mk[vertex,cherry],
+  mk[vertex,vertex,cherry], mk[cherry,cherry], and the self-kernel
+  mk[vertex,cherry,cherry] respectively.
+  Paper derivation cross-checked numerically at `⟦explicitEuler⟧`
+  (yields `1`, matching the leading `v⁶` term).
+  21 helpers (cycles 367/368/369/370/372/384/403) reused verbatim
+  + 3 new helpers (`h_dw_mkVertexCherryCherry`,
+  `h_mkVertexCherryCherry`, `h_dws_mkVertexCherryCherry`).
+
+* **m=0 corollary**
+  `powRep_sum_eq_of_agreement_at_mkVertexCherryCherry_zero`
+  (cycle 492) — specialisation of Sub-lemma A at `t = mk
+  [vertex, cherry, cherry], m = 0`; nine agreement hypotheses
+  (vertex, cherry, broom₃, bushy, mk[cherry], mk[vertex,cherry],
+  mk[vertex,vertex,cherry], mk[cherry,cherry],
+  mk[vertex,cherry,cherry]).
+
+* **`trichildCrossTerm` extension** — third `else if` branch for
+  `(vertex, cherry, cherry)` with the back-computed Blocks (5)+(6)+(7)
+  trilinear cross-term value:
+  ```
+  −2v⁴c + 2v²c² + 3v³b' − 2vcb' − v²·bushy − 4v²·vc + 2c·vc
+   + 2v·vvc + v·cc
+  ```
+
+* **Recursive calibration witness**
+  `inversePolyTree_mkVertexCherryCherry` (cycle 492) matching the
+  cycle 492 closed form verbatim under `f = elementaryWeightQ_phi η_q`.
+
+* **Two non-vacuity `example`s** on `⟦explicitEuler⟧`:
+  - closed-form witness pinning to `1` (the order-6 even-parity
+    leading-`v⁶` value);
+  - m=0 reflexive witness via 9 `rfl`s.
+
+### §12.2 Regression checks
+
+* Cycle 491's `inversePolyTree_mkVertexVertexCherry` re-verified
+  axiom-clean after the `trichildCrossTerm` extension (the new
+  `(vertex, cherry, cherry)` `if_neg` branch does not affect cycle
+  491's `if_pos ⟨rfl, rfl, rfl⟩` discharge at `(vertex, vertex,
+  cherry)`).
+* Cycle 400's `inversePolyTree_bushy` re-verified axiom-clean (the
+  first `(vertex, vertex, vertex)` branch still fires).
+* Cycle 403's `elementaryWeightQ_phi_inv_mkVertexVertexCherry`
+  re-verified axiom-clean (independent of `trichildCrossTerm`).
+* All prior `inversePolyTree_*` calibration witnesses re-verified
+  axiom-clean (the new branch only matches at
+  `(vertex, cherry, cherry)`).
+* `Section422.lean` compiles cleanly with only the cycle 365
+  grandfathered sorry warning at line 2279.
+
+### §12.3 Streak advance
+
+§422 axiom-clean streak: 65 substantive + 4 doc (cycles 336–491)
+→ **66 substantive + 4 doc** (cycles 336–492).
+
+### §12.4 Cycle 493+ outlook
+
+Two more non-symmetric `k = 3` candidates remain per §6.2 + §3.3:
+* `mk [vertex, vertex, broom₃]` (order 6).
+* `mk [vertex, vertex, mk [cherry]]` (order 6).
+
+Each cycle adds one `else if` branch to `trichildCrossTerm` + one
+`inversePolyTree_*` calibration. Cycle 493+ planners may also
+consider transitioning to Phase α'.5.2 (k ≥ 4 trees) once the
+`k = 3` ladder is sufficiently populated for downstream
+machine-checked corollaries.
+
+## §13 Cycle 493 closure — Phase α'.5.1 P4 ship
+
+### §13.1 What shipped
+
+* **Quotient-level closed form**
+  `elementaryWeightQ_phi_inv_mkVertexVertexMkCherry` — `Φ_{η_q⁻¹}`
+  at the order-6 tree `mk [vertex, vertex, mk [cherry]]`. 15
+  monomials across 10 named sum-kernels: `vertex, cherry, broom₃,
+  bushy, mk[cherry], mk[v,c], mk[v,v,c], mk[mk[cherry]],
+  mk[v,mk[cherry]]`, plus the self-kernel `mk[v,v,mk[cherry]]`.
+* **`trichildCrossTerm` extension** — fourth `else if` branch
+  `(vertex, vertex, mk [cherry])`:
+  ```
+  -v⁴c + v³m + v²c² + 3v³b' - 4vcb' + mb'
+    - v²·bu + c·bu - 2v²·vc + v·vvc + 2v·vmc
+  ```
+  Back-computed by subtracting Blocks (1)+(2)+(3)+(4)+(8) of
+  `trichildPolynomial` at `(inv_v, inv_v, inv_mc) = (-v, -v,
+  -v³ + 2vc - m)` from the closed-form RHS.
+* **Calibration witness** `inversePolyTree_mkVertexVertexMkCherry`
+  — 13th Family C witness; proof recipe identical to cycle
+  491/492's: `rw [inversePolyTree, inversePolyTree_vertex,
+  inversePolyTree_mkCherry]; unfold trichildPolynomial; rw [show
+  trichildCrossTerm vertex vertex (mk [cherry]) f = ... by unfold;
+  rw [if_neg × 3, if_pos]]; show <bridge>; ring`.
+* **m=0 corollary**
+  `powRep_sum_eq_of_agreement_at_mkVertexVertexMkCherry_zero` (10
+  agreement hypotheses; specialisation of Sub-lemma A).
+* **Two `example` non-vacuity checks** at `⟦explicitEuler⟧`:
+  closed-form pins to `1` via leading `v⁶` (the only non-vanishing
+  term when `c = b' = bu = m = vc = vvc = Mmc = vmc = vvmc = 0`);
+  m=0 reflexive via 10 `rfl`s.
+
+All four named theorems axiom-clean:
+`[propext, Classical.choice, Quot.sound]`.
+
+### §13.2 Regression checks
+
+* `inversePolyTree_bushy`, `inversePolyTree_mkVertexVertexCherry`,
+  and `inversePolyTree_mkVertexCherryCherry` remain axiom-clean
+  after the `trichildCrossTerm` extension. Their `if_neg`/`if_pos`
+  cascades hit at the 1st/2nd/3rd branches (respectively), all
+  before the new 4th branch — so the cycle 493 extension is
+  invisible to them.
+* `Section422.lean` compiles cleanly with only the cycle 365
+  grandfathered sorry warning at line 2279.
+* Sorry count: 5 (unchanged).
+
+### §13.3 Streak advance
+
+§422 axiom-clean streak: 66 substantive + 4 doc (cycles 336–492)
+→ **67 substantive + 4 doc** (cycles 336–493).
+
+### §13.4 Cycle 494+ outlook
+
+One remaining non-symmetric `k = 3` candidate per §6.2 + §3.3:
+* `mk [vertex, vertex, broom₃]` (order 6).
+
+Paper-derivation guidance: third-child factor for `broom₃` is
+`dws M.inverse i broom₃ = (inv_v + Aᵢ)²` (depth-2 binary, but
+both children are vertices so only `Aᵢ` appears, not `Bᵢ`). So
+the per-row factor for `mk [v, v, broom₃]` is
+`(inv_v + Aᵢ)² · (inv_b' + Σⱼ Aᵢⱼ · (inv_v + Aⱼ)²)`. Expanding
+the inner `(inv_v + Aⱼ)² = inv_v² + 2·inv_v·Aⱼ + Aⱼ²` produces
+new `Σⱼ Aᵢⱼ · Aⱼ²` and `Σⱼ Aᵢⱼ · Aⱼ` terms; multiplied through
+gives a 9-kernel decomposition (estimated):
+* Existing: `v, c, b', bu, vc, vvc` (6 from cycle 403).
+* New: `Mb' = Φ_η(mk [broom₃])` (cycle 371's kernel), `vMb' =
+  Φ_η(mk [vertex, broom₃])` (new), and the self-kernel
+  `Φ_η(mk [vertex, vertex, broom₃])`.
+
+That's the same approx LOC budget as cycle 493 (~700 LOC). After
+this final `k = 3` ladder ship, Phase α'.5.1 P5 closes and
+options open to Phase α'.5.2 (k ≥ 4 children, with `tetrachild*`
+infrastructure per §5).
+
+Alternative downstream targets:
+* **Phase β**: Sub-lemma A body closure at line 2279
+  (grandfathered cycle 365 sorry). Multi-cycle work; needs the
+  induction machinery for subtree-agreement → kernel-equality
+  lifted from the m=0 corollaries.
+* **Phase α'.5.2**: Extend `inversePolyTree` to k=4 children via
+  `tetrachildPolynomial`/`tetrachildCrossTerm`. Restructures
+  the recursion; estimated ~3–5 cycles for the infrastructure +
+  one calibration witness.
