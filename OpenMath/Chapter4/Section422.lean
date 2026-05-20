@@ -14876,6 +14876,219 @@ noncomputable def tetrachildPolynomial
     + tetrachildCrossTerm t₁ t₂ t₃ t₄ f
     - f (OpenMath.Chapter3.Section310.RootedTree.mk [t₁, t₂, t₃, t₄])
 
+/-- *Phase α'.7.0 (cycle 509) — parametric `n`-child cross-term skeleton.*
+
+For an arbitrary number of children `n`, this helper packages the
+cross-term contribution that — together with the block-∅ "all-constant"
+term, the single-child blocks, and the self-kernel block — recovers
+`inversePolyTree (mk [children 0, …, children (n - 1)]) f`.
+
+Dispatch by `n`:
+
+* `n = 0, 1`: returns `0` (no cross-term content; the low-`n` `inversePolyTree`
+  branches encode their full structure in `nchildPolynomial`'s
+  arm-specific bodies).
+* `n = 2`: delegates to cycle 387's `bichildCrossTerm`.
+* `n = 3`: delegates to cycles 399 / 491's `trichildCrossTerm`.
+* `n = 4`: delegates to cycles 500–504's `tetrachildCrossTerm`.
+* `n ≥ 5`: returns `0` (placeholder; Phase α'.7.5 / cycle 517+ extends).
+
+This is **internal helper infrastructure**, NOT a Butcher concept.
+Faithfulness contract is via the Phase α'.7.2 (cycle 511) cycle 358
+bridge theorem, not direct textbook correspondence. The `_ + 5 => 0`
+catch-all is the same R6.B-style obstruction as `inversePolyTree`'s
+`k ≥ 5` catch-all (line 14924); it is intentional and will be lifted at
+Phase α'.7.5. -/
+noncomputable def nchildCrossTerm : ∀ (n : ℕ),
+    (Fin n → RT) → (Fin n → ℝ) → (RT → ℝ) → ℝ
+  | 0, _, _, _ => 0
+  | 1, _, _, _ => 0
+  | 2, ch, _, f => bichildCrossTerm (ch 0) (ch 1) f
+  | 3, ch, _, f => trichildCrossTerm (ch 0) (ch 1) (ch 2) f
+  | 4, ch, _, f => tetrachildCrossTerm (ch 0) (ch 1) (ch 2) (ch 3) f
+  | _ + 5, _, _, _ => 0
+
+/-- *Phase α'.7.0 (cycle 509) — parametric `n`-child inverse-polynomial.*
+
+For arbitrary `n`, children indices `Fin n → RT`, per-child recursive
+inverse-polynomial values `Fin n → ℝ`, and an elementary-weight function
+`f : RT → ℝ`, `nchildPolynomial n children inv_children f` is the
+closed-form expression matching `inversePolyTree (mk [children 0, …,
+children (n - 1)]) f`.
+
+Three arms (matching `inversePolyTree`'s low-`n` cases):
+
+* `n = 0`: returns `-f vertex` (cycle 341 closed form; matches
+  `inversePolyTree (mk []) f`).
+* `n = 1`: returns the cycle 392 single-child form `-(v · inv₀)
+  + monochildCrossTerm (children 0) f - f (mk [children 0])`.
+* `n ≥ 2`: uniform subset-sum body:
+  * Block ∅ (all-constant): `-(v · ∏ inv_children)`.
+  * Single-child blocks: `-∑ ℓ₀, (∏ i ≠ ℓ₀, inv_children i)
+    · f (mk [children ℓ₀])`.
+  * Cross-term blocks: `+ nchildCrossTerm n children inv_children f`.
+  * Self-kernel block: `- f (mk (List.ofFn children))`.
+
+This is **internal helper infrastructure**, NOT a Butcher concept. The
+faithfulness contract — equivalence to `inversePolyTree (mk [...]) f`
+under the cycle 358 `elementaryWeightQ_phi_inv_mk` bridge — is deferred
+to Phase α'.7.2 (cycle 511). Cycle 509 ships the parametric form's
+signature plus 5 calibration witnesses against the per-arity helpers
+at `n ∈ {0, 1, 2, 3, 4}`. -/
+noncomputable def nchildPolynomial : ∀ (n : ℕ),
+    (Fin n → RT) → (Fin n → ℝ) → (RT → ℝ) → ℝ
+  | 0, _, _, f => -f RootedTree.vertex
+  | 1, ch, inv, f =>
+      -(f RootedTree.vertex * inv 0)
+        + monochildCrossTerm (ch 0) f
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk [ch 0])
+  | n + 2, ch, inv, f =>
+      -(f RootedTree.vertex * ∏ i : Fin (n + 2), inv i)
+        - ∑ ℓ₀ : Fin (n + 2), (∏ i ∈ Finset.univ.erase ℓ₀, inv i)
+            * f (OpenMath.Chapter3.Section310.RootedTree.mk [ch ℓ₀])
+        + nchildCrossTerm (n + 2) ch inv f
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+              (List.ofFn (fun i : Fin (n + 2) => ch i)))
+
+/-- *Phase α'.7.0 (cycle 509) — calibration at `n = 0`.*
+
+The parametric form `nchildPolynomial` at `n = 0` reduces to the
+cycle 341 vertex closed form `-f vertex`. -/
+theorem nchildPolynomial_zero
+    (children : Fin 0 → RT) (inv_children : Fin 0 → ℝ) (f : RT → ℝ) :
+    nchildPolynomial 0 children inv_children f = -f RootedTree.vertex :=
+  rfl
+
+/-- *Phase α'.7.0 (cycle 509) — calibration at `n = 1`.*
+
+The parametric form `nchildPolynomial` at `n = 1` reduces to the cycle
+392 single-child closed form, matching `inversePolyTree (mk [c]) f`. -/
+theorem nchildPolynomial_eq_one
+    (children : Fin 1 → RT) (inv_children : Fin 1 → ℝ) (f : RT → ℝ) :
+    nchildPolynomial 1 children inv_children f =
+      -(f RootedTree.vertex * inv_children 0)
+        + monochildCrossTerm (children 0) f
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk [children 0]) :=
+  rfl
+
+/-- *Phase α'.7.0 (cycle 509) — calibration at `n = 2` against `bichildPolynomial`.*
+
+The parametric form `nchildPolynomial` at `n = 2` reduces to cycle 387's
+`bichildPolynomial`. -/
+theorem nchildPolynomial_eq_bichildPolynomial
+    (children : Fin 2 → RT) (inv_children : Fin 2 → ℝ) (f : RT → ℝ) :
+    nchildPolynomial 2 children inv_children f =
+      bichildPolynomial (children 0) (children 1)
+        (inv_children 0) (inv_children 1) f := by
+  show -(f RootedTree.vertex * ∏ i : Fin 2, inv_children i)
+        - ∑ ℓ₀ : Fin 2, (∏ i ∈ Finset.univ.erase ℓ₀, inv_children i)
+            * f (OpenMath.Chapter3.Section310.RootedTree.mk [children ℓ₀])
+        + nchildCrossTerm 2 children inv_children f
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+              (List.ofFn (fun i : Fin 2 => children i))) = _
+  have hch2 : nchildCrossTerm 2 children inv_children f =
+      bichildCrossTerm (children 0) (children 1) f := rfl
+  have hlist : List.ofFn (fun i : Fin 2 => children i) =
+      [children 0, children 1] := by
+    simp [List.ofFn_succ, List.ofFn_zero]
+  rw [hch2, hlist]
+  unfold bichildPolynomial
+  rw [Fin.prod_univ_two, Fin.sum_univ_two]
+  have he0 : (Finset.univ.erase (0 : Fin 2)) = {1} := by decide
+  have he1 : (Finset.univ.erase (1 : Fin 2)) = {0} := by decide
+  rw [he0, he1, Finset.prod_singleton, Finset.prod_singleton]
+  ring
+
+/-- *Phase α'.7.0 (cycle 509) — calibration at `n = 3` against `trichildPolynomial`.*
+
+The parametric form `nchildPolynomial` at `n = 3` reduces to cycle 399's
+`trichildPolynomial`. -/
+theorem nchildPolynomial_eq_trichildPolynomial
+    (children : Fin 3 → RT) (inv_children : Fin 3 → ℝ) (f : RT → ℝ) :
+    nchildPolynomial 3 children inv_children f =
+      trichildPolynomial (children 0) (children 1) (children 2)
+        (inv_children 0) (inv_children 1) (inv_children 2) f := by
+  show -(f RootedTree.vertex * ∏ i : Fin 3, inv_children i)
+        - ∑ ℓ₀ : Fin 3, (∏ i ∈ Finset.univ.erase ℓ₀, inv_children i)
+            * f (OpenMath.Chapter3.Section310.RootedTree.mk [children ℓ₀])
+        + nchildCrossTerm 3 children inv_children f
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+              (List.ofFn (fun i : Fin 3 => children i))) = _
+  have hch3 : nchildCrossTerm 3 children inv_children f =
+      trichildCrossTerm (children 0) (children 1) (children 2) f := rfl
+  have hlist : List.ofFn (fun i : Fin 3 => children i) =
+      [children 0, children 1, children 2] := by
+    simp [List.ofFn_succ, List.ofFn_zero]
+  rw [hch3, hlist]
+  unfold trichildPolynomial
+  rw [Fin.prod_univ_three, Fin.sum_univ_three]
+  have he0 : (Finset.univ.erase (0 : Fin 3)) = {1, 2} := by decide
+  have he1 : (Finset.univ.erase (1 : Fin 3)) = {0, 2} := by decide
+  have he2 : (Finset.univ.erase (2 : Fin 3)) = {0, 1} := by decide
+  rw [he0, he1, he2]
+  rw [show ({1, 2} : Finset (Fin 3)) = insert (1 : Fin 3) {2} from rfl,
+      Finset.prod_insert (by decide : (1 : Fin 3) ∉ ({2} : Finset (Fin 3))),
+      Finset.prod_singleton,
+      show ({0, 2} : Finset (Fin 3)) = insert (0 : Fin 3) {2} from rfl,
+      Finset.prod_insert (by decide : (0 : Fin 3) ∉ ({2} : Finset (Fin 3))),
+      Finset.prod_singleton,
+      show ({0, 1} : Finset (Fin 3)) = insert (0 : Fin 3) {1} from rfl,
+      Finset.prod_insert (by decide : (0 : Fin 3) ∉ ({1} : Finset (Fin 3))),
+      Finset.prod_singleton]
+  ring
+
+/-- *Phase α'.7.0 (cycle 509) — calibration at `n = 4` against `tetrachildPolynomial`.*
+
+The parametric form `nchildPolynomial` at `n = 4` reduces to cycle 500's
+`tetrachildPolynomial`. -/
+theorem nchildPolynomial_eq_tetrachildPolynomial
+    (children : Fin 4 → RT) (inv_children : Fin 4 → ℝ) (f : RT → ℝ) :
+    nchildPolynomial 4 children inv_children f =
+      tetrachildPolynomial (children 0) (children 1) (children 2) (children 3)
+        (inv_children 0) (inv_children 1) (inv_children 2) (inv_children 3) f := by
+  show -(f RootedTree.vertex * ∏ i : Fin 4, inv_children i)
+        - ∑ ℓ₀ : Fin 4, (∏ i ∈ Finset.univ.erase ℓ₀, inv_children i)
+            * f (OpenMath.Chapter3.Section310.RootedTree.mk [children ℓ₀])
+        + nchildCrossTerm 4 children inv_children f
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+              (List.ofFn (fun i : Fin 4 => children i))) = _
+  have hch4 : nchildCrossTerm 4 children inv_children f =
+      tetrachildCrossTerm (children 0) (children 1) (children 2) (children 3) f :=
+    rfl
+  have hlist : List.ofFn (fun i : Fin 4 => children i) =
+      [children 0, children 1, children 2, children 3] := by
+    simp [List.ofFn_succ, List.ofFn_zero]
+  rw [hch4, hlist]
+  unfold tetrachildPolynomial
+  rw [Fin.prod_univ_four, Fin.sum_univ_four]
+  have he0 : (Finset.univ.erase (0 : Fin 4)) = {1, 2, 3} := by decide
+  have he1 : (Finset.univ.erase (1 : Fin 4)) = {0, 2, 3} := by decide
+  have he2 : (Finset.univ.erase (2 : Fin 4)) = {0, 1, 3} := by decide
+  have he3 : (Finset.univ.erase (3 : Fin 4)) = {0, 1, 2} := by decide
+  rw [he0, he1, he2, he3]
+  -- {a, b, c} = insert a (insert b {c}), use Finset.prod_insert + Finset.prod_singleton
+  rw [show ({1, 2, 3} : Finset (Fin 4)) = insert (1 : Fin 4) {2, 3} from rfl,
+      Finset.prod_insert (by decide : (1 : Fin 4) ∉ ({2, 3} : Finset (Fin 4))),
+      show ({2, 3} : Finset (Fin 4)) = insert (2 : Fin 4) {3} from rfl,
+      Finset.prod_insert (by decide : (2 : Fin 4) ∉ ({3} : Finset (Fin 4))),
+      Finset.prod_singleton,
+      show ({0, 2, 3} : Finset (Fin 4)) = insert (0 : Fin 4) {2, 3} from rfl,
+      Finset.prod_insert (by decide : (0 : Fin 4) ∉ ({2, 3} : Finset (Fin 4))),
+      show ({2, 3} : Finset (Fin 4)) = insert (2 : Fin 4) {3} from rfl,
+      Finset.prod_insert (by decide : (2 : Fin 4) ∉ ({3} : Finset (Fin 4))),
+      Finset.prod_singleton,
+      show ({0, 1, 3} : Finset (Fin 4)) = insert (0 : Fin 4) {1, 3} from rfl,
+      Finset.prod_insert (by decide : (0 : Fin 4) ∉ ({1, 3} : Finset (Fin 4))),
+      show ({1, 3} : Finset (Fin 4)) = insert (1 : Fin 4) {3} from rfl,
+      Finset.prod_insert (by decide : (1 : Fin 4) ∉ ({3} : Finset (Fin 4))),
+      Finset.prod_singleton,
+      show ({0, 1, 2} : Finset (Fin 4)) = insert (0 : Fin 4) {1, 2} from rfl,
+      Finset.prod_insert (by decide : (0 : Fin 4) ∉ ({1, 2} : Finset (Fin 4))),
+      show ({1, 2} : Finset (Fin 4)) = insert (1 : Fin 4) {2} from rfl,
+      Finset.prod_insert (by decide : (1 : Fin 4) ∉ ({2} : Finset (Fin 4))),
+      Finset.prod_singleton]
+  ring
+
 /-- *Phase α'.4.1 (cycle 387, extended cycles 399, 500) — recursive inverse-polynomial on rooted trees.*
 
 For any rooted tree `t` and elementary-weight function `f : RT → ℝ`,
