@@ -1438,3 +1438,134 @@ None of substance. Minor structural notes:
 The §422 cluster's axiom-clean streak now stands at
 **72 substantive + 6 doc** (cycles 336–499); sorry count remains
 at 5 (4 docstring + 1 grandfathered cycle 365 sorry).
+
+## §15 Cycle 501 update — Phase α'.5.2.2 `mk [vertex, vertex, vertex, cherry]` ship
+
+### §15.1 What shipped
+
+Five interlocking deliverables for the first non-symmetric k=4
+quadruple `mk [vertex, vertex, vertex, cherry]` (order 6,
+even-parity):
+
+* **B.1** `elementaryWeightQ_phi_inv_mkVertexVertexVertexCherry`
+  — quotient-level closed form with **12 monomials in 9 named
+  kernels** (the strategy's paper sketch was 11/8; see §15.2).
+* **B.2** `powRep_sum_eq_of_agreement_at_mkVertexVertexVertexCherry_zero`
+  — m=0 corollary with 9 agreement hypotheses (Sub-lemma A
+  specialisation per cycle 403 template).
+* **B.3** `tetrachildCrossTerm` new `(vertex, vertex, vertex, cherry)`
+  branch — 8-term residual `-v⁴c + 6v³b' - 3vcb' - 4v²bu + cbu
+  + v·bushy₄ + 3v·vvc - 3v²·vc`. Back-computed from B.1 closed form
+  minus Block (1)+(2)+(3)+(4)+(5)+(16) backbone of
+  `tetrachildPolynomial`.
+* **B.4** `inversePolyTree_mkVertexVertexVertexCherry` calibration
+  witness — extends the cycle 491 k=3 template (with `show`-bridge
+  for `f (mk [vertex]) ↔ f cherry`) to k=4 with one additional
+  cherry-child layer.
+* **B.5** `tetrachildCrossTerm_eq_of_subtree_agreement` Phase γ
+  extension — adds second `by_cases h_vvvc` branch for the new
+  `(v,v,v,c)` case (mandatory regression scope per cycle 500's
+  Discovery #2).
+
+Plus two `⟦explicitEuler⟧` non-vacuity examples (closed form = `+1`,
+m=0 corollary by `rfl × 9`).
+
+LOC added: ~750. Sorry count unchanged at 5.
+
+### §15.2 The kernel inventory miss — strategy's paper derivation was wrong by one term
+
+Per memory `feedback_dws_cherry_factor_includes_v_aᵢ.md`: the per-row
+`derivativeWeightWithSrc` expansion at a cherry child unfolds to
+`(v² − c) − v·Aᵢ + Bᵢ`, NOT `(v² − c) + Bᵢ`. The cycle 501 strategy's
+§B.1 paper sketch dropped the `-v·Aᵢ` term.
+
+The omitted `-v·Aᵢ` term, when multiplied by `(Aᵢ − v)³ = Aᵢ³ −
+3v·Aᵢ² + 3v²·Aᵢ − v³`, produces a `-v · Aᵢ⁴` monomial. Summed against
+`M.b i`, this is `Σ b · Aᵢ⁴ = M.elementaryWeight bushy₄`, surfacing
+**`bushy₄` as a 9th kernel** beyond the strategy's 8-kernel sketch.
+
+Corrected closed form (worker's symbolic re-derivation per strategy's
+§G "trust the worker's derivation" directive):
+
+```
+Φ_{η_q⁻¹}(mk [v,v,v,c])
+  = v⁶ − 5v⁴c + 3v²c² + 6v³·b' − 3vcb' − 4v²·bu + c·bu
+    + v·bushy₄ + v³·m − 3v²·vc + 3v·vvc − vvvc
+```
+
+Sanity at `⟦explicitEuler⟧` (v=1, all higher kernels 0):
+`1 − 0 + 0 + 0 − 0 − 0 + 0 + 0 + 0 − 0 + 0 − 0 = 1` ✓
+
+The strategy's risk inventory R2 ("kernel inventory miss") was
+correctly identified but the mitigation was wrong (the cherry-factor
+is *not* linear in `S_c` alone — it's linear in both `Aᵢ` and `Bᵢ`).
+The `ring` empirical verifier in B.4 caught the inconsistency
+exactly as designed.
+
+### §15.3 Generalization — every `(v, …, v, c)` k-tuple surfaces a new busher kernel
+
+For any `mk [v, v, …, v, c]` with `k-1` vertex prefixes and one
+cherry tail (`k ≥ 2`), the per-row factor is
+`(Aᵢ − v)^{k-1} · ((v² − c) − v·Aᵢ + Bᵢ)`. Expanding gives an
+`Aᵢ^k`-monomial with coefficient `-v`, summed to `Σ b · Aᵢ^k =
+M.elementaryWeight (busher_{k+1})` where `busher_n = mk [v, …, v]`
+with `n` vertex children (so `busher_2 = broom₃`, `busher_3 = bushy`,
+`busher_4 = bushy₄`, `busher_5 = mk [v⁵]`, etc.).
+
+So:
+
+* `(v, c)` → cycle 372: surfaces `broom₃` (= busher_2).
+* `(v, v, c)` → cycle 403: surfaces `bushy` (= busher_3).
+* `(v, v, v, c)` → cycle 501: surfaces `bushy₄` (= busher_4).
+* `(v, v, v, v, c)` → cycle 503+: will surface `busher_5 = mk [v, v, v, v, v]`.
+
+This pattern recurs at every rung of the "vertex-prefix + cherry-tail"
+ladder. Workers should anticipate this kernel by inspecting the
+binomial expansion's leading `Aᵢ^k`-monomial.
+
+### §15.4 Mechanical template for k=4 (cycle 502+ inheritance)
+
+The cycle 491 P2 template scales directly to k=4 with these
+modifications relative to the k=3 (cycle 491/492/493/494) recipe:
+
+* **Three new helpers** (instead of two): `h_dw_mkVertexVertexVertexCherry`
+  (4-layer cons-case unfold, `(Σⱼ Aᵢⱼ)^3 · (Σⱼ Aᵢⱼ · Σₖ Aⱼₖ)`),
+  `h_mkVertexVertexVertexCherry` (sum form), and
+  `h_dws_mkVertexVertexVertexCherry` (4-layer `derivativeWeightWithSrcProd`
+  unfold extending cycle 403's k=3 template by one vertex layer).
+* **9-term per-summand decomposition** in `h_subst` (instead of 7):
+  (Aᵢ-power, Bᵢ-power) pairs `{(0,0), (1,0), (2,0), (3,0), (4,0),
+  (0,1), (1,1), (2,1), (3,1)}`.
+* **8 `Finset.sum_add_distrib` + 8 `← Finset.mul_sum`** (instead of
+  6) — the last term has no scalar coefficient (the self-kernel
+  `vvvc` directly back-substitutes via `← h_mkVertexVertexVertexCherry`).
+* **9 back-substitutions**: `vvvc, vvc, vc, m, bushy₄, bushy, broom₃,
+  cherry, vertex` (in `←` rewrite order).
+
+### §15.5 Phase γ extension is non-optional
+
+Cycle 500's Discovery #2 — extending `tetrachildCrossTerm` requires
+extending `tetrachildCrossTerm_eq_of_subtree_agreement` — was
+load-bearing for cycle 501. The B.5 ship adds a second `by_cases
+h_vvvc` branch with 7 `h_closed _ (by decide)` kernel-discharges
+(vertex/cherry/broom₃/bushy/bushy₄/mk[v,c]/mk[v,v,c], all of order
+≤ 6 = order of `mk [v,v,v,c]`).
+
+The default branch's `if_neg` chain becomes 4 long:
+`rw [if_neg h_vvvv, if_neg h_vvvc, if_neg h_vvvv, if_neg h_vvvc]`.
+
+### §15.6 Forward agenda
+
+* **Cycle 502**: Phase α'.5.2.3 ship per scoping doc §5.3. Candidates:
+  `(v, v, c, c)` (order 7, more cross-term richness, quadratic in Bᵢ),
+  or `(v, c, c, c)` (order 8, cubic in Bᵢ), or `(v, v, v, mk[c])`
+  (order 7, vertex-prefix + nested-cherry-tail). The single-cherry-tail
+  ladder is exhausted at cycle 501 for k=4 (the `(v,v,v,c)` rung);
+  next rungs introduce a second non-leaf child and need the cycle 384
+  (`mk[c,c]`) / cycle 492 (`mk[v,c,c]`) machinery.
+* **Cycle 503+**: continue ladder per the §5.3 enumeration, batching
+  cases with similar kernel inventories where possible.
+
+The §422 cluster's axiom-clean streak now stands at
+**74 substantive + 6 doc** (cycles 336–501); sorry count remains
+at 5 (4 docstring + 1 grandfathered cycle 365 sorry).
