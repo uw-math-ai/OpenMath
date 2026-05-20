@@ -1195,3 +1195,105 @@ Alternative downstream targets:
   `tetrachildPolynomial`/`tetrachildCrossTerm`. Restructures
   the recursion; estimated ~3–5 cycles for the infrastructure +
   one calibration witness.
+
+## §14 — Cycle 494 update (Phase α'.5.1 P5 ship, ladder closure)
+
+### §14.1 Deliverables shipped
+
+* **Quotient-level closed form** `elementaryWeightQ_phi_inv_mkVertexVertexBroom₃`
+  for `Φ_{η_q⁻¹}(mk [vertex, vertex, broom₃])`. Closed form:
+  `v⁶ - 5v⁴c + 4v³b' + 4v²c² - 4vcb' + b'² - v²·bushy + 2v³·mc
+   - 4v²·mvc + 2v·mvvc - v²·mb + 2v·mvb - mvvb` (13 monomials
+  across 10 named sum-kernels — v, c, b', bu, mc, mvc, mvvc, mb,
+  mvb, mvvb).
+* **`trichildCrossTerm` extension** — fifth `else if` branch
+  `(vertex, vertex, broom₃)`, value back-computed from the closed
+  form minus Blocks (1)+(2)+(3)+(4)+(8):
+  `-v⁴c + 3v³b' - 2vcb' + b'² - v²·bushy + 2v³·mc - 4v²·mvc
+   + 2v·mvvc + 2v·mvb`.
+* **Recursive calibration witness** `inversePolyTree_mkVertexVertexBroom₃`
+  matching the closed form verbatim.
+* **m=0 corollary** `powRep_sum_eq_of_agreement_at_mkVertexVertexBroom₃_zero`
+  (10 agreement hypotheses).
+* **Two non-vacuity `example`s** at `⟦explicitEuler⟧`.
+
+### §14.2 Kernel enumeration (cycle 494 paper derivation)
+
+Per cycle 493's `feedback_dws_cherry_factor_includes_v_aᵢ.md` discipline,
+worker enumerated kernels via symbolic expansion BEFORE drafting Lean.
+
+For `t = mk [vertex, vertex, broom₃]`, the per-row factor is:
+```
+dws_i = (inv_v + Aᵢ)² · (inv_b' + ∑ⱼ Aᵢⱼ · (inv_v + Aⱼ)²)
+```
+where `Aᵢ = ∑ⱼ M.A i j`, `Aⱼ = ∑ₖ M.A j k`, `inv_v = -v`,
+`inv_b' = -v³ + 2vc - b'`.
+
+Expanding `(-v + Aⱼ)² = v² - 2v·Aⱼ + Aⱼ²` and distributing:
+```
+∑ⱼ Aᵢⱼ · (-v + Aⱼ)² = v²·Aᵢ - 2v·∑ⱼ Aᵢⱼ·Aⱼ + ∑ⱼ Aᵢⱼ·Aⱼ²
+```
+
+Per-row decomposition has 10 distinct (Aᵢ^p, β_j-aggregate)
+monomials, mapping after `Σᵢ bᵢ · ...` to 10 named kernels:
+* `1, Aᵢ, Aᵢ², Aᵢ³` → `v, c, b', bu` (cycle 367/368/370 standard kernels)
+* `∑ⱼ Aᵢⱼ·Aⱼ` → `mc = Φ_η(mk [cherry])`
+* `Aᵢ · ∑ⱼ Aᵢⱼ·Aⱼ` → `mvc = Φ_η(mk [v, cherry])` (cycle 372 kernel)
+* `Aᵢ² · ∑ⱼ Aᵢⱼ·Aⱼ` → `mvvc = Φ_η(mk [v, v, cherry])` (cycle 403 kernel)
+* `∑ⱼ Aᵢⱼ·Aⱼ²` → `mb = Φ_η(mk [broom₃])` (cycle 371 kernel)
+* `Aᵢ · ∑ⱼ Aᵢⱼ·Aⱼ²` → `mvb = Φ_η(mk [v, broom₃])` (cycle 386 kernel)
+* `Aᵢ² · ∑ⱼ Aᵢⱼ·Aⱼ²` → `mvvb = Φ_η(mk [v, v, broom₃])` (self-kernel, NEW)
+
+Strategy estimate was 8–10 kernels; actual is 10 (matched
+upper bound). Sanity check at `⟦explicitEuler⟧` (v=1, all
+others=0) gives `1⁶ = 1` ✓.
+
+### §14.3 Regression checks
+
+* `inversePolyTree_bushy`, `inversePolyTree_mkVertexVertexCherry`,
+  `inversePolyTree_mkVertexCherryCherry`, and
+  `inversePolyTree_mkVertexVertexMkCherry` remain axiom-clean after
+  the `trichildCrossTerm` extension. Their `if_neg`/`if_pos` cascades
+  hit at the 1st/2nd/3rd/4th branches respectively, all before the
+  new 5th branch — so the cycle 494 extension is invisible to them.
+* `Section422.lean` compiles cleanly with only the cycle 365
+  grandfathered sorry warning at line 2279.
+* Sorry count: 5 (unchanged).
+
+### §14.4 Streak advance and Phase α'.5.1 ladder closure
+
+§422 axiom-clean streak: 67 substantive + 4 doc (cycles 336–493)
+→ **68 substantive + 4 doc** (cycles 336–494).
+
+Phase α'.5.1 closes the `k = 3` order-6 candidate list per §6.2.
+Five witnesses shipped over cycles 400 / 403 / 491 / 492 / 493 / 494:
+* `bushy = mk [v, v, v]` (cycle 400, symmetric)
+* `mk [v, v, cherry]` (cycle 403 / 491 cal witness)
+* `mk [v, cherry, cherry]` (cycle 492)
+* `mk [v, v, mk [cherry]]` (cycle 493)
+* `mk [v, v, broom₃]` (cycle 494, this ship)
+
+### §14.5 Cycle 495+ outlook
+
+Three principal paths for cycle 495's planner:
+
+1. **Phase β/γ scoping doc** — markdown-only scoping doc for the
+   cycle 365 sorry at line 2279
+   (`powRep_sum_eq_of_strict_subtree_agreement` general body).
+   The unified `inversePolyTree` recursion + uniform kernel
+   characterisation across cycles 491/492/493/494 + the 14 Family C
+   calibration witnesses give the empirical surface needed to
+   design the structural induction.
+
+2. **Phase α'.5.2 scoping doc** — `k = 4` heterogeneous-children
+   witnesses (e.g. `mk [v, v, v, c]`). Requires
+   `tetrachildPolynomial` + `tetrachildCrossTerm` infrastructure
+   analogous to cycle 387's `bichildPolynomial` and cycle 399's
+   `trichildPolynomial`. Multi-cycle infrastructure.
+
+3. **Pivot to fresh entity** — natural inflection point after the
+   `k = 3` ladder closes. Cycle 495's planner reads
+   `cycle_336_pivot_options.md` and picks `def:451A`, `def:442A`,
+   `thm:535A`, or `thm:541A`.
+
+The pivot decision belongs to cycle 495's planner.

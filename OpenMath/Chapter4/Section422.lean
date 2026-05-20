@@ -8268,6 +8268,832 @@ example :
     (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
     rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl
 
+/-- *Phase α'.5.1 P5 (cycle 494) — `mk [vertex, vertex, broom₃]` closed
+form for the §383 inverse class.*
+
+For any `η_q : Quotient PhiEquivalent.setoidSigma`, expresses
+`Φ_{η_q⁻¹}(mk [vertex, vertex, broom₃])` as a polynomial in
+`Φ_η` evaluated at ten named subtrees of order ≤ 6: `vertex`,
+`cherry`, `broom₃`, `bushy`, `mk [cherry]`, `mk [vertex, cherry]`,
+`mk [vertex, vertex, cherry]`, `mk [broom₃]`, `mk [vertex, broom₃]`,
+and `mk [vertex, vertex, broom₃]` itself.
+
+This is the fifth (and final) non-symmetric three-children
+order-6 witness, completing the `k = 3` order-6 candidate list
+per the scoping doc §6.2: `mk [vertex, vertex, vertex] = bushy`
+(cycle 400), `mk [vertex, vertex, cherry]` (cycle 403),
+`mk [vertex, cherry, cherry]` (cycle 492),
+`mk [vertex, vertex, mk [cherry]]` (cycle 493), and
+`mk [vertex, vertex, broom₃]` (cycle 494). Non-vacuity at
+`⟦explicitEuler⟧` pins the closed form to `1` via the leading `v⁶`
+term (all other kernels vanish).
+
+Proof structure: quotient-level induction to `⟨s, M⟩`, reuse cycle
+367/368/369/370/372/371/386/403 helpers for the standard kernels,
+add new helpers `h_dw_mkVertexVertexBroom₃`,
+`h_mkVertexVertexBroom₃`, and `h_dws_mkVertexVertexBroom₃`
+(three-layer cons-case unfold with broom₃-tail). Substitute via
+`h_inv_v`, `h_inv_broom₃`, distribute the inner Σⱼ sum
+`∑ⱼ Aᵢⱼ · (-v + Aⱼ)² = v²·Aᵢ - 2v·∑ⱼ Aᵢⱼ·Aⱼ + ∑ⱼ Aᵢⱼ·Aⱼ²`, and
+assemble the 10-kernel closed form via nine applications of
+`Finset.sum_add_distrib` + nine `← Finset.mul_sum`
+back-substitutions + `ring`. -/
+theorem elementaryWeightQ_phi_inv_mkVertexVertexBroom₃
+    (η_q : Quotient PhiEquivalent.setoidSigma) :
+    elementaryWeightQ_phi (η_q⁻¹)
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃])
+      = (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 6
+        - 5 * (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 4
+            * elementaryWeightQ_phi η_q RootedTree.cherry
+        + 4 * (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 3
+            * elementaryWeightQ_phi η_q RootedTree.broom₃
+        + 4 * (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 2
+            * (elementaryWeightQ_phi η_q RootedTree.cherry) ^ 2
+        - 4 * elementaryWeightQ_phi η_q RootedTree.vertex
+            * elementaryWeightQ_phi η_q RootedTree.cherry
+            * elementaryWeightQ_phi η_q RootedTree.broom₃
+        + (elementaryWeightQ_phi η_q RootedTree.broom₃) ^ 2
+        - (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 2
+            * elementaryWeightQ_phi η_q RootedTree.bushy
+        + 2 * (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 3
+            * elementaryWeightQ_phi η_q
+                (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        - 4 * (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 2
+            * elementaryWeightQ_phi η_q
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.cherry])
+        + 2 * elementaryWeightQ_phi η_q RootedTree.vertex
+            * elementaryWeightQ_phi η_q
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+        - (elementaryWeightQ_phi η_q RootedTree.vertex) ^ 2
+            * elementaryWeightQ_phi η_q
+                (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+        + 2 * elementaryWeightQ_phi η_q RootedTree.vertex
+            * elementaryWeightQ_phi η_q
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.broom₃])
+        - elementaryWeightQ_phi η_q
+            (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) := by
+  refine Quotient.inductionOn η_q ?_
+  rintro ⟨s, M⟩
+  -- Cycle 367 helpers (reused verbatim).
+  have h_inv_v : M.inverse.elementaryWeight RootedTree.vertex
+      = -M.elementaryWeight RootedTree.vertex := by
+    show ∑ j : Fin s, M.inverse.b j * M.inverse.derivativeWeight j RootedTree.vertex
+          = -(∑ j : Fin s, M.b j * M.derivativeWeight j RootedTree.vertex)
+    rw [← Finset.sum_neg_distrib]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [RKTableau.inverse_b, RKTableau.derivativeWeight_vertex,
+        RKTableau.derivativeWeight_vertex, neg_mul]
+  have h_vertex : M.elementaryWeight RootedTree.vertex = ∑ j : Fin s, M.b j := by
+    show ∑ j : Fin s, M.b j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.b j
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [RKTableau.derivativeWeight_vertex, mul_one]
+  have h_dw_cherry : ∀ i : Fin s,
+      M.derivativeWeight i RootedTree.cherry = ∑ j : Fin s, M.A i j := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [] = ∑ j : Fin s, M.A i j
+    rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [RKTableau.derivativeWeight_vertex, mul_one]
+  have h_cherry : M.elementaryWeight RootedTree.cherry
+      = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j := by
+    show ∑ i : Fin s, M.b i * M.derivativeWeight i RootedTree.cherry
+          = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_cherry i]
+  -- Cycle 368 helpers (reused verbatim).
+  have h_dw_broom₃ : ∀ i : Fin s,
+      M.derivativeWeight i RootedTree.broom₃ = (∑ j : Fin s, M.A i j) ^ 2 := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [RootedTree.vertex]
+        = (∑ j : Fin s, M.A i j) ^ 2
+    have h_inner_sum :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeight_vertex, mul_one]
+    have h_prod_step :
+        M.derivativeWeightProd i [RootedTree.vertex] = ∑ j : Fin s, M.A i j := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+            * M.derivativeWeightProd i [] = ∑ j : Fin s, M.A i j
+      rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one, h_inner_sum]
+    rw [h_inner_sum, h_prod_step]; ring
+  have h_broom₃ : M.elementaryWeight RootedTree.broom₃
+      = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 2 := by
+    show ∑ i : Fin s, M.b i * M.derivativeWeight i RootedTree.broom₃
+          = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 2
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_broom₃ i]
+  -- Cycle 370 helpers (reused verbatim) — bushy three-vertex-children structure.
+  have h_dw_bushy : ∀ i : Fin s,
+      M.derivativeWeight i RootedTree.bushy = (∑ j : Fin s, M.A i j) ^ 3 := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [RootedTree.vertex, RootedTree.vertex]
+        = (∑ j : Fin s, M.A i j) ^ 3
+    have h_inner_sum :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeight_vertex, mul_one]
+    have h_prod_step_1 :
+        M.derivativeWeightProd i [RootedTree.vertex] = ∑ j : Fin s, M.A i j := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+            * M.derivativeWeightProd i [] = ∑ j : Fin s, M.A i j
+      rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one, h_inner_sum]
+    have h_prod_step_2 :
+        M.derivativeWeightProd i [RootedTree.vertex, RootedTree.vertex]
+          = (∑ j : Fin s, M.A i j) ^ 2 := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+            * M.derivativeWeightProd i [RootedTree.vertex]
+          = (∑ j : Fin s, M.A i j) ^ 2
+      rw [h_inner_sum, h_prod_step_1]; ring
+    rw [h_inner_sum, h_prod_step_2]; ring
+  have h_bushy : M.elementaryWeight RootedTree.bushy
+      = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 3 := by
+    show ∑ i : Fin s, M.b i * M.derivativeWeight i RootedTree.bushy
+          = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 3
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_bushy i]
+  -- Representative-lift of cycle 368's quotient closed form for broom₃ inverse.
+  have h_inv_broom₃ : M.inverse.elementaryWeight RootedTree.broom₃
+      = -(M.elementaryWeight RootedTree.vertex) ^ 3
+        + 2 * M.elementaryWeight RootedTree.vertex
+            * M.elementaryWeight RootedTree.cherry
+        - M.elementaryWeight RootedTree.broom₃ :=
+    elementaryWeightQ_phi_inv_broom₃
+      (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩)
+  -- Cycle 369 helpers for `mk [cherry]` derivative/elementary weight closed forms.
+  have h_dw_mkCherry : ∀ i : Fin s,
+      M.derivativeWeight i
+          (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        = ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.cherry)
+          * M.derivativeWeightProd i [] = _
+    rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [h_dw_cherry j]
+  have h_mkCherry : M.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+      = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k := by
+    show ∑ i : Fin s, M.b i
+            * M.derivativeWeight i
+                (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+          = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_mkCherry i]
+  -- Cycle 371 helpers for `mk [broom₃]` derivative/elementary weight closed forms.
+  have h_dw_mkBroom₃ : ∀ i : Fin s,
+      M.derivativeWeight i
+          (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+        = ∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2 := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.broom₃)
+          * M.derivativeWeightProd i [] = _
+    rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [h_dw_broom₃ j]
+  have h_mkBroom₃ : M.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+      = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2 := by
+    show ∑ i : Fin s, M.b i
+            * M.derivativeWeight i
+                (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+          = ∑ i : Fin s, M.b i * ∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_mkBroom₃ i]
+  -- Cycle 372 helpers — `mk [vertex, cherry]` derivative/elementary weight.
+  have h_dw_mkVertexCherry : ∀ i : Fin s,
+      M.derivativeWeight i
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.cherry])
+        = (∑ j : Fin s, M.A i j)
+          * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k) := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [RootedTree.cherry] = _
+    have h_vertex_factor :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeight_vertex, mul_one]
+    have h_cherry_factor :
+        M.derivativeWeightProd i [RootedTree.cherry]
+          = ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.cherry)
+            * M.derivativeWeightProd i [] = _
+      rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one]
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [h_dw_cherry j]
+    rw [h_vertex_factor, h_cherry_factor]
+  have h_mkVertexCherry : M.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry])
+      = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j)
+          * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k) := by
+    show ∑ i : Fin s, M.b i
+            * M.derivativeWeight i
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.cherry])
+          = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j)
+              * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k)
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_mkVertexCherry i]; ring
+  -- Cycle 403 helpers — `mk [v, v, cherry]` derivative/elementary weight.
+  have h_dw_mkVertexVertexCherry : ∀ i : Fin s,
+      M.derivativeWeight i
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+        = (∑ j : Fin s, M.A i j) ^ 2
+          * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k) := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [RootedTree.vertex, RootedTree.cherry] = _
+    have h_vertex_inner :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeight_vertex, mul_one]
+    have h_cherry_inner :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.cherry
+          = ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [h_dw_cherry j]
+    have h_prod_step_cherry :
+        M.derivativeWeightProd i [RootedTree.cherry]
+          = ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.cherry)
+            * M.derivativeWeightProd i [] = _
+      rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one, h_cherry_inner]
+    have h_prod_step_vc :
+        M.derivativeWeightProd i [RootedTree.vertex, RootedTree.cherry]
+          = (∑ j : Fin s, M.A i j)
+            * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k) := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+            * M.derivativeWeightProd i [RootedTree.cherry] = _
+      rw [h_vertex_inner, h_prod_step_cherry]
+    rw [h_vertex_inner, h_prod_step_vc]; ring
+  have h_mkVertexVertexCherry : M.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+      = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 2
+          * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k) := by
+    show ∑ i : Fin s, M.b i
+            * M.derivativeWeight i
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+          = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 2
+              * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k)
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_mkVertexVertexCherry i]; ring
+  -- Cycle 386 helpers — `mk [vertex, broom₃]` derivative/elementary weight.
+  have h_dw_mkVertexBroom₃ : ∀ i : Fin s,
+      M.derivativeWeight i
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.broom₃])
+        = (∑ j : Fin s, M.A i j)
+          * (∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2) := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [RootedTree.broom₃] = _
+    have h_vertex_factor :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeight_vertex, mul_one]
+    have h_broom_factor :
+        M.derivativeWeightProd i [RootedTree.broom₃]
+          = ∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2 := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.broom₃)
+            * M.derivativeWeightProd i [] = _
+      rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one]
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [h_dw_broom₃ j]
+    rw [h_vertex_factor, h_broom_factor]
+  have h_mkVertexBroom₃ : M.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.broom₃])
+      = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j)
+          * (∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2) := by
+    show ∑ i : Fin s, M.b i
+            * M.derivativeWeight i
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.broom₃])
+          = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j)
+              * (∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2)
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_mkVertexBroom₃ i]; ring
+  -- New cycle 494 helpers — three-children asymmetric
+  -- `mk [vertex, vertex, broom₃]` structure: two-vertex prefix giving
+  -- `Aᵢ²` factor + broom₃ tail giving the Aⱼ²-pattern factor.
+  have h_dw_mkVertexVertexBroom₃ : ∀ i : Fin s,
+      M.derivativeWeight i
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃])
+        = (∑ j : Fin s, M.A i j) ^ 2
+          * (∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2) := by
+    intro i
+    show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+          * M.derivativeWeightProd i [RootedTree.vertex, RootedTree.broom₃] = _
+    have h_vertex_inner :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeight_vertex, mul_one]
+    have h_broom_inner :
+        ∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.broom₃
+          = ∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2 := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [h_dw_broom₃ j]
+    have h_prod_step_broom :
+        M.derivativeWeightProd i [RootedTree.broom₃]
+          = ∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2 := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.broom₃)
+            * M.derivativeWeightProd i [] = _
+      rw [show M.derivativeWeightProd i [] = 1 from rfl, mul_one, h_broom_inner]
+    have h_prod_step_vb :
+        M.derivativeWeightProd i [RootedTree.vertex, RootedTree.broom₃]
+          = (∑ j : Fin s, M.A i j)
+            * (∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2) := by
+      show (∑ j : Fin s, M.A i j * M.derivativeWeight j RootedTree.vertex)
+            * M.derivativeWeightProd i [RootedTree.broom₃] = _
+      rw [h_vertex_inner, h_prod_step_broom]
+    rw [h_vertex_inner, h_prod_step_vb]; ring
+  have h_mkVertexVertexBroom₃ : M.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃])
+      = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 2
+          * (∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2) := by
+    show ∑ i : Fin s, M.b i
+            * M.derivativeWeight i
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃])
+          = ∑ i : Fin s, M.b i * (∑ j : Fin s, M.A i j) ^ 2
+              * (∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2)
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [h_dw_mkVertexVertexBroom₃ i]; ring
+  -- Three-layer cons-case unfold for `mk [v, v, broom₃]`'s
+  -- derivativeWeightWithSrc: outer two-cons unfold strips the two-vertex
+  -- prefix, producing two identical vertex-source factors `inv_v + Aᵢ`
+  -- (cycle 367/370 pattern); inner broom₃ tail unfolds via cycle
+  -- 371's `h_dws_broom₃` to `(inv_v + ∑ₖ Aⱼₖ)²`.
+  have h_dws_mkVertexVertexBroom₃ : ∀ i : Fin s,
+      M.derivativeWeightWithSrc M.inverse i
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃])
+        = (M.inverse.elementaryWeight RootedTree.vertex
+            + ∑ j : Fin s, M.A i j) ^ 2
+          * (M.inverse.elementaryWeight RootedTree.broom₃
+             + ∑ j : Fin s, M.A i j
+                 * (M.inverse.elementaryWeight RootedTree.vertex
+                    + ∑ k : Fin s, M.A j k) ^ 2) := by
+    intro i
+    show (M.inverse.elementaryWeight RootedTree.vertex
+            + ∑ j : Fin s, M.A i j
+                * M.derivativeWeightWithSrc M.inverse j RootedTree.vertex)
+          * M.derivativeWeightWithSrcProd M.inverse i
+              [RootedTree.vertex, RootedTree.broom₃] = _
+    have h_vertex_inner :
+        ∑ j : Fin s, M.A i j * M.derivativeWeightWithSrc M.inverse j RootedTree.vertex
+          = ∑ j : Fin s, M.A i j := by
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [RKTableau.derivativeWeightWithSrc_vertex, mul_one]
+    -- Inner `dws_inv_j broom₃ = (inv_v + ∑ₖ Aⱼₖ)²` (cycle 371 pattern).
+    have h_dws_broom₃ : ∀ j : Fin s,
+        M.derivativeWeightWithSrc M.inverse j RootedTree.broom₃
+          = (M.inverse.elementaryWeight RootedTree.vertex
+              + ∑ k : Fin s, M.A j k) ^ 2 := by
+      intro j
+      show (M.inverse.elementaryWeight RootedTree.vertex
+              + ∑ k : Fin s, M.A j k
+                  * M.derivativeWeightWithSrc M.inverse k RootedTree.vertex)
+            * M.derivativeWeightWithSrcProd M.inverse j [RootedTree.vertex]
+          = (M.inverse.elementaryWeight RootedTree.vertex
+              + ∑ k : Fin s, M.A j k) ^ 2
+      have h_inner_sum :
+          ∑ k : Fin s, M.A j k
+              * M.derivativeWeightWithSrc M.inverse k RootedTree.vertex
+            = ∑ k : Fin s, M.A j k := by
+        refine Finset.sum_congr rfl (fun k _ => ?_)
+        rw [RKTableau.derivativeWeightWithSrc_vertex, mul_one]
+      have h_prod_step :
+          M.derivativeWeightWithSrcProd M.inverse j [RootedTree.vertex]
+            = M.inverse.elementaryWeight RootedTree.vertex + ∑ k : Fin s, M.A j k := by
+        show (M.inverse.elementaryWeight RootedTree.vertex
+                + ∑ k : Fin s, M.A j k
+                    * M.derivativeWeightWithSrc M.inverse k RootedTree.vertex)
+              * M.derivativeWeightWithSrcProd M.inverse j []
+            = M.inverse.elementaryWeight RootedTree.vertex + ∑ k : Fin s, M.A j k
+        rw [show M.derivativeWeightWithSrcProd M.inverse j [] = 1 from rfl, mul_one,
+            h_inner_sum]
+      rw [h_inner_sum, h_prod_step]; ring
+    have h_broom_factor :
+        M.derivativeWeightWithSrcProd M.inverse i [RootedTree.broom₃]
+          = M.inverse.elementaryWeight RootedTree.broom₃
+            + ∑ j : Fin s, M.A i j
+                * (M.inverse.elementaryWeight RootedTree.vertex
+                   + ∑ k : Fin s, M.A j k) ^ 2 := by
+      show (M.inverse.elementaryWeight RootedTree.broom₃
+              + ∑ j : Fin s, M.A i j
+                  * M.derivativeWeightWithSrc M.inverse j RootedTree.broom₃)
+            * M.derivativeWeightWithSrcProd M.inverse i [] = _
+      rw [show M.derivativeWeightWithSrcProd M.inverse i [] = 1 from rfl, mul_one]
+      congr 1
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [h_dws_broom₃ j]
+    have h_prod_step_vb :
+        M.derivativeWeightWithSrcProd M.inverse i [RootedTree.vertex, RootedTree.broom₃]
+          = (M.inverse.elementaryWeight RootedTree.vertex + ∑ j : Fin s, M.A i j)
+            * (M.inverse.elementaryWeight RootedTree.broom₃
+               + ∑ j : Fin s, M.A i j
+                   * (M.inverse.elementaryWeight RootedTree.vertex
+                      + ∑ k : Fin s, M.A j k) ^ 2) := by
+      show (M.inverse.elementaryWeight RootedTree.vertex
+              + ∑ j : Fin s, M.A i j
+                  * M.derivativeWeightWithSrc M.inverse j RootedTree.vertex)
+            * M.derivativeWeightWithSrcProd M.inverse i [RootedTree.broom₃] = _
+      rw [h_vertex_inner, h_broom_factor]
+    rw [h_vertex_inner, h_prod_step_vb]; ring
+  -- Main computation: assemble closed form via _inv_mk + _mk × 10 + sum algebra.
+  rw [elementaryWeightQ_phi_inv_mk M
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]),
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk]
+  have h_sum :
+      (∑ i : Fin s, M.b i
+          * M.derivativeWeightWithSrc M.inverse i
+              (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]))
+        = -(M.elementaryWeight RootedTree.vertex) ^ 6
+          + 5 * (M.elementaryWeight RootedTree.vertex) ^ 4
+              * M.elementaryWeight RootedTree.cherry
+          - 4 * (M.elementaryWeight RootedTree.vertex) ^ 3
+              * M.elementaryWeight RootedTree.broom₃
+          - 4 * (M.elementaryWeight RootedTree.vertex) ^ 2
+              * (M.elementaryWeight RootedTree.cherry) ^ 2
+          + 4 * M.elementaryWeight RootedTree.vertex
+              * M.elementaryWeight RootedTree.cherry
+              * M.elementaryWeight RootedTree.broom₃
+          - (M.elementaryWeight RootedTree.broom₃) ^ 2
+          + (M.elementaryWeight RootedTree.vertex) ^ 2
+              * M.elementaryWeight RootedTree.bushy
+          - 2 * (M.elementaryWeight RootedTree.vertex) ^ 3
+              * M.elementaryWeight
+                  (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+          + 4 * (M.elementaryWeight RootedTree.vertex) ^ 2
+              * M.elementaryWeight
+                  (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.cherry])
+          - 2 * M.elementaryWeight RootedTree.vertex
+              * M.elementaryWeight
+                  (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+          + (M.elementaryWeight RootedTree.vertex) ^ 2
+              * M.elementaryWeight
+                  (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+          - 2 * M.elementaryWeight RootedTree.vertex
+              * M.elementaryWeight
+                  (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.broom₃])
+          + M.elementaryWeight
+              (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) := by
+    have h_subst :
+        (∑ i : Fin s, M.b i
+            * M.derivativeWeightWithSrc M.inverse i
+                (OpenMath.Chapter3.Section310.RootedTree.mk
+                  [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]))
+          = ∑ i : Fin s,
+              ((-(M.elementaryWeight RootedTree.vertex) ^ 5
+                  + 2 * (M.elementaryWeight RootedTree.vertex) ^ 3
+                      * M.elementaryWeight RootedTree.cherry
+                  - (M.elementaryWeight RootedTree.vertex) ^ 2
+                      * M.elementaryWeight RootedTree.broom₃) * M.b i
+                + (3 * (M.elementaryWeight RootedTree.vertex) ^ 4
+                    - 4 * (M.elementaryWeight RootedTree.vertex) ^ 2
+                        * M.elementaryWeight RootedTree.cherry
+                    + 2 * M.elementaryWeight RootedTree.vertex
+                        * M.elementaryWeight RootedTree.broom₃)
+                    * (M.b i * ∑ j : Fin s, M.A i j)
+                + (-3 * (M.elementaryWeight RootedTree.vertex) ^ 3
+                    + 2 * M.elementaryWeight RootedTree.vertex
+                        * M.elementaryWeight RootedTree.cherry
+                    - M.elementaryWeight RootedTree.broom₃)
+                    * (M.b i * (∑ j : Fin s, M.A i j) ^ 2)
+                + (M.elementaryWeight RootedTree.vertex) ^ 2
+                    * (M.b i * (∑ j : Fin s, M.A i j) ^ 3)
+                + (-2 * (M.elementaryWeight RootedTree.vertex) ^ 3)
+                    * (M.b i * ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k)
+                + (4 * (M.elementaryWeight RootedTree.vertex) ^ 2)
+                    * (M.b i * (∑ j : Fin s, M.A i j)
+                        * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k))
+                + (-2 * M.elementaryWeight RootedTree.vertex)
+                    * (M.b i * (∑ j : Fin s, M.A i j) ^ 2
+                        * (∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k))
+                + (M.elementaryWeight RootedTree.vertex) ^ 2
+                    * (M.b i * ∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2)
+                + (-2 * M.elementaryWeight RootedTree.vertex)
+                    * (M.b i * (∑ j : Fin s, M.A i j)
+                        * (∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2))
+                + M.b i * (∑ j : Fin s, M.A i j) ^ 2
+                    * (∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2)) := by
+      refine Finset.sum_congr rfl (fun i _ => ?_)
+      rw [h_dws_mkVertexVertexBroom₃ i, h_inv_broom₃, h_inv_v]
+      -- Pre-distribute the inner Σⱼ Aᵢⱼ · (-v + Σₖ Aⱼₖ)² into three
+      -- standard kernels (Aᵢ via v², ∑Aᵢⱼ·Aⱼ via -2v, ∑Aᵢⱼ·Aⱼ² via 1).
+      have h_inner_expand :
+          ∑ j : Fin s, M.A i j
+              * (-M.elementaryWeight RootedTree.vertex + ∑ k : Fin s, M.A j k) ^ 2
+            = M.elementaryWeight RootedTree.vertex ^ 2 * ∑ j : Fin s, M.A i j
+              + (-2 * M.elementaryWeight RootedTree.vertex)
+                  * ∑ j : Fin s, M.A i j * ∑ k : Fin s, M.A j k
+              + ∑ j : Fin s, M.A i j * (∑ k : Fin s, M.A j k) ^ 2 := by
+        have h_inner :
+            ∑ j : Fin s, M.A i j
+                * (-M.elementaryWeight RootedTree.vertex + ∑ k : Fin s, M.A j k) ^ 2
+              = ∑ j : Fin s, (M.elementaryWeight RootedTree.vertex ^ 2 * M.A i j
+                  + (-2 * M.elementaryWeight RootedTree.vertex)
+                      * (M.A i j * ∑ k : Fin s, M.A j k)
+                  + M.A i j * (∑ k : Fin s, M.A j k) ^ 2) := by
+          refine Finset.sum_congr rfl (fun j _ => ?_); ring
+        rw [h_inner, Finset.sum_add_distrib, Finset.sum_add_distrib,
+            ← Finset.mul_sum, ← Finset.mul_sum]
+      rw [h_inner_expand]; ring
+    rw [h_subst, Finset.sum_add_distrib, Finset.sum_add_distrib,
+        Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib,
+        Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib,
+        Finset.sum_add_distrib,
+        ← Finset.mul_sum, ← Finset.mul_sum, ← Finset.mul_sum, ← Finset.mul_sum,
+        ← Finset.mul_sum, ← Finset.mul_sum, ← Finset.mul_sum, ← Finset.mul_sum,
+        ← Finset.mul_sum,
+        ← h_mkVertexVertexBroom₃, ← h_mkVertexBroom₃, ← h_mkBroom₃,
+        ← h_mkVertexVertexCherry, ← h_mkVertexCherry, ← h_mkCherry,
+        ← h_bushy, ← h_broom₃, ← h_cherry, ← h_vertex]
+    ring
+  rw [h_sum]; ring
+
+/-- *Phase α'.5.1 P5 (cycle 494) — `mk [vertex, vertex, broom₃]` closed
+form non-vacuity at `η_q = ⟦explicitEuler⟧`.* The expected value is
+`Φ_{⟦explicitEuler⟧⁻¹}(mk [vertex, vertex, broom₃]) = 1⁶ - 0 + 0 - ...
+= 1`, since for explicit Euler `Σ b = 1` (so `Φ_η(vertex) = 1`) and
+`A = 0` (so all higher elementary weights vanish). Leading `v⁶`
+survives, all other terms vanish — consistent with the order-6 even
+parity pattern of cycles 384/403/492/493. -/
+example :
+    elementaryWeightQ_phi
+      ((Quotient.mk PhiEquivalent.setoidSigma
+          ⟨1, RKTableau.explicitEuler⟩))⁻¹
+      (OpenMath.Chapter3.Section310.RootedTree.mk
+        [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) = 1 := by
+  rw [elementaryWeightQ_phi_inv_mkVertexVertexBroom₃, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk, elementaryWeightQ_phi_mk,
+      elementaryWeightQ_phi_mk]
+  have h_vertex : RKTableau.explicitEuler.elementaryWeight RootedTree.vertex = 1 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.vertex = 1
+    simp [RKTableau.explicitEuler, RKTableau.derivativeWeight_vertex]
+  have h_cherry_zero :
+      RKTableau.explicitEuler.derivativeWeight 0 RootedTree.cherry = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [] = 0
+    simp [RKTableau.explicitEuler]
+  have h_cherry : RKTableau.explicitEuler.elementaryWeight RootedTree.cherry = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.cherry = 0
+    simp [h_cherry_zero]
+  have h_broom₃_zero :
+      RKTableau.explicitEuler.derivativeWeight 0 RootedTree.broom₃ = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [RootedTree.vertex] = 0
+    simp [RKTableau.explicitEuler]
+  have h_broom₃ : RKTableau.explicitEuler.elementaryWeight RootedTree.broom₃ = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.broom₃ = 0
+    simp [h_broom₃_zero]
+  have h_bushy_zero :
+      RKTableau.explicitEuler.derivativeWeight 0 RootedTree.bushy = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0
+                [RootedTree.vertex, RootedTree.vertex] = 0
+    simp [RKTableau.explicitEuler]
+  have h_bushy : RKTableau.explicitEuler.elementaryWeight RootedTree.bushy = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i RootedTree.bushy = 0
+    simp [h_bushy_zero]
+  have h_mkCherry_zero :
+      RKTableau.explicitEuler.derivativeWeight 0
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.cherry)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [] = 0
+    simp [RKTableau.explicitEuler]
+  have h_mkCherry :
+      RKTableau.explicitEuler.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i
+              (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]) = 0
+    simp [h_mkCherry_zero]
+  have h_mkVertexCherry_zero :
+      RKTableau.explicitEuler.derivativeWeight 0
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry]) = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [RootedTree.cherry] = 0
+    simp [RKTableau.explicitEuler]
+  have h_mkVertexCherry :
+      RKTableau.explicitEuler.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.cherry]) = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i
+              (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry]) = 0
+    simp [h_mkVertexCherry_zero]
+  have h_mkVertexVertexCherry_zero :
+      RKTableau.explicitEuler.derivativeWeight 0
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry]) = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0
+                [RootedTree.vertex, RootedTree.cherry] = 0
+    simp [RKTableau.explicitEuler]
+  have h_mkVertexVertexCherry :
+      RKTableau.explicitEuler.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry]) = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i
+              (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry]) = 0
+    simp [h_mkVertexVertexCherry_zero]
+  have h_mkBroom₃_zero :
+      RKTableau.explicitEuler.derivativeWeight 0
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]) = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.broom₃)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [] = 0
+    simp [RKTableau.explicitEuler]
+  have h_mkBroom₃ :
+      RKTableau.explicitEuler.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]) = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i
+              (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]) = 0
+    simp [h_mkBroom₃_zero]
+  have h_mkVertexBroom₃_zero :
+      RKTableau.explicitEuler.derivativeWeight 0
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.broom₃]) = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0 [RootedTree.broom₃] = 0
+    simp [RKTableau.explicitEuler]
+  have h_mkVertexBroom₃ :
+      RKTableau.explicitEuler.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.broom₃]) = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i
+              (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.broom₃]) = 0
+    simp [h_mkVertexBroom₃_zero]
+  have h_mkVertexVertexBroom₃_zero :
+      RKTableau.explicitEuler.derivativeWeight 0
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) = 0 := by
+    show (∑ j : Fin 1, RKTableau.explicitEuler.A 0 j
+              * RKTableau.explicitEuler.derivativeWeight j RootedTree.vertex)
+            * RKTableau.explicitEuler.derivativeWeightProd 0
+                [RootedTree.vertex, RootedTree.broom₃] = 0
+    simp [RKTableau.explicitEuler]
+  have h_mkVertexVertexBroom₃ :
+      RKTableau.explicitEuler.elementaryWeight
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) = 0 := by
+    show ∑ i : Fin 1, RKTableau.explicitEuler.b i
+            * RKTableau.explicitEuler.derivativeWeight i
+              (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) = 0
+    simp [h_mkVertexVertexBroom₃_zero]
+  rw [h_vertex, h_cherry, h_broom₃, h_bushy, h_mkCherry, h_mkVertexCherry,
+      h_mkVertexVertexCherry, h_mkBroom₃, h_mkVertexBroom₃, h_mkVertexVertexBroom₃]
+  ring
+
+/-- *Phase α'.5.1 P5 (cycle 494) — Priority 2 `mk [vertex, vertex, broom₃]`
+m=0 witness:* specialisation of Sub-lemma A
+`powRep_sum_eq_of_strict_subtree_agreement` at
+`t = mk [vertex, vertex, broom₃], m = 0`. Under agreement at
+`vertex`, `cherry`, `broom₃`, `bushy`, `mk [cherry]`,
+`mk [vertex, cherry]`, `mk [vertex, vertex, cherry]`, `mk [broom₃]`,
+`mk [vertex, broom₃]`, and `mk [vertex, vertex, broom₃]` (ten
+subtrees corresponding to the closed-form factors of cycle 494's
+`_mkVertexVertexBroom₃`), the `η_q^(-1)` images at
+`mk [vertex, vertex, broom₃]` coincide.
+
+Proof: reduce `η_q ^ (-(((0 + 1 : ℕ) : ℤ)))` to `η_q⁻¹` via
+`Nat.cast_one` + `zpow_neg_one`, apply cycle 494's
+`elementaryWeightQ_phi_inv_mkVertexVertexBroom₃` on both sides, then
+substitute the ten agreement hypotheses. -/
+theorem powRep_sum_eq_of_agreement_at_mkVertexVertexBroom₃_zero
+    (η_q η_q' : Quotient PhiEquivalent.setoidSigma)
+    (h_vertex : elementaryWeightQ_phi η_q RootedTree.vertex
+              = elementaryWeightQ_phi η_q' RootedTree.vertex)
+    (h_cherry : elementaryWeightQ_phi η_q RootedTree.cherry
+              = elementaryWeightQ_phi η_q' RootedTree.cherry)
+    (h_broom₃ : elementaryWeightQ_phi η_q RootedTree.broom₃
+              = elementaryWeightQ_phi η_q' RootedTree.broom₃)
+    (h_bushy : elementaryWeightQ_phi η_q RootedTree.bushy
+              = elementaryWeightQ_phi η_q' RootedTree.bushy)
+    (h_mkCherry : elementaryWeightQ_phi η_q
+                    (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+              = elementaryWeightQ_phi η_q'
+                  (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]))
+    (h_mkVertexCherry : elementaryWeightQ_phi η_q
+                          (OpenMath.Chapter3.Section310.RootedTree.mk
+                            [RootedTree.vertex, RootedTree.cherry])
+              = elementaryWeightQ_phi η_q'
+                  (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.cherry]))
+    (h_mkVertexVertexCherry : elementaryWeightQ_phi η_q
+                                (OpenMath.Chapter3.Section310.RootedTree.mk
+                                  [RootedTree.vertex, RootedTree.vertex,
+                                   RootedTree.cherry])
+              = elementaryWeightQ_phi η_q'
+                  (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry]))
+    (h_mkBroom₃ : elementaryWeightQ_phi η_q
+                    (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+              = elementaryWeightQ_phi η_q'
+                  (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃]))
+    (h_mkVertexBroom₃ : elementaryWeightQ_phi η_q
+                          (OpenMath.Chapter3.Section310.RootedTree.mk
+                            [RootedTree.vertex, RootedTree.broom₃])
+              = elementaryWeightQ_phi η_q'
+                  (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.broom₃]))
+    (h_mkVertexVertexBroom₃ : elementaryWeightQ_phi η_q
+                                (OpenMath.Chapter3.Section310.RootedTree.mk
+                                  [RootedTree.vertex, RootedTree.vertex,
+                                   RootedTree.broom₃])
+              = elementaryWeightQ_phi η_q'
+                  (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃])) :
+    elementaryWeightQ_phi (η_q ^ (-(((0 + 1 : ℕ) : ℤ))))
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃])
+      = elementaryWeightQ_phi (η_q' ^ (-(((0 + 1 : ℕ) : ℤ))))
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) := by
+  have h_pow : ∀ ζ : Quotient PhiEquivalent.setoidSigma,
+      ζ ^ (-(((0 + 1 : ℕ) : ℤ))) = ζ⁻¹ := by
+    intro ζ; rw [zero_add, Nat.cast_one]; exact zpow_neg_one _
+  rw [h_pow η_q, h_pow η_q',
+      elementaryWeightQ_phi_inv_mkVertexVertexBroom₃,
+      elementaryWeightQ_phi_inv_mkVertexVertexBroom₃,
+      h_vertex, h_cherry, h_broom₃, h_bushy, h_mkCherry, h_mkVertexCherry,
+      h_mkVertexVertexCherry, h_mkBroom₃, h_mkVertexBroom₃,
+      h_mkVertexVertexBroom₃]
+
+/-- *Phase α'.5.1 P5 (cycle 494) — `mk [vertex, vertex, broom₃]` m=0 witness
+non-vacuity at `η_q = η_q' = ⟦explicitEuler⟧`.* Discharges the ten
+agreement hypotheses by `rfl`. -/
+example :
+    elementaryWeightQ_phi
+        ((Quotient.mk PhiEquivalent.setoidSigma
+            ⟨1, RKTableau.explicitEuler⟩) ^ (-(((0 + 1 : ℕ) : ℤ))))
+        (OpenMath.Chapter3.Section310.RootedTree.mk
+          [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃])
+      = elementaryWeightQ_phi
+          ((Quotient.mk PhiEquivalent.setoidSigma
+              ⟨1, RKTableau.explicitEuler⟩) ^ (-(((0 + 1 : ℕ) : ℤ))))
+          (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) :=
+  powRep_sum_eq_of_agreement_at_mkVertexVertexBroom₃_zero
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    (Quotient.mk PhiEquivalent.setoidSigma ⟨1, RKTableau.explicitEuler⟩)
+    rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl
+
 /-! ### Phase α'.1 (cycle 380) — Family A recursive helper `inversePolyChain`
 
 Cycle 380 ships the partial V1 recursive shape for Phase α': a
@@ -8815,6 +9641,24 @@ noncomputable def trichildCrossTerm
           f (OpenMath.Chapter3.Section310.RootedTree.mk
               [RootedTree.vertex,
                OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]])
+  else if t₁ = RootedTree.vertex ∧ t₂ = RootedTree.vertex
+      ∧ t₃ = RootedTree.broom₃ then
+    -(f RootedTree.vertex) ^ 4 * f RootedTree.cherry
+      + 3 * (f RootedTree.vertex) ^ 3 * f RootedTree.broom₃
+      - 2 * f RootedTree.vertex * f RootedTree.cherry * f RootedTree.broom₃
+      + (f RootedTree.broom₃) ^ 2
+      - (f RootedTree.vertex) ^ 2 * f RootedTree.bushy
+      + 2 * (f RootedTree.vertex) ^ 3 *
+          f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+      - 4 * (f RootedTree.vertex) ^ 2 *
+          f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.cherry])
+      + 2 * f RootedTree.vertex *
+          f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+      + 2 * f RootedTree.vertex *
+          f (OpenMath.Chapter3.Section310.RootedTree.mk
+              [RootedTree.vertex, RootedTree.broom₃])
   else 0
 
 /-- *Phase α'.4.1 (cycle 399) — triple-children polynomial helper.*
@@ -9461,6 +10305,133 @@ theorem inversePolyTree_mkVertexVertexMkCherry (f : RT → ℝ) :
         - f (OpenMath.Chapter3.Section310.RootedTree.mk
             [RootedTree.vertex, RootedTree.vertex,
              OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry]])
+  ring
+
+/-- *Phase α'.5.1 P5 (cycle 494) — `mk [vertex, vertex, broom₃]` calibration
+witness.*
+
+`inversePolyTree (mk [vertex, vertex, broom₃]) f` matches cycle 494's
+`elementaryWeightQ_phi_inv_mkVertexVertexBroom₃` 13-monomial closed form
+verbatim (under `f = elementaryWeightQ_phi η_q`). The proof unfolds the
+triple-children branch of `inversePolyTree`, rewrites the recursive
+`inversePolyTree vertex f = -f vertex` via `inversePolyTree_vertex` (the
+same theorem fires globally on both vertex positions), and
+`inversePolyTree broom₃ f` via `inversePolyTree_broom₃`, expands
+`trichildPolynomial`, and dispatches `trichildCrossTerm`: the first four
+if-branches `(vertex, vertex, vertex)`, `(vertex, vertex, cherry)`,
+`(vertex, cherry, cherry)`, `(vertex, vertex, mk [cherry])` fail
+(third component is `broom₃`, not vertex / cherry / `mk [cherry]`; or
+second component fails), and the fifth (new cycle 494) if-branch
+`(vertex, vertex, broom₃)` fires via `rfl`, exposing the cycle 494
+cross-term value. Closure via a `show`-bridge that canonicalises
+`f (mk [vertex]) ↔ f cherry` (from the cycle 399 Block (2) + Block (3)
+expansion at `t₁ = t₂ = vertex`), followed by `ring`. Phase α'.5.1 P5
+deliverable, closing the `k = 3` order-6 candidate list. -/
+theorem inversePolyTree_mkVertexVertexBroom₃ (f : RT → ℝ) :
+    inversePolyTree
+      (OpenMath.Chapter3.Section310.RootedTree.mk
+        [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) f
+      = (f RootedTree.vertex) ^ 6
+        - 5 * (f RootedTree.vertex) ^ 4 * f RootedTree.cherry
+        + 4 * (f RootedTree.vertex) ^ 3 * f RootedTree.broom₃
+        + 4 * (f RootedTree.vertex) ^ 2 * (f RootedTree.cherry) ^ 2
+        - 4 * f RootedTree.vertex * f RootedTree.cherry * f RootedTree.broom₃
+        + (f RootedTree.broom₃) ^ 2
+        - (f RootedTree.vertex) ^ 2 * f RootedTree.bushy
+        + 2 * (f RootedTree.vertex) ^ 3 *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        - 4 * (f RootedTree.vertex) ^ 2 *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry])
+        + 2 * f RootedTree.vertex *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+        - (f RootedTree.vertex) ^ 2 *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+        + 2 * f RootedTree.vertex *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.broom₃])
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃]) := by
+  rw [inversePolyTree, inversePolyTree_vertex, inversePolyTree_broom₃]
+  unfold trichildPolynomial
+  rw [show trichildCrossTerm RootedTree.vertex RootedTree.vertex
+            RootedTree.broom₃ f
+          = -(f RootedTree.vertex) ^ 4 * f RootedTree.cherry
+            + 3 * (f RootedTree.vertex) ^ 3 * f RootedTree.broom₃
+            - 2 * f RootedTree.vertex * f RootedTree.cherry * f RootedTree.broom₃
+            + (f RootedTree.broom₃) ^ 2
+            - (f RootedTree.vertex) ^ 2 * f RootedTree.bushy
+            + 2 * (f RootedTree.vertex) ^ 3 *
+                f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+            - 4 * (f RootedTree.vertex) ^ 2 *
+                f (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.cherry])
+            + 2 * f RootedTree.vertex *
+                f (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+            + 2 * f RootedTree.vertex *
+                f (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.broom₃]) by
+        unfold trichildCrossTerm
+        rw [if_neg (by decide), if_neg (by decide), if_neg (by decide),
+            if_neg (by decide), if_pos ⟨rfl, rfl, rfl⟩]]
+  show -(f RootedTree.vertex * -f RootedTree.vertex * -f RootedTree.vertex
+            * (-(f RootedTree.vertex) ^ 3
+               + 2 * f RootedTree.vertex * f RootedTree.cherry
+               - f RootedTree.broom₃))
+        - -f RootedTree.vertex
+            * (-(f RootedTree.vertex) ^ 3
+               + 2 * f RootedTree.vertex * f RootedTree.cherry
+               - f RootedTree.broom₃)
+            * f RootedTree.cherry
+        - -f RootedTree.vertex
+            * (-(f RootedTree.vertex) ^ 3
+               + 2 * f RootedTree.vertex * f RootedTree.cherry
+               - f RootedTree.broom₃)
+            * f RootedTree.cherry
+        - -f RootedTree.vertex * -f RootedTree.vertex
+            * f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+        + (-(f RootedTree.vertex) ^ 4 * f RootedTree.cherry
+            + 3 * (f RootedTree.vertex) ^ 3 * f RootedTree.broom₃
+            - 2 * f RootedTree.vertex * f RootedTree.cherry * f RootedTree.broom₃
+            + (f RootedTree.broom₃) ^ 2
+            - (f RootedTree.vertex) ^ 2 * f RootedTree.bushy
+            + 2 * (f RootedTree.vertex) ^ 3 *
+                f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+            - 4 * (f RootedTree.vertex) ^ 2 *
+                f (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.cherry])
+            + 2 * f RootedTree.vertex *
+                f (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+            + 2 * f RootedTree.vertex *
+                f (OpenMath.Chapter3.Section310.RootedTree.mk
+                    [RootedTree.vertex, RootedTree.broom₃]))
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃])
+      = (f RootedTree.vertex) ^ 6
+        - 5 * (f RootedTree.vertex) ^ 4 * f RootedTree.cherry
+        + 4 * (f RootedTree.vertex) ^ 3 * f RootedTree.broom₃
+        + 4 * (f RootedTree.vertex) ^ 2 * (f RootedTree.cherry) ^ 2
+        - 4 * f RootedTree.vertex * f RootedTree.cherry * f RootedTree.broom₃
+        + (f RootedTree.broom₃) ^ 2
+        - (f RootedTree.vertex) ^ 2 * f RootedTree.bushy
+        + 2 * (f RootedTree.vertex) ^ 3 *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.cherry])
+        - 4 * (f RootedTree.vertex) ^ 2 *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.cherry])
+        + 2 * f RootedTree.vertex *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry])
+        - (f RootedTree.vertex) ^ 2 *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk [RootedTree.broom₃])
+        + 2 * f RootedTree.vertex *
+            f (OpenMath.Chapter3.Section310.RootedTree.mk
+                [RootedTree.vertex, RootedTree.broom₃])
+        - f (OpenMath.Chapter3.Section310.RootedTree.mk
+            [RootedTree.vertex, RootedTree.vertex, RootedTree.broom₃])
   ring
 
 /-- *Phase α'.4.1 (cycle 388) — `mk [cherry, cherry]` calibration witness.*
