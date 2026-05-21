@@ -30,13 +30,19 @@ MathJax = {
   header {
     background: #1e293b;
     color: #f8fafc;
-    padding: 1.25rem 2rem;
+    padding: 1.1rem 2rem;
     position: sticky;
     top: 0;
     z-index: 10;
     display: flex;
+    flex-direction: column;
+    gap: .6rem;
+  }
+
+  .header-row {
+    display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: 1.5rem;
     flex-wrap: wrap;
   }
 
@@ -46,7 +52,7 @@ MathJax = {
   #search {
     flex: 1;
     min-width: 200px;
-    padding: .45rem .75rem;
+    padding: .4rem .75rem;
     border: 1px solid #334155;
     border-radius: 6px;
     background: #0f172a;
@@ -56,10 +62,11 @@ MathJax = {
   }
   #search:focus { border-color: #6366f1; }
 
-  .filters { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .filter-row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+  .filter-label { font-size: .72rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-right: .2rem; }
 
   .filter-btn {
-    padding: .3rem .65rem;
+    padding: .28rem .6rem;
     border-radius: 999px;
     border: 1px solid #475569;
     background: transparent;
@@ -71,9 +78,25 @@ MathJax = {
   .filter-btn:hover { background: #334155; }
   .filter-btn.active { background: #6366f1; border-color: #6366f1; color: #fff; }
 
+  /* Score filter buttons have score-specific active colors */
+  .filter-btn.score-3.active { background: #15803d; border-color: #15803d; }
+  .filter-btn.score-2.active { background: #1d4ed8; border-color: #1d4ed8; }
+  .filter-btn.score-1.active { background: #b91c1c; border-color: #b91c1c; }
+
+  .divider { width: 1px; height: 16px; background: #334155; margin: 0 .2rem; }
+
   main { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem; }
 
-  #stats { font-size: .82rem; color: #64748b; margin-bottom: 1rem; }
+  #stats { font-size: .82rem; color: #64748b; margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+  .stat-pill {
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 600;
+  }
+  .stat-3 { background: #dcfce7; color: #15803d; }
+  .stat-2 { background: #dbeafe; color: #1d4ed8; }
+  .stat-1 { background: #fee2e2; color: #b91c1c; }
 
   .card {
     background: #fff;
@@ -82,11 +105,15 @@ MathJax = {
     margin-bottom: .9rem;
     overflow: hidden;
   }
+  /* Left border color by score */
+  .card[data-score="3"] { border-left: 4px solid #22c55e; }
+  .card[data-score="2"] { border-left: 4px solid #3b82f6; }
+  .card[data-score="1"] { border-left: 4px solid #ef4444; }
 
   .card-header {
     padding: .75rem 1.1rem;
     display: grid;
-    grid-template-columns: auto auto auto 1fr auto;
+    grid-template-columns: auto auto auto auto 1fr auto;
     align-items: center;
     gap: .5rem;
     cursor: pointer;
@@ -98,7 +125,7 @@ MathJax = {
     grid-column: 1 / -1;
     font-size: .72rem;
     color: #94a3b8;
-    padding-top: .15rem;
+    padding-top: .1rem;
   }
 
   .badge {
@@ -115,6 +142,11 @@ MathJax = {
   .badge-cor     { background: #ffe4e6; color: #be123c; }
   .badge-partial { background: #ffedd5; color: #c2410c; font-style: italic; }
   .badge-concept { background: #f0fdf4; color: #166534; font-weight: 500; }
+
+  /* Score badges */
+  .badge-score-3 { background: #dcfce7; color: #15803d; font-weight: 700; }
+  .badge-score-2 { background: #dbeafe; color: #1d4ed8; font-weight: 700; }
+  .badge-score-1 { background: #fee2e2; color: #b91c1c; font-weight: 700; }
 
   .card-title { font-weight: 600; font-size: .95rem; }
 
@@ -133,15 +165,10 @@ MathJax = {
     margin: 1rem 0 .35rem;
   }
 
-  .latex-block {
-    font-size: .9rem;
-    line-height: 1.8;
-    color: #374151;
-  }
+  .latex-block { font-size: .9rem; line-height: 1.8; color: #374151; }
   .latex-block em { font-style: italic; }
   .latex-block mjx-container[display] { margin: .6em 0; }
 
-  /* Proof is initially hidden behind a toggle */
   .proof-toggle {
     display: inline-flex;
     align-items: center;
@@ -158,28 +185,30 @@ MathJax = {
   .proof-body { display: none; margin-top: .5rem; }
   .proof-body.open { display: block; }
 
-  .preamble-text {
-    font-size: .82rem;
-    color: #64748b;
-    font-style: italic;
-    line-height: 1.5;
+  .preamble-text { font-size: .82rem; color: #64748b; font-style: italic; line-height: 1.5; }
+
+  /* Judge verdict box */
+  .judge-box {
+    margin-top: .35rem;
+    padding: .5rem .75rem;
+    border-radius: 6px;
+    font-size: .85rem;
+    display: flex;
+    align-items: baseline;
+    gap: .6rem;
   }
+  .judge-box-3 { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .judge-box-2 { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .judge-box-1 { background: #fef2f2; border: 1px solid #fecaca; }
+  .judge-label { font-weight: 700; white-space: nowrap; }
+  .judge-reason { color: #374151; }
+  .judge-model  { font-size: .72rem; color: #94a3b8; margin-left: auto; white-space: nowrap; }
 
   .pill-list { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .25rem; }
 
   .var-list { margin-top: .25rem; }
-  .var-row {
-    display: flex;
-    gap: .5rem;
-    font-size: .82rem;
-    line-height: 1.6;
-    color: #374151;
-  }
-  .var-name {
-    font-family: 'SF Mono','Fira Code','Menlo',monospace;
-    color: #5b21b6;
-    white-space: nowrap;
-  }
+  .var-row { display: flex; gap: .5rem; font-size: .82rem; line-height: 1.6; color: #374151; }
+  .var-name { font-family: 'SF Mono','Fira Code','Menlo',monospace; color: #5b21b6; white-space: nowrap; }
 
   .dep-list { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .25rem; }
   .dep-link {
@@ -219,9 +248,21 @@ MathJax = {
 <body>
 
 <header>
-  <h1>OpenMath <span>Theorem Mapping</span></h1>
-  <input id="search" type="search" placeholder="Search by name, ID, statement, or concept…">
-  <div class="filters" id="filters"></div>
+  <div class="header-row">
+    <h1>OpenMath <span>Theorem Mapping</span></h1>
+    <input id="search" type="search" placeholder="Search by name, ID, statement, or concept…">
+  </div>
+  <div class="header-row">
+    <div class="filter-row">
+      <span class="filter-label">Kind</span>
+      <div id="kind-filters"></div>
+    </div>
+    <div class="divider"></div>
+    <div class="filter-row">
+      <span class="filter-label">Score</span>
+      <div id="score-filters"></div>
+    </div>
+  </div>
 </header>
 
 <main>
@@ -236,13 +277,15 @@ const KIND_BADGE = {
   lemma:      'badge-lem',
   corollary:  'badge-cor',
 };
+const SCORE_LABEL = { 3: '3 — Equivalent', 2: '2 — Generalization', 1: '1 — Other' };
+const SCORE_BADGE  = { 3: 'badge-score-3', 2: 'badge-score-2', 1: 'badge-score-1' };
+const SCORE_BOX    = { 3: 'judge-box-3',   2: 'judge-box-2',   1: 'judge-box-1' };
 
 function kindBadge(kind) { return KIND_BADGE[kind] || 'badge-def'; }
 
 function clean(s) {
   return String(s ?? '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
-
 function esc(s) {
   return clean(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -281,10 +324,14 @@ function scrollToCard(id) {
 }
 
 let allEntries = [];
-let activeKind = 'all';
+let activeKind  = 'all';
+let activeScore = 'all';
 let query = '';
 
 function buildCard([id, e]) {
+  const score = e._score;
+  const scoreBadge = score
+    ? `<span class="badge ${SCORE_BADGE[score]}">${score}</span>` : '';
   const statusBadge = e.status === 'partial'
     ? `<span class="badge badge-partial">partial</span>` : '';
 
@@ -302,34 +349,27 @@ function buildCard([id, e]) {
 
   const contextHtml = e.context_latex
     ? `<div class="section-label">Context</div>
-       <div class="latex-block">${latexToHtml(e.context_latex)}</div>`
-    : '';
+       <div class="latex-block">${latexToHtml(e.context_latex)}</div>` : '';
 
   const proofHtml = e.proof_latex
     ? `<div class="section-label">Proof</div>
        <button class="proof-toggle" onclick="toggleProof(this)">▶ Show proof</button>
-       <div class="proof-body">
-         <div class="latex-block">${latexToHtml(e.proof_latex)}</div>
-       </div>`
-    : '';
+       <div class="proof-body"><div class="latex-block">${latexToHtml(e.proof_latex)}</div></div>` : '';
 
   const preambleHtml = e.preamble
     ? `<div class="section-label">Preamble</div>
-       <div class="preamble-text">${esc(e.preamble)}</div>`
-    : '';
+       <div class="preamble-text">${esc(e.preamble)}</div>` : '';
 
   const introducesHtml = (e.introduces && e.introduces.length)
     ? `<div class="section-label">Introduces</div>
        <div class="pill-list">${e.introduces.map(c =>
-           `<span class="badge badge-concept">${esc(c)}</span>`).join('')}</div>`
-    : '';
+           `<span class="badge badge-concept">${esc(c)}</span>`).join('')}</div>` : '';
 
   const variablesHtml = (e.variables && e.variables.length)
     ? `<div class="section-label">Variables</div>
        <div class="var-list">${e.variables.map(v =>
            `<div class="var-row"><span class="var-name">${esc(v.name)}</span><span>${esc(v.definition)}</span></div>`
-         ).join('')}</div>`
-    : '';
+         ).join('')}</div>` : '';
 
   const depsIds = (e.dependencies || []).map(d => d.id || d).filter(Boolean);
   const depsHtml = `<div class="section-label">Dependencies</div>
@@ -337,15 +377,23 @@ function buildCard([id, e]) {
 
   const dependentsHtml = (e.dependents && e.dependents.length)
     ? `<div class="section-label">Used by</div>
-       <div class="dep-list">${depLinks(e.dependents)}</div>`
-    : '';
+       <div class="dep-list">${depLinks(e.dependents)}</div>` : '';
+
+  const judgeHtml = score
+    ? `<div class="section-label">Judge Verdict</div>
+       <div class="judge-box ${SCORE_BOX[score]}">
+         <span class="judge-label">${esc(SCORE_LABEL[score])}</span>
+         <span class="judge-reason">${esc(e._reason || '')}</span>
+         <span class="judge-model">${esc(e._model || '')}</span>
+       </div>` : '';
 
   return `
-  <div class="card" id="card-${esc(id)}" data-id="${esc(id)}">
+  <div class="card" id="card-${esc(id)}" data-id="${esc(id)}" data-score="${score || ''}">
     <div class="card-header">
       <span class="badge badge-id">${esc(id)}</span>
       <span class="badge ${kindBadge(e.kind)}">${esc(e.kind)}</span>
       ${statusBadge}
+      ${scoreBadge}
       <span class="card-title">${esc(e.name || '—')}</span>
       <span class="chevron">▼</span>
       ${locationLine}
@@ -365,6 +413,7 @@ function buildCard([id, e]) {
         ? `<pre class="lean-block">${esc(e.lean_statement)}</pre>`
         : '<span style="color:#94a3b8">—</span>'}
       <div class="symbol-line">${esc(e.lean_symbol || '')}</div>
+      ${judgeHtml}
     </div>
   </div>`;
 }
@@ -372,7 +421,7 @@ function buildCard([id, e]) {
 function toggleProof(btn) {
   const body = btn.nextElementSibling;
   const open = body.classList.toggle('open');
-  btn.textContent = (open ? '▼ Hide proof' : '▶ Show proof');
+  btn.textContent = open ? '▼ Hide proof' : '▶ Show proof';
   if (open) {
     const card = btn.closest('.card');
     if (!card.dataset.typeset) {
@@ -387,7 +436,8 @@ function toggleProof(btn) {
 function render() {
   const q = query.toLowerCase();
   const filtered = allEntries.filter(([id, e]) => {
-    if (activeKind !== 'all' && e.kind !== activeKind) return false;
+    if (activeKind  !== 'all' && e.kind    !== activeKind)          return false;
+    if (activeScore !== 'all' && String(e._score) !== activeScore)  return false;
     if (!q) return true;
     return (
       id.toLowerCase().includes(q) ||
@@ -395,12 +445,19 @@ function render() {
       (e.statement_latex || '').toLowerCase().includes(q) ||
       (e.lean_symbol || '').toLowerCase().includes(q) ||
       (e.introduces || []).some(c => c.toLowerCase().includes(q)) ||
-      (e.subsection_title || '').toLowerCase().includes(q)
+      (e.subsection_title || '').toLowerCase().includes(q) ||
+      (e._reason || '').toLowerCase().includes(q)
     );
   });
 
-  document.getElementById('stats').textContent =
-    `Showing ${filtered.length} of ${allEntries.length} entries`;
+  const counts = {3:0, 2:0, 1:0};
+  filtered.forEach(([,e]) => { if (e._score) counts[e._score]++; });
+
+  document.getElementById('stats').innerHTML =
+    `<span>Showing ${filtered.length} of ${allEntries.length} entries</span>` +
+    `<span class="stat-pill stat-3">▲ ${counts[3]} equiv</span>` +
+    `<span class="stat-pill stat-2">~ ${counts[2]} gen</span>` +
+    `<span class="stat-pill stat-1">✗ ${counts[1]} other</span>`;
 
   const container = document.getElementById('cards');
   if (filtered.length === 0) {
@@ -424,16 +481,31 @@ function render() {
 }
 
 function buildFilters(entries) {
+  // Kind filters
   const kinds = ['all', ...new Set(entries.map(([,e]) => e.kind).filter(Boolean))].sort();
-  const container = document.getElementById('filters');
-  container.innerHTML = kinds.map(k =>
+  document.getElementById('kind-filters').innerHTML = kinds.map(k =>
     `<button class="filter-btn${k==='all'?' active':''}" data-kind="${k}">${k==='all'?'All':k}</button>`
   ).join('');
-  container.querySelectorAll('.filter-btn').forEach(btn => {
+  document.getElementById('kind-filters').querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('kind-filters').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeKind = btn.dataset.kind;
+      render();
+    });
+  });
+
+  // Score filters
+  document.getElementById('score-filters').innerHTML =
+    `<button class="filter-btn active" data-score="all">All</button>` +
+    [3,2,1].map(s =>
+      `<button class="filter-btn score-${s}" data-score="${s}">${s}</button>`
+    ).join('');
+  document.getElementById('score-filters').querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('score-filters').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeScore = btn.dataset.score;
       render();
     });
   });
@@ -444,18 +516,34 @@ document.getElementById('search').addEventListener('input', e => {
   render();
 });
 
-fetch('theorem_mapping.json')
-  .then(r => r.json())
-  .then(data => {
-    allEntries = Object.entries(data).sort(([a],[b]) => a.localeCompare(b));
-    buildFilters(allEntries);
-    render();
-  })
-  .catch(() => {
-    document.getElementById('cards').innerHTML =
-      '<div class="no-results">Could not load theorem_mapping.json.<br>' +
-      'Serve this directory with: <code>python -m http.server 8080</code></div>';
+// Load both files in parallel, merge scores into entries
+Promise.all([
+  fetch('theorem_mapping.json').then(r => r.json()),
+  fetch('scores.jsonl').then(r => r.text()).then(text => {
+    const map = {};
+    text.trim().split('\n').filter(Boolean).forEach(line => {
+      try { const r = JSON.parse(line); map[r.id] = r; } catch {}
+    });
+    return map;
+  }).catch(() => ({})),
+]).then(([mapping, scores]) => {
+  allEntries = Object.entries(mapping).sort(([a],[b]) => a.localeCompare(b));
+  // Merge score data into each entry as private fields
+  allEntries.forEach(([id, e]) => {
+    const s = scores[id];
+    if (s) {
+      e._score  = s.score;
+      e._reason = s.reason;
+      e._model  = s.model;
+    }
   });
+  buildFilters(allEntries);
+  render();
+}).catch(() => {
+  document.getElementById('cards').innerHTML =
+    '<div class="no-results">Could not load data files.<br>' +
+    'Serve this directory with: <code>python -m http.server 8080</code></div>';
+});
 </script>
 </body>
 </html>
