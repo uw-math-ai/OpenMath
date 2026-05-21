@@ -136,14 +136,32 @@ def main() -> None:
             missing_lean.append(entity_id)
 
         mapping[entity_id] = {
-            "lean_symbol": lean_symbol,
-            "lean_file": lean_file_rel,
-            "status": entry["status"],
-            "kind": entity.get("kind"),
-            "name": entity.get("name"),
-            "statement_text": entity.get("statement_text"),
+            # Identity
+            "lean_symbol":     lean_symbol,
+            "lean_file":       lean_file_rel,
+            "status":          entry["status"],
+            "kind":            entity.get("kind"),
+            "number":          entity.get("number"),
+            "name":            entity.get("name"),
+            # Location in textbook
+            "chapter":         entity.get("chapter"),
+            "section":         entity.get("section"),
+            "subsection":      entity.get("subsection"),
+            "subsection_title": entity.get("subsection_title"),
+            "page":            entity.get("page"),
+            # Textbook content
+            "preamble":        entity.get("preamble"),
+            "introduces":      entity.get("introduces"),
+            "variables":       entity.get("variables"),
+            "statement_text":  entity.get("statement_text"),
             "statement_latex": entity.get("statement_latex"),
-            "lean_statement": lean_statement,
+            "proof_latex":     entity.get("proof_latex"),
+            "context_latex":   entity.get("context_latex"),
+            # Dependency graph
+            "dependencies":    entity.get("dependencies"),
+            "dependents":      entity.get("dependents"),
+            # Lean
+            "lean_statement":  lean_statement,
         }
 
     OUTPUT.write_text(json.dumps(mapping, indent=2, ensure_ascii=False) + "\n")

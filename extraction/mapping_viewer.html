@@ -56,11 +56,7 @@ MathJax = {
   }
   #search:focus { border-color: #6366f1; }
 
-  .filters {
-    display: flex;
-    gap: .4rem;
-    flex-wrap: wrap;
-  }
+  .filters { display: flex; gap: .4rem; flex-wrap: wrap; }
 
   .filter-btn {
     padding: .3rem .65rem;
@@ -75,17 +71,9 @@ MathJax = {
   .filter-btn:hover { background: #334155; }
   .filter-btn.active { background: #6366f1; border-color: #6366f1; color: #fff; }
 
-  main {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 1.5rem 1rem;
-  }
+  main { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem; }
 
-  #stats {
-    font-size: .82rem;
-    color: #64748b;
-    margin-bottom: 1rem;
-  }
+  #stats { font-size: .82rem; color: #64748b; margin-bottom: 1rem; }
 
   .card {
     background: #fff;
@@ -96,15 +84,22 @@ MathJax = {
   }
 
   .card-header {
-    padding: .8rem 1.1rem;
-    display: flex;
-    align-items: baseline;
-    gap: .6rem;
-    flex-wrap: wrap;
+    padding: .75rem 1.1rem;
+    display: grid;
+    grid-template-columns: auto auto auto 1fr auto;
+    align-items: center;
+    gap: .5rem;
     cursor: pointer;
     user-select: none;
   }
   .card-header:hover { background: #f8fafc; }
+
+  .card-meta {
+    grid-column: 1 / -1;
+    font-size: .72rem;
+    color: #94a3b8;
+    padding-top: .15rem;
+  }
 
   .badge {
     font-size: .7rem;
@@ -119,22 +114,14 @@ MathJax = {
   .badge-lem     { background: #fef9c3; color: #854d0e; }
   .badge-cor     { background: #ffe4e6; color: #be123c; }
   .badge-partial { background: #ffedd5; color: #c2410c; font-style: italic; }
+  .badge-concept { background: #f0fdf4; color: #166534; font-weight: 500; }
 
-  .card-title {
-    font-weight: 600;
-    font-size: .95rem;
-    flex: 1;
-  }
+  .card-title { font-weight: 600; font-size: .95rem; }
 
-  .chevron {
-    margin-left: auto;
-    color: #94a3b8;
-    font-size: .75rem;
-    transition: transform .2s;
-  }
+  .chevron { color: #94a3b8; font-size: .75rem; transition: transform .2s; justify-self: end; }
   .card.open .chevron { transform: rotate(180deg); }
 
-  .card-body { display: none; padding: 0 1.1rem 1rem; border-top: 1px solid #f1f5f9; }
+  .card-body { display: none; padding: 0 1.1rem 1.1rem; border-top: 1px solid #f1f5f9; }
   .card.open .card-body { display: block; }
 
   .section-label {
@@ -143,22 +130,73 @@ MathJax = {
     text-transform: uppercase;
     letter-spacing: .05em;
     color: #94a3b8;
-    margin: .9rem 0 .3rem;
+    margin: 1rem 0 .35rem;
   }
 
-  .latex-statement {
+  .latex-block {
     font-size: .9rem;
     line-height: 1.8;
     color: #374151;
   }
-  .latex-statement em { font-style: italic; }
-  /* give display math some breathing room */
-  .latex-statement mjx-container[display] { margin: .6em 0; }
+  .latex-block em { font-style: italic; }
+  .latex-block mjx-container[display] { margin: .6em 0; }
+
+  /* Proof is initially hidden behind a toggle */
+  .proof-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .75rem;
+    color: #6366f1;
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 0;
+    margin-top: .5rem;
+  }
+  .proof-toggle:hover { text-decoration: underline; }
+  .proof-body { display: none; margin-top: .5rem; }
+  .proof-body.open { display: block; }
+
+  .preamble-text {
+    font-size: .82rem;
+    color: #64748b;
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  .pill-list { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .25rem; }
+
+  .var-list { margin-top: .25rem; }
+  .var-row {
+    display: flex;
+    gap: .5rem;
+    font-size: .82rem;
+    line-height: 1.6;
+    color: #374151;
+  }
+  .var-name {
+    font-family: 'SF Mono','Fira Code','Menlo',monospace;
+    color: #5b21b6;
+    white-space: nowrap;
+  }
+
+  .dep-list { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .25rem; }
+  .dep-link {
+    font-size: .75rem;
+    font-family: 'SF Mono','Fira Code','Menlo',monospace;
+    color: #1d4ed8;
+    text-decoration: none;
+    background: #eff6ff;
+    padding: .1rem .45rem;
+    border-radius: 4px;
+  }
+  .dep-link:hover { background: #dbeafe; }
 
   .lean-block {
     background: #0f172a;
     color: #e2e8f0;
-    font-family: 'SF Mono', 'Fira Code', 'Menlo', monospace;
+    font-family: 'SF Mono','Fira Code','Menlo',monospace;
     font-size: .8rem;
     line-height: 1.6;
     padding: .75rem 1rem;
@@ -170,24 +208,19 @@ MathJax = {
   .symbol-line {
     font-size: .75rem;
     color: #64748b;
-    font-family: 'SF Mono', 'Fira Code', 'Menlo', monospace;
+    font-family: 'SF Mono','Fira Code','Menlo',monospace;
     margin-top: .5rem;
     word-break: break-all;
   }
 
-  .no-results {
-    text-align: center;
-    color: #94a3b8;
-    padding: 3rem 0;
-    font-size: .9rem;
-  }
+  .no-results { text-align: center; color: #94a3b8; padding: 3rem 0; font-size: .9rem; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>OpenMath <span>Theorem Mapping</span></h1>
-  <input id="search" type="search" placeholder="Search by name, ID, or statement…">
+  <input id="search" type="search" placeholder="Search by name, ID, statement, or concept…">
   <div class="filters" id="filters"></div>
 </header>
 
@@ -204,9 +237,7 @@ const KIND_BADGE = {
   corollary:  'badge-cor',
 };
 
-function kindBadge(kind) {
-  return KIND_BADGE[kind] || 'badge-def';
-}
+function kindBadge(kind) { return KIND_BADGE[kind] || 'badge-def'; }
 
 function clean(s) {
   return String(s ?? '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
@@ -216,35 +247,142 @@ function esc(s) {
   return clean(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Strip the outer \begin{theorem}...\end{theorem} (or definition/lemma/corollary) wrapper
-// and convert basic LaTeX text commands to HTML so MathJax only has to handle math.
 function latexToHtml(raw) {
   let s = clean(raw);
-
-  // Remove outer document-level environment wrapper
-  s = s.replace(/^\\begin\{(?:theorem|definition|lemma|corollary|proposition|remark)[^}]*\}\s*/i, '');
-  s = s.replace(/\s*\\end\{(?:theorem|definition|lemma|corollary|proposition|remark)\}\s*$/i, '');
-
-  // Cross-references → plain label, e.g. \eqref{eq:140a} → (140a)
+  s = s.replace(/^\\begin\{(?:theorem|definition|lemma|corollary|proposition|remark|proof)[^}]*\}\s*/i, '');
+  s = s.replace(/\s*\\end\{(?:theorem|definition|lemma|corollary|proposition|remark|proof)\}\s*$/i, '');
   s = s.replace(/\\eqref\{eq:([^}]+)\}/g, '($1)');
   s = s.replace(/\\ref\{[^}]+\}/g, '(?)');
-
-  // Text-mode commands → HTML
   s = s.replace(/\\emph\{([^}]*)\}/g, '<em>$1</em>');
   s = s.replace(/\\textbf\{([^}]*)\}/g, '<strong>$1</strong>');
   s = s.replace(/\\textit\{([^}]*)\}/g, '<em>$1</em>');
   s = s.replace(/\\text\{([^}]*)\}/g, '$1');
-
-  // Paragraph breaks
+  s = s.replace(/\\paragraph\{[^}]*\}\s*/g, '');
   s = s.replace(/\n{2,}/g, '</p><p>');
-  s = '<p>' + s + '</p>';
+  return '<p>' + s + '</p>';
+}
 
-  return s;
+function depLinks(ids) {
+  if (!ids || ids.length === 0) return '<span style="color:#94a3b8">none</span>';
+  return ids.map(id =>
+    `<a class="dep-link" href="#card-${esc(id)}" onclick="scrollToCard('${esc(id)}')">${esc(id)}</a>`
+  ).join('');
+}
+
+function scrollToCard(id) {
+  const el = document.getElementById('card-' + id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.classList.add('open');
+  if (!el.dataset.typeset) {
+    el.dataset.typeset = '1';
+    if (window.MathJax?.typesetPromise) MathJax.typesetPromise([el]);
+  }
 }
 
 let allEntries = [];
 let activeKind = 'all';
 let query = '';
+
+function buildCard([id, e]) {
+  const statusBadge = e.status === 'partial'
+    ? `<span class="badge badge-partial">partial</span>` : '';
+
+  const locationParts = [
+    e.chapter != null ? `Ch. ${e.chapter}` : null,
+    e.subsection_title ? esc(e.subsection_title) : null,
+    e.page != null ? `p. ${e.page}` : null,
+  ].filter(Boolean);
+  const locationLine = locationParts.length
+    ? `<div class="card-meta">${locationParts.join(' · ')}</div>` : '';
+
+  const statementHtml = e.statement_latex
+    ? latexToHtml(e.statement_latex)
+    : '<span style="color:#94a3b8">—</span>';
+
+  const contextHtml = e.context_latex
+    ? `<div class="section-label">Context</div>
+       <div class="latex-block">${latexToHtml(e.context_latex)}</div>`
+    : '';
+
+  const proofHtml = e.proof_latex
+    ? `<div class="section-label">Proof</div>
+       <button class="proof-toggle" onclick="toggleProof(this)">▶ Show proof</button>
+       <div class="proof-body">
+         <div class="latex-block">${latexToHtml(e.proof_latex)}</div>
+       </div>`
+    : '';
+
+  const preambleHtml = e.preamble
+    ? `<div class="section-label">Preamble</div>
+       <div class="preamble-text">${esc(e.preamble)}</div>`
+    : '';
+
+  const introducesHtml = (e.introduces && e.introduces.length)
+    ? `<div class="section-label">Introduces</div>
+       <div class="pill-list">${e.introduces.map(c =>
+           `<span class="badge badge-concept">${esc(c)}</span>`).join('')}</div>`
+    : '';
+
+  const variablesHtml = (e.variables && e.variables.length)
+    ? `<div class="section-label">Variables</div>
+       <div class="var-list">${e.variables.map(v =>
+           `<div class="var-row"><span class="var-name">${esc(v.name)}</span><span>${esc(v.definition)}</span></div>`
+         ).join('')}</div>`
+    : '';
+
+  const depsIds = (e.dependencies || []).map(d => d.id || d).filter(Boolean);
+  const depsHtml = `<div class="section-label">Dependencies</div>
+    <div class="dep-list">${depLinks(depsIds)}</div>`;
+
+  const dependentsHtml = (e.dependents && e.dependents.length)
+    ? `<div class="section-label">Used by</div>
+       <div class="dep-list">${depLinks(e.dependents)}</div>`
+    : '';
+
+  return `
+  <div class="card" id="card-${esc(id)}" data-id="${esc(id)}">
+    <div class="card-header">
+      <span class="badge badge-id">${esc(id)}</span>
+      <span class="badge ${kindBadge(e.kind)}">${esc(e.kind)}</span>
+      ${statusBadge}
+      <span class="card-title">${esc(e.name || '—')}</span>
+      <span class="chevron">▼</span>
+      ${locationLine}
+    </div>
+    <div class="card-body">
+      ${preambleHtml}
+      <div class="section-label">Textbook Statement</div>
+      <div class="latex-block">${statementHtml}</div>
+      ${contextHtml}
+      ${proofHtml}
+      ${introducesHtml}
+      ${variablesHtml}
+      ${depsHtml}
+      ${dependentsHtml}
+      <div class="section-label">Lean Statement</div>
+      ${e.lean_statement
+        ? `<pre class="lean-block">${esc(e.lean_statement)}</pre>`
+        : '<span style="color:#94a3b8">—</span>'}
+      <div class="symbol-line">${esc(e.lean_symbol || '')}</div>
+    </div>
+  </div>`;
+}
+
+function toggleProof(btn) {
+  const body = btn.nextElementSibling;
+  const open = body.classList.toggle('open');
+  btn.textContent = (open ? '▼ Hide proof' : '▶ Show proof');
+  if (open) {
+    const card = btn.closest('.card');
+    if (!card.dataset.typeset) {
+      card.dataset.typeset = '1';
+      if (window.MathJax?.typesetPromise) MathJax.typesetPromise([card]);
+    } else {
+      if (window.MathJax?.typesetPromise) MathJax.typesetPromise([body]);
+    }
+  }
+}
 
 function render() {
   const q = query.toLowerCase();
@@ -255,7 +393,9 @@ function render() {
       id.toLowerCase().includes(q) ||
       (e.name || '').toLowerCase().includes(q) ||
       (e.statement_latex || '').toLowerCase().includes(q) ||
-      (e.lean_symbol || '').toLowerCase().includes(q)
+      (e.lean_symbol || '').toLowerCase().includes(q) ||
+      (e.introduces || []).some(c => c.toLowerCase().includes(q)) ||
+      (e.subsection_title || '').toLowerCase().includes(q)
     );
   });
 
@@ -268,59 +408,27 @@ function render() {
     return;
   }
 
-  container.innerHTML = filtered.map(([id, e]) => {
-    const statusBadge = e.status === 'partial'
-      ? `<span class="badge badge-partial">partial</span>` : '';
-    const latexHtml = e.statement_latex
-      ? latexToHtml(e.statement_latex)
-      : '<span style="color:#94a3b8">—</span>';
-    return `
-    <div class="card" data-id="${esc(id)}">
-      <div class="card-header">
-        <span class="badge badge-id">${esc(id)}</span>
-        <span class="badge ${kindBadge(e.kind)}">${esc(e.kind)}</span>
-        ${statusBadge}
-        <span class="card-title">${esc(e.name || '—')}</span>
-        <span class="chevron">▼</span>
-      </div>
-      <div class="card-body">
-        <div class="section-label">Textbook Statement</div>
-        <div class="latex-statement">${latexHtml}</div>
-
-        <div class="section-label">Lean Statement</div>
-        ${e.lean_statement
-          ? `<pre class="lean-block">${esc(e.lean_statement)}</pre>`
-          : `<span style="color:#94a3b8">—</span>`}
-
-        <div class="symbol-line">${esc(e.lean_symbol || '')}</div>
-      </div>
-    </div>`;
-  }).join('');
+  container.innerHTML = filtered.map(buildCard).join('');
 
   container.querySelectorAll('.card-header').forEach(h => {
-    h.addEventListener('click', () => {
+    h.addEventListener('click', ev => {
+      if (ev.target.closest('a,button')) return;
       const card = h.parentElement;
       card.classList.toggle('open');
-      // Typeset math in this card the first time it opens
       if (card.classList.contains('open') && !card.dataset.typeset) {
         card.dataset.typeset = '1';
-        if (window.MathJax?.typesetPromise) {
-          MathJax.typesetPromise([card]);
-        }
+        if (window.MathJax?.typesetPromise) MathJax.typesetPromise([card]);
       }
     });
   });
 }
 
 function buildFilters(entries) {
-  const kinds = ['all', ...new Set(entries.map(([, e]) => e.kind).filter(Boolean))].sort();
+  const kinds = ['all', ...new Set(entries.map(([,e]) => e.kind).filter(Boolean))].sort();
   const container = document.getElementById('filters');
   container.innerHTML = kinds.map(k =>
-    `<button class="filter-btn${k === 'all' ? ' active' : ''}" data-kind="${k}">
-      ${k === 'all' ? 'All' : k}
-    </button>`
+    `<button class="filter-btn${k==='all'?' active':''}" data-kind="${k}">${k==='all'?'All':k}</button>`
   ).join('');
-
   container.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -339,7 +447,7 @@ document.getElementById('search').addEventListener('input', e => {
 fetch('theorem_mapping.json')
   .then(r => r.json())
   .then(data => {
-    allEntries = Object.entries(data).sort(([a], [b]) => a.localeCompare(b));
+    allEntries = Object.entries(data).sort(([a],[b]) => a.localeCompare(b));
     buildFilters(allEntries);
     render();
   })
