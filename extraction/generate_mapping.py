@@ -13,8 +13,22 @@ OUTPUT = ROOT / "extraction" / "theorem_mapping.json"
 
 COMPLETED_STATUSES = {"formalized", "partial"}
 
-# Separators that end the statement and start the proof/body
+# Separators that end the statement and start the proof/body.
+# For non-structure declarations only — structures/classes use the
+# `where` keyword as the start of their FIELDS, which are part of the
+# statement, not the proof. See `extract_lean_statement`.
 PROOF_SEP = re.compile(r":=\s*by\b|:=(?!\s*by)|\bwhere\s*$")
+
+# Lines that start a new top-level declaration. Used to find the end
+# of a structure / class / inductive body.
+TOP_LEVEL_RE = re.compile(
+    r"^(noncomputable\s+|protected\s+|private\s+)*"
+    r"(def|theorem|lemma|abbrev|structure|class|instance|inductive|"
+    r"namespace|end\b|section\b|opaque|axiom|example)\b"
+)
+
+# Declaration kinds whose body IS part of the statement.
+STRUCTURE_LIKE = {"structure", "class", "inductive"}
 
 
 def _build_pattern(qualified_name: str) -> re.Pattern:
@@ -71,13 +85,30 @@ def extract_lean_statement(lean_file: Path, lean_symbol: str) -> str | None:
     if start is None:
         return None
 
+    # Detect the declaration kind so we know whether `where` ends the
+    # statement (def/theorem/etc.) or begins the body that we want to keep
+    # (structure/class/inductive).
+    kind_m = re.match(
+        r"^[ \t]*(?:noncomputable\s+|protected\s+|private\s+)*(\w+)\s+",
+        lines[start],
+    )
+    kind = kind_m.group(1) if kind_m else ""
+
     collected: list[str] = []
-    for line in lines[start:]:
-        m = PROOF_SEP.search(line)
-        if m:
-            collected.append(line[: m.start()].rstrip())
-            break
-        collected.append(line)
+    if kind in STRUCTURE_LIKE:
+        # Keep header AND body. Stop only at the next top-level declaration.
+        collected.append(lines[start])
+        for line in lines[start + 1:]:
+            if TOP_LEVEL_RE.match(line):
+                break
+            collected.append(line)
+    else:
+        for line in lines[start:]:
+            m = PROOF_SEP.search(line)
+            if m:
+                collected.append(line[: m.start()].rstrip())
+                break
+            collected.append(line)
 
     return "\n".join(collected).rstrip()
 
