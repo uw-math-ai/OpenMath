@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Judge Lean 4 formalizations against natural-language statements using two LLMs
-via Token Factory API (OpenAI-compatible), alternating between Kimi 2.6 and DeepSeek-V4-Pro.
+Judge Lean 4 formalizations against natural-language statements using
+DeepSeek V4 Pro via the Token Factory API (OpenAI-compatible).
 
 Usage:
     export TOKEN_FACTORY_API_KEY=<key>
@@ -24,7 +24,7 @@ try:
 except ImportError:
     sys.exit("openai package not found. Install with: pip install openai")
 
-RUBRIC_VERSION = "1.0"
+RUBRIC_VERSION = "1.2"
 MODELS = ["deepseek-ai/DeepSeek-V4-Pro"]
 
 DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1"
@@ -36,42 +36,65 @@ You are a judge evaluating the faithfulness of a Lean 4 formalization to a \
 natural-language mathematical statement from J. C. Butcher's \
 "Numerical Methods for Ordinary Differential Equations".
 
-Score the Lean 4 statement against the natural-language original using this rubric:
+Before assigning a score, you MUST first answer two yes/no questions:
 
-SCORE 3 — VERBATIM: The Lean assertion is logically equivalent to the NL statement \
-(each implies the other). Contrapositives, ε-δ vs. filter reformulations, and \
-equivalent Mathlib idioms all count as 3. The Lean may use more abstract types \
-(e.g., PseudoEMetricSpace instead of ℝ^N) as long as the NL statement is a direct \
-specialization.
+  Q1.  Does the Lean statement IMPLY the natural-language statement?
+       That is: if the Lean theorem holds, does the textbook statement \
+       follow as a logical consequence?  (Lean → NL)
+  Q2.  Does the natural-language statement IMPLY the Lean statement?
+       That is: if the textbook statement is true, does the Lean theorem \
+       follow as a logical consequence?  (NL → Lean)
 
-SCORE 2 — GENERALIZATION: The Lean is strictly stronger than the NL — Lean implies \
-NL, but NL does not imply Lean. The generalization must be mathematically correct, \
-and the NL must be recoverable by specializing the Lean (instantiating a type, \
-restricting a domain, or adding back a hypothesis).
+The score is then determined by this table:
 
-SCORE 1 — OTHER: Anything else, including:
-- Strictly weaker (extra hypothesis in Lean, restricted domain, trivial disjunction \
-in conclusion)
-- Incomparable (neither direction implies the other)
-- Vacuous (conclusion is trivially True or a tautology)
-- Wrong object (e.g., function vs. relation, norm vs. semi-norm)
-- Wrong Mathlib definition (similarly-named but mathematically non-equivalent)
-- Statements false in the claimed setting
+  Q1=true  AND Q2=true    →  SCORE 3 (VERBATIM, logically equivalent)
+  Q1=true  AND Q2=false   →  SCORE 2 (GENERALIZATION — Lean is strictly stronger)
+  Q1=false                →  SCORE 1 (Lean does not capture the textbook),
+                              UNLESS the case-split exception below applies.
 
+CASE-SPLIT EXCEPTION:
+If the LEAN 4 STATEMENT contains MULTIPLE concatenated declaration headers \
+(e.g., two `theorem` keywords) that together form a case split of the \
+textbook theorem — for example, separate theorems for x < 0 and x ≥ 0 \
+covering NL's "for all x" — answer Q1 and Q2 for the LOGICAL UNION of the \
+declarations rather than for any single one.
+  - If the union covers the full textbook domain and Q1 holds for the union → \
+    SCORE 3 (verbatim by case split).
+  - If the union covers a proper subset of NL's domain (some cases are still \
+    missing) and the cases shown are themselves faithful — SCORE 2 (PARTIAL \
+    CASE-SPLIT COVERAGE). This is the ONLY way to reach SCORE 2 when Q1 is \
+    false for the union.
+
+IMPLICIT-CONTEXT EXCEPTION:
 The user message may include a SURROUNDING CONTEXT block — the textbook \
-prose immediately preceding the statement. Sometimes it carries hypotheses \
-the statement references implicitly ("the function f", "the system", "the \
-dynamics"); sometimes it is purely motivational. When the natural-language \
-statement is incomplete without it, treat the relevant context as part of \
-the natural-language hypotheses. If the Lean version makes those \
-implicit context-hypotheses explicit (e.g., taking a Hamiltonian or a \
-Lipschitz function as a hypothesis), do NOT penalize this as "extra \
-hypothesis" — Lean must be explicit where the textbook is implicit. Only \
-score down for hypotheses that are absent from BOTH the statement AND the \
-surrounding context.
+prose immediately preceding the statement. When the natural-language \
+statement is incomplete on its own and the context carries hypotheses, treat \
+the relevant context as part of the natural-language hypotheses for Q1 and Q2. \
+A Lean version that makes implicit context-hypotheses explicit (e.g., taking \
+a Hamiltonian or a Lipschitz function as a hypothesis) should NOT cause Q2 \
+to become false on that account — Lean must be explicit where the textbook \
+is implicit.
+
+COMMON MISTAKES TO AVOID (each of these is SCORE 1, NOT SCORE 2):
+- Adding a hypothesis in Lean does NOT make Lean stronger; it makes Lean \
+  WEAKER. Q1 is FALSE, Q2 is TRUE. → SCORE 1.
+- Restricting a parameter in Lean (e.g., Lean proves only N=2 of an \
+  N-dimensional textbook theorem) makes Lean WEAKER, not a generalization. \
+  Q1 is FALSE for the full NL domain. → SCORE 1.
+- Lean stating the conclusion with a different constant, different sum \
+  structure, or different bound formula is NOT a generalization unless \
+  Lean's bound is strictly tighter. → SCORE 1.
+- A single Lean declaration missing a conjunct of the textbook (e.g., NL = \
+  "exists ∧ unique", Lean only proves existence) is SCORE 1 — the case-split \
+  exception requires MULTIPLE concatenated declarations.
 
 Respond with ONLY valid JSON and nothing else:
-{"score": <1, 2, or 3>, "reason": "<10 words or fewer>"}
+{
+  "lean_implies_nl": <true|false>,
+  "nl_implies_lean": <true|false>,
+  "score": <1, 2, or 3>,
+  "reason": "<10 words or fewer>"
+}
 """
 
 CONTEXT_CHAR_CAP = 2000
@@ -208,14 +231,20 @@ def judge_entry(
         if score not in (1, 2, 3):
             raise ValueError(f"score {score} out of range")
         reason = str(data.get("reason", ""))[:120]
+        lean_implies_nl = data.get("lean_implies_nl")
+        nl_implies_lean = data.get("nl_implies_lean")
     except Exception as exc:
         score = None
         reason = f"parse error: {exc}"[:120]
+        lean_implies_nl = None
+        nl_implies_lean = None
 
     return {
         "id": entry_id,
         "run": run_idx,
         "score": score,
+        "lean_implies_nl": lean_implies_nl,
+        "nl_implies_lean": nl_implies_lean,
         "reason": reason,
         "model": model,
         "temperature": temperature,
@@ -303,13 +332,16 @@ def main() -> None:
                 )
                 out.write(json.dumps(record, ensure_ascii=False) + "\n")
                 out.flush()
-                print(f"score={record['score']}  {record['reason']}")
+                imp = f"L→NL={record['lean_implies_nl']} NL→L={record['nl_implies_lean']}"
+                print(f"score={record['score']}  ({imp})  {record['reason']}")
             except Exception as exc:
                 print(f"ERROR: {exc}")
                 out.write(json.dumps({
                     "id": eid,
                     "run": run_idx,
                     "score": None,
+                    "lean_implies_nl": None,
+                    "nl_implies_lean": None,
                     "reason": f"api error: {str(exc)[:80]}",
                     "model": model,
                     "temperature": args.temperature,
