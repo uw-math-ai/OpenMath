@@ -13,11 +13,83 @@ OUTPUT = ROOT / "extraction" / "theorem_mapping.json"
 
 COMPLETED_STATUSES = {"formalized", "partial"}
 
-# Separators that end the statement and start the proof/body.
-# For non-structure declarations only — structures/classes use the
-# `where` keyword as the start of their FIELDS, which are part of the
-# statement, not the proof. See `extract_lean_statement`.
-PROOF_SEP = re.compile(r":=\s*by\b|:=(?!\s*by)|\bwhere\s*$")
+
+def find_proof_separator(lines: list[str], start: int) -> tuple[int, int] | None:
+    """Find where the proof body begins for a proof-bearing declaration.
+
+    Walks characters starting at lines[start], tracking bracket depth so
+    that Lean 4 named-argument syntax (e.g. `R := ℝ` inside parens) and
+    default-value syntax (e.g. `(x : Nat := 5)`) are NOT mistaken for the
+    proof separator. Skips content inside `--` line comments and `/- … -/`
+    block comments.
+
+    Returns (line_idx, col_idx) of the matched separator, or None if not
+    found. The separator is one of:
+      - `:= by`  (top-level proof start)
+      - `:=`     (top-level term-level body — for `def`s this is the body,
+                  but for theorems/lemmas/corollaries it's the proof)
+      - `where`  (trailing word-bounded `where` at depth 0)
+    """
+    paren = bracket = brace = 0
+    block_comment_depth = 0
+
+    for line_idx in range(start, len(lines)):
+        line = lines[line_idx]
+        i = 0
+        n = len(line)
+        while i < n:
+            # Inside block comment — only look for `-/`
+            if block_comment_depth > 0:
+                if i + 1 < n and line[i] == '-' and line[i + 1] == '/':
+                    block_comment_depth -= 1
+                    i += 2
+                    continue
+                # Block comments can nest in Lean 4
+                if i + 1 < n and line[i] == '/' and line[i + 1] == '-':
+                    block_comment_depth += 1
+                    i += 2
+                    continue
+                i += 1
+                continue
+
+            # Line comment — skip rest of line
+            if i + 1 < n and line[i] == '-' and line[i + 1] == '-':
+                break
+            # Block comment open
+            if i + 1 < n and line[i] == '/' and line[i + 1] == '-':
+                block_comment_depth += 1
+                i += 2
+                continue
+
+            ch = line[i]
+            if ch == '(':
+                paren += 1
+            elif ch == ')':
+                paren = max(0, paren - 1)
+            elif ch == '[':
+                bracket += 1
+            elif ch == ']':
+                bracket = max(0, bracket - 1)
+            elif ch == '{':
+                brace += 1
+            elif ch == '}':
+                brace = max(0, brace - 1)
+            elif ch == ':' and i + 1 < n and line[i + 1] == '=':
+                if paren == 0 and bracket == 0 and brace == 0:
+                    return (line_idx, i)
+                i += 2
+                continue
+            elif (
+                ch == 'w'
+                and line[i:i + 5] == 'where'
+                and (i == 0 or not (line[i - 1].isalnum() or line[i - 1] == '_'))
+                and (i + 5 == n or not (line[i + 5].isalnum() or line[i + 5] == '_'))
+                and paren == 0 and bracket == 0 and brace == 0
+                and line[i + 5:].strip() == ''
+            ):
+                return (line_idx, i)
+            i += 1
+    return None
 
 # Lines that start a new top-level declaration. Used to find the end
 # of a structure / class / inductive body.
@@ -100,12 +172,21 @@ def extract_lean_statement(lean_file: Path, lean_symbol: str) -> str | None:
     collected: list[str] = []
     if kind in PROOF_BEARING_KINDS:
         # theorem/lemma/corollary: body is the proof, drop it.
-        for line in lines[start:]:
-            m = PROOF_SEP.search(line)
-            if m:
-                collected.append(line[: m.start()].rstrip())
-                break
-            collected.append(line)
+        sep = find_proof_separator(lines, start)
+        if sep is None:
+            # No proof separator found — include everything from `start`
+            # to the next top-level declaration. Safer than dropping the
+            # extraction entirely.
+            collected.append(lines[start])
+            for line in lines[start + 1:]:
+                if TOP_LEVEL_RE.match(line):
+                    break
+                collected.append(line)
+        else:
+            sep_line, sep_col = sep
+            for idx in range(start, sep_line):
+                collected.append(lines[idx])
+            collected.append(lines[sep_line][:sep_col].rstrip())
     else:
         # def / abbrev / structure / class / instance / inductive:
         # body IS the content. Keep until the next top-level declaration.
