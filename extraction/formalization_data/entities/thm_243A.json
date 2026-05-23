@@ -1,0 +1,67 @@
+{
+  "id": "thm:243A",
+  "kind": "theorem",
+  "number": "243A",
+  "name": "Consistency, stability and convergence",
+  "is_helper": false,
+  "chapter": 2,
+  "section": "22",
+  "subsection": "243",
+  "subsection_title": "Consistency, stability and convergence",
+  "page": 130,
+  "statement_text": "A linear multistep method is convergent if and only if it is\nstable and consistent.",
+  "statement_latex": "\\begin{theorem}\nA linear multistep method is convergent if and only if it is stable and consistent.\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:404B",
+      "kind": "definition",
+      "number": "404B",
+      "name": "consistent (LMM)",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:402A",
+      "kind": "definition",
+      "number": "402A",
+      "name": "convergent (LMM)",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:310A",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "lem:110B",
+    "thm:110C",
+    "thm:111A",
+    "thm:140A",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

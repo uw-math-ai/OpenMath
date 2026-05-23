@@ -1,0 +1,45 @@
+{
+  "id": "lem:313A",
+  "kind": "lemma",
+  "number": "313A",
+  "name": "The Taylor expansion of the approximate solution",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "31",
+  "subsection": "313",
+  "subsection_title": "The Taylor expansion of the approximate solution",
+  "page": 180,
+  "statement_text": "Let k = 1, 2, . . . ,. If\n                                 \u0014         1\n              Yi = y0 +                        Φi (t)hr(t) F (t)(y0 ) + O(hk ),   (313a)\n                                          σ(t)\n                               r(t)≤k−1\n\n\nthen\n                       \u0014        1\n         hf (Yi ) =                 (Φi D)(t)hr(t) F (t)(y0 ) + O(hk+1 ).         (313b)\n                               σ(t)\n                      r(t)≤k",
+  "statement_latex": "\\begin{lemma}\nLet $k = 1, 2, \\dots$. If\n\\[\nY_i = y_0 + \\sum_{r(t) \\leq k-1} \\frac{1}{\\sigma(t)} \\Phi_i(t) h^{r(t)} F(t)(y_0) + O(h^k), \\tag{313a}\n\\]\nthen\n\\[\nhf(Y_i) = \\sum_{r(t) \\leq k} \\frac{1}{\\sigma(t)} (\\Phi_i D)(t) h^{r(t)} F(t)(y_0) + O(h^{k+1}). \\tag{313b}\n\\]\n\\end{lemma}",
+  "proof_text": "Proof.\n%n     Use Lemma 310B. The coefficient of σ(t)−1 F (t)(y0 )hr(t) in hf (Yi ) is\n j=1 i (tj ), where t = [t1 t2 · · · tk ].\n    Φ",
+  "proof_latex": "\\begin{proof}\nUse Lemma~\\ref{lem:310B}. The coefficient of $\\sigma(t)^{-1} F(t)(y_0) h^{r(t)}$ in $hf(Y_i)$ is $\\sum_{j=1}^n \\Phi_i(t_j)$, where $t = [t_1 t_2 \\cdots t_k]$.\n\nWe are now in a position to derive the formal Taylor expansion for the computed solution. The proof we give for this result is for a general Runge--Kutta method that may be implicit. In the case of an explicit method, the iterations used in the proof can be replaced by a sequence of expansions for $Y_1$, for $hf(Y_1)$, for $Y_2$, for $hf(Y_2)$, and so on until we reach $Y_s$, $hf(Y_s)$ and finally $y_1$.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "lem:310B",
+      "kind": "lemma",
+      "number": "310B",
+      "name": "Elementary Differential Weight Formula",
+      "edge_type": "uses_lemma",
+      "context": "Lemma 310B"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:310A",
+    "lem:310B",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B"
+  ],
+  "dependents": [
+    "def:323A",
+    "thm:313B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

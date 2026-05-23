@@ -1,0 +1,102 @@
+{
+  "chapter": 1,
+  "title": "Differential and Difference Equations",
+  "entity_count": 17,
+  "n_unformalized": 17,
+  "sections": [
+    {
+      "section": "10",
+      "title": "Differential Equation Problems",
+      "subsections": [
+        {
+          "subsection": "101",
+          "title": "The Kepler problem",
+          "entities": [
+            "thm:101A"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "11",
+      "title": "Differential Equation Theory",
+      "subsections": [
+        {
+          "subsection": "110",
+          "title": "Existence and uniqueness of solutions",
+          "entities": [
+            "def:110A",
+            "lem:110B",
+            "thm:110C"
+          ]
+        },
+        {
+          "subsection": "111",
+          "title": "Linear systems of differential equations",
+          "entities": [
+            "thm:111A"
+          ]
+        },
+        {
+          "subsection": "112",
+          "title": "Stiff differential equations",
+          "entities": [
+            "def:112A",
+            "thm:112B"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "12",
+      "title": "Further Evolutionary Problems",
+      "subsections": [
+        {
+          "subsection": "123",
+          "title": "Further Hamiltonian problems",
+          "entities": [
+            "thm:123A",
+            "thm:123B"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "13",
+      "title": "Difference Equation Problems",
+      "subsections": []
+    },
+    {
+      "section": "14",
+      "title": "Difference Equation Theory",
+      "subsections": [
+        {
+          "subsection": "140",
+          "title": "Linear difference equations",
+          "entities": [
+            "thm:140A"
+          ]
+        },
+        {
+          "subsection": "141",
+          "title": "Constant coefficients",
+          "entities": [
+            "thm:141A"
+          ]
+        },
+        {
+          "subsection": "142",
+          "title": "Powers of matrices",
+          "entities": [
+            "def:142A",
+            "def:142B",
+            "thm:142C",
+            "thm:142D",
+            "thm:142E",
+            "thm:142F"
+          ]
+        }
+      ]
+    }
+  ]
+}

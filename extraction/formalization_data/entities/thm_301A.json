@@ -1,0 +1,53 @@
+{
+  "id": "thm:301A",
+  "kind": "theorem",
+  "number": "301A",
+  "name": "Functions on trees",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "30",
+  "subsection": "301",
+  "subsection_title": "Functions on trees",
+  "page": 161,
+  "statement_text": "Let t = [tm 1 m2      mk\n\ntrees. Then\n                                                \u0014\n                                                k\n                                r(t) = 1 +            mi r(ti ),                      (301a)\n                                                i=1\n\n                                          k\n                                σ(t) =          mi !σ(ti )mi ,                        (301b)\n                                          i=1\n\n                                                k\n                                γ(t) = r(t)           γ(ti )mi .                      (301c)\n                                                i=1\n\nFurthermore,\n                           r(τ ) = σ(τ ) = γ(τ ) = 1.                     (301d)",
+  "statement_latex": "\\begin{theorem}\nLet $t = [t_1^{m_1} t_2^{m_2} \\dots t_k^{m_k}]$ be a rooted tree. Then\n\\begin{align}\nr(t) &= 1 + \\sum_{i=1}^k m_i r(t_i), \\label{eq:301a} \\\\\n\\sigma(t) &= \\prod_{i=1}^k m_i! \\, \\sigma(t_i)^{m_i}, \\label{eq:301b} \\\\\n\\gamma(t) &= r(t) \\prod_{i=1}^k \\gamma(t_i)^{m_i}. \\label{eq:301c}\n\\end{align}\nFurthermore,\n\\begin{equation}\nr(\\tau) = \\sigma(\\tau) = \\gamma(\\tau) = 1. \\label{eq:301d}\n\\end{equation}\n\\end{theorem}",
+  "proof_text": "Proof. To verify (301d), calculate r, σ and γ for the single tree with one\nvertex. To prove (301a), add the numbers of vertices in the m1 +m2 +· · ·+mk\ntrees attached to the new root, and add one extra for the new root. In the\ncalculation of γ(t), the integers attached to the vertices in the m1 + m2 +\n· · · + mk trees joined to the new root are the same as in the constituent trees\nthemselves. The product of these integers, and the integer r(t), gives the result\n(301c). Finally, (301b) follows by noting that the permutations which leave\nthe vertex pairs, making up the list of edges, are just as in the individual\nattached trees, together with the additional permutations of the label sets\namongst identical subtrees.",
+  "proof_latex": "\\begin{proof}\nTo verify \\eqref{eq:301d}, calculate $r$, $\\sigma$ and $\\gamma$ for the single tree with one vertex. To prove \\eqref{eq:301a}, add the numbers of vertices in the $m_1 + m_2 + \\dots + m_k$ trees attached to the new root, and add one extra for the new root. In the calculation of $\\gamma(t)$, the integers attached to the vertices in the $m_1 + m_2 + \\dots + m_k$ trees joined to the new root are the same as in the constituent trees themselves. The product of these integers, and the integer $r(t)$, gives the result \\eqref{eq:301c}. Finally, \\eqref{eq:301b} follows by noting that the permutations which leave the vertex pairs, making up the list of edges, are just as in the individual attached trees, together with the additional permutations of the label sets amongst identical subtrees.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nLet $t$ be a tree, possibly constructed as $t = [t_{1}^{m_{1}} t_{2}^{m_{2}} \\dots t_{k}^{m_{k}}]$ where $t_{1}, t_{2}, \\dots, t_{k}$ are distinct trees. Define:\n\\begin{itemize}\n    \\item $r(t)$: the order (number of vertices) of $t$,\n    \\item $\\sigma(t)$: the symmetry (order of the symmetry group) of $t$,\n    \\item $\\gamma(t)$: the density of $t$, defined as the product over all vertices of the order of the subtree rooted at that vertex.\n\\end{itemize}\nLet $\\tau$ denote the elementary tree (a single vertex).",
+  "variables": [
+    {
+      "name": "t",
+      "definition": "a tree, possibly constructed as t = [t1^m1 t2^m2 ... tk^mk] where t1, t2, ..., tk are distinct trees"
+    },
+    {
+      "name": "r(t)",
+      "definition": "the order (number of vertices) of the tree t"
+    },
+    {
+      "name": "σ(t)",
+      "definition": "the symmetry (order of the symmetry group) of the tree t"
+    },
+    {
+      "name": "γ(t)",
+      "definition": "the density of the tree t, defined as the product over all vertices of the order of the subtree rooted at that vertex"
+    },
+    {
+      "name": "τ",
+      "definition": "the elementary tree (single vertex)"
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem provides recursive formulas for the order r(t), symmetry σ(t), and density γ(t) of a tree t, where t is constructed from distinct subtrees t1,...,tk with multiplicities m1,...,mk. The base case for the elementary tree τ is given.",
+  "introduces": [],
+  "dependencies": [],
+  "transitive_dependencies": [],
+  "dependents": [
+    "def:310A",
+    "def:388D",
+    "thm:302A",
+    "thm:372A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

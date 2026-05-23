@@ -1,0 +1,83 @@
+{
+  "id": "thm:353A",
+  "kind": "theorem",
+  "number": "353A",
+  "name": "A-stability of Gauss and related methods",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "353",
+  "subsection_title": "A-stability of Gauss and related methods",
+  "page": 259,
+  "statement_text": "Let s be a positive integer and let\n                                           N (z)\n                                  R(z) =\n                                           D(z)\ndenote the (s − d, s) member of the Padé table for the exponential function,\nwhere d = 0, 1 or 2. Then\n                                |R(z)| ≤ 1,\nfor all complex z satisfying Rez ≤ 0.",
+  "statement_latex": "\\begin{theorem}\nLet $s$ be a positive integer and let\n\\[\nR(z)=\\frac{N(z)}{D(z)}\n\\]\ndenote the $(s-d,s)$ member of the Pad\\'e table for the exponential function,\nwhere $d=0$, $1$ or $2$. Then\n\\[\n|R(z)|\\leq 1,\n\\]\nfor all complex $z$ satisfying $\\operatorname{Re}z\\leq 0$.\n\\end{theorem}",
+  "proof_text": "Proof. We use the E-polynomial. Because N (z) = exp(z)D(z) + O(z 2s−d+1 ),\nwe have\n\n      E(y) = D(iy)D(−iy) − N (iy)N (−iy)\n           = D(iy)D(−iy) − exp(iy)D(iy) exp(−iy)D(−iy) + O(y 2s−d+1 )\n           = O(y 2s−d+1 ).\n\nBecause E(y) has degree not exceeding 2s and is an even function, either\nE(y) = 0, in the case d = 0, or E(y) = Cy 2s with C > 0, in the cases d = 1\nand d = 2. In all cases, E(y) ≥ 0 for all real y.\n  To complete the proof, we must show that the denominator of R has no\nzeros in the left half-plane. Without loss of generality, we assume that Re z < 0\nand we prove that D(z) \u0004= 0. Write D0 , D1 , . . . , Ds for the denominators of\nthe sequence of Padé approximations given by\n\n                             V00 , V11 , . . . , Vs−1,s−1 , Vs−d,s ,\n\nso that D(z) = Ds (z). From Theorems 352C, 352D and 352E, we have\n\n                                1\n Dk (z) = Dk−1 (z) +                      z 2 Dk−2 ,               k = 2, 3, . . . , s − 1, (353a)\n                        4(2k − 1)(2k − 3)\n\nand\n                       Ds (z) = (1 − αz)Ds−1 + βz 2 Ds−2 ,                                     (353b)\nwhere the constants α and β will depend on the value of d and s. However,\nα = 0 if d = 0 and α > 0 for d = 1 and d = 2. In all cases, β > 0.\n  Consider the sequence of complex numbers, ζk , for k = 1, 2, . . . , s, defined\nby\n                  1\n          ζ1 = 1 − z,\n                  2\n                             1              −1\n          ζk = 1 +                     z 2 ζk−1 ,                k = 2, 3, . . . , s − 1,\n                     4(2k − 1)(2k − 3)\n                                −1\n          ζs = (1 − αz) + βz 2 ζs−1 .\n\nThis means that ζ1 /z = −1/2 + 1/z has negative real part. We prove by\ninduction that ζk /z also has negative real part for k = 2, 3, . . . , s. We see this\nby noting that\n                                            \u000e          \u000f−1\n        ζk  1          1                        ζk−1\n           = +                                               ,      k = 2, 3, . . . , s − 1,\n        z   z  4(2k − 1)(2k − 3)                  z\n                    \u000e      \u000f−1\n        ζs  1         ζs−1\n           = −α+β              .\n         z  z           z\n\nThe fact that Ds (z) cannot vanish now follows by observing that\n\n                             Ds (z) = ζ1 ζ2 ζ3 · · · ζs .\n\nHence, D = Ds does not have a zero in the left half-plane.",
+  "proof_latex": "\\begin{proof}\nWe use the $E$-polynomial. Because $N(z)=\\exp(z)D(z)+O(z^{2s-d+1})$,\nwe have\n\\begin{align*}\nE(y)&=D(iy)D(-iy)-N(iy)N(-iy)\\\\\n    &=D(iy)D(-iy)-\\exp(iy)D(iy)\\exp(-iy)D(-iy)+O(y^{2s-d+1})\\\\\n    &=O(y^{2s-d+1}).\n\\end{align*}\nBecause $E(y)$ has degree not exceeding $2s$ and is an even function, either\n$E(y)=0$, in the case $d=0$, or $E(y)=Cy^{2s}$ with $C>0$, in the cases $d=1$\nand $d=2$. In all cases, $E(y)\\geq 0$ for all real $y$.\n\nTo complete the proof, we must show that the denominator of $R$ has no\nzeros in the left half-plane. Without loss of generality, we assume that $\\operatorname{Re}z<0$\nand we prove that $D(z)\\neq 0$. Write $D_0$, $D_1$, $\\dots$, $D_s$ for the denominators of\nthe sequence of Pad\\'e approximations given by\n\\[\nV_{00},\\ V_{11},\\ \\dots,\\ V_{s-1,s-1},\\ V_{s-d,s},\n\\]\nso that $D(z)=D_s(z)$. From Theorems~\\ref{thm:352C}, \\ref{thm:352D} and \\ref{thm:352E}, we have\n\\begin{equation}\nD_k(z)=D_{k-1}(z)+\\frac{1}{4(2k-1)(2k-3)}z^2D_{k-2},\\qquad k=2,3,\\dots,s-1, \\tag{353a}\n\\end{equation}\nand\n\\begin{equation}\nD_s(z)=(1-\\alpha z)D_{s-1}+\\beta z^2D_{s-2}, \\tag{353b}\n\\end{equation}\nwhere the constants $\\alpha$ and $\\beta$ will depend on the value of $d$ and $s$. However,\n$\\alpha=0$ if $d=0$ and $\\alpha>0$ for $d=1$ and $d=2$. In all cases, $\\beta>0$.\n\nConsider the sequence of complex numbers, $\\zeta_k$, for $k=1,2,\\dots,s$, defined\nby\n\\begin{align*}\n\\zeta_1 &= 1-\\frac{1}{2}z,\\\\\n\\zeta_k &= 1+\\frac{1}{4(2k-1)(2k-3)}z^2\\zeta_{k-1}^{-1},\\qquad k=2,3,\\dots,s-1,\\\\\n\\zeta_s &= (1-\\alpha z)+\\beta z^2\\zeta_{s-1}^{-1}.\n\\end{align*}\nThis means that $\\zeta_1/z=-\\frac{1}{2}+1/z$ has negative real part. We prove by\ninduction that $\\zeta_k/z$ also has negative real part for $k=2,3,\\dots,s$. We see this\nby noting that\n\\begin{align*}\n\\frac{\\zeta_k}{z}&=\\frac{1}{z}+\\frac{1}{4(2k-1)(2k-3)}\\left(\\frac{\\zeta_{k-1}}{z}\\right)^{-1},\\qquad k=2,3,\\dots,s-1,\\\\\n\\frac{\\zeta_s}{z}&=-\\alpha+\\beta\\left(\\frac{\\zeta_{s-1}}{z}\\right)^{-1}.\n\\end{align*}\nThe fact that $D_s(z)$ cannot vanish now follows by observing that\n\\[\nD_s(z)=\\zeta_1\\zeta_2\\zeta_3\\cdots\\zeta_s.\n\\]\nHence, $D=D_s$ does not have a zero in the left half-plane.\n\nAlternative proofs of this and related results have been given by Axelsson\n(1969, 1972), Butcher (1977), Ehle (1973), Ehle and Picel (1975), Watts and\nShampine (1972) and Wright (1970).\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns the A-stability of methods (like Gauss, Radau IA/IIA, Lobatto IIIC) whose stability functions are specific Pad\\'e approximations to the exponential function, taken from the diagonal and first two sub-diagonals of the Pad\\'e table. Let $R(z)$ be the $(s-d, s)$ member of the Pad\\'e table for the exponential function, expressed as a rational function $N(z)/D(z)$. Here $s$ is a positive integer, and $d$ is an integer taking values $0$, $1$, or $2$, indicating the diagonal ($d=0$) or first two sub-diagonals ($d=1,2$) of the Pad\\'e table.",
+  "variables": [
+    {
+      "name": "R(z)",
+      "definition": "the (s-d, s) member of the Padé table for the exponential function, expressed as a rational function N(z)/D(z)"
+    },
+    {
+      "name": "s",
+      "definition": "a positive integer, likely the order or a parameter related to the Padé approximation"
+    },
+    {
+      "name": "d",
+      "definition": "an integer taking values 0, 1, or 2, indicating the diagonal (d=0) or first two sub-diagonals (d=1,2) of the Padé table"
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem concerns the A-stability of methods (like Gauss, Radau IA/IIA, Lobatto IIIC) whose stability functions are specific Padé approximations to the exponential function, taken from the diagonal and first two sub-diagonals of the Padé table.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:352A",
+      "kind": "theorem",
+      "number": "352A",
+      "name": "Padé approximations to the exponential function",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:352C",
+      "kind": "theorem",
+      "number": "352C",
+      "name": "Pade approximant recurrence relation",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:352D",
+      "kind": "theorem",
+      "number": "352D",
+      "name": "Pade approximation recurrence relation",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:352E",
+      "kind": "theorem",
+      "number": "352E",
+      "name": "V function recurrence relation",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:342D",
+    "lem:342A",
+    "lem:342B",
+    "lem:359A",
+    "thm:342C",
+    "thm:352A",
+    "thm:352C",
+    "thm:352D",
+    "thm:352E"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

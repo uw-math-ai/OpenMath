@@ -1,0 +1,184 @@
+{
+  "chapter": 5,
+  "title": "General Linear Methods",
+  "entity_count": 35,
+  "n_unformalized": 35,
+  "sections": [
+    {
+      "section": "50",
+      "title": "Representing Methods in General Linear Form",
+      "subsections": []
+    },
+    {
+      "section": "51",
+      "title": "Consistency, Stability and Convergence",
+      "subsections": [
+        {
+          "subsection": "510",
+          "title": "Definitions of consistency and stability",
+          "entities": [
+            "def:510A",
+            "def:510B",
+            "def:510C"
+          ]
+        },
+        {
+          "subsection": "512",
+          "title": "Definition of convergence",
+          "entities": [
+            "def:512A"
+          ]
+        },
+        {
+          "subsection": "513",
+          "title": "The necessity of stability",
+          "entities": [
+            "thm:513A"
+          ]
+        },
+        {
+          "subsection": "514",
+          "title": "The necessity of consistency",
+          "entities": [
+            "thm:514A"
+          ]
+        },
+        {
+          "subsection": "515",
+          "title": "Stability and consistency imply convergence",
+          "entities": [
+            "lem:515A",
+            "lem:515B",
+            "lem:515C",
+            "thm:515D"
+          ]
+        },
+        {
+          "subsection": "520",
+          "title": "Introduction",
+          "entities": [
+            "def:520A",
+            "thm:520B",
+            "def:520C",
+            "thm:520D",
+            "def:520E",
+            "def:520F"
+          ]
+        },
+        {
+          "subsection": "521",
+          "title": "Methods with maximal stability order",
+          "entities": [
+            "def:521A",
+            "thm:521B"
+          ]
+        },
+        {
+          "subsection": "523",
+          "title": "Non-linear stability",
+          "entities": [
+            "thm:523A",
+            "thm:523B"
+          ]
+        },
+        {
+          "subsection": "525",
+          "title": "G-symplectic methods",
+          "entities": [
+            "def:525A"
+          ]
+        },
+        {
+          "subsection": "530",
+          "title": "Possible definitions of order",
+          "entities": [
+            "def:530A",
+            "def:530B",
+            "def:530C"
+          ]
+        },
+        {
+          "subsection": "532",
+          "title": "Algebraic analysis of order",
+          "entities": [
+            "thm:532A"
+          ]
+        },
+        {
+          "subsection": "534",
+          "title": "The order of a G-symplectic method",
+          "entities": [
+            "thm:534A"
+          ]
+        },
+        {
+          "subsection": "535",
+          "title": "The underlying one-step method",
+          "entities": [
+            "thm:535A"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "52",
+      "title": "The Stability of General Linear Methods",
+      "subsections": []
+    },
+    {
+      "section": "53",
+      "title": "The Order of General Linear Methods",
+      "subsections": []
+    },
+    {
+      "section": "54",
+      "title": "Methods with Runge–Kutta stability",
+      "subsections": [
+        {
+          "subsection": "541",
+          "title": "The types of DIMSIM methods",
+          "entities": [
+            "thm:541A"
+          ]
+        },
+        {
+          "subsection": "542",
+          "title": "Runge–Kutta stability",
+          "entities": [
+            "def:542A"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "55",
+      "title": "Methods with Inherent Runge–Kutta Stability",
+      "subsections": [
+        {
+          "subsection": "550",
+          "title": "Doubly companion matrices",
+          "entities": [
+            "thm:550A",
+            "thm:550B",
+            "cor:550C"
+          ]
+        },
+        {
+          "subsection": "551",
+          "title": "Inherent Runge–Kutta stability",
+          "entities": [
+            "def:551A",
+            "thm:551B"
+          ]
+        },
+        {
+          "subsection": "553",
+          "title": "Derivation of methods with IRK stability",
+          "entities": [
+            "thm:553A"
+          ]
+        }
+      ]
+    }
+  ]
+}

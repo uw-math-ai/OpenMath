@@ -1,0 +1,68 @@
+{
+  "id": "thm:110C",
+  "kind": "theorem",
+  "number": "110C",
+  "name": "Existence and uniqueness of solutions",
+  "is_helper": false,
+  "chapter": 1,
+  "section": "11",
+  "subsection": "110",
+  "subsection_title": "Existence and uniqueness of solutions",
+  "page": 44,
+  "statement_text": "Consider an initial value problem\n\n                               y \u0002 (x) = f (x, y(x)),                       (110a)\n                                y(a) = y0 ,                                 (110b)\n\nwhere f : [a, b] × RN → RN is continuous in its first variable and satisfies a\nLipschitz condition in its second variable. Then there exists a unique solution\nto this problem.",
+  "statement_latex": "\\begin{theorem}[110C]\nConsider an initial value problem\n\\[\ny'(x) = f(x, y(x)), \\tag{110a}\n\\]\n\\[\ny(a) = y_0, \\tag{110b}\n\\]\nwhere \\( f : [a, b] \\times \\mathbb{R}^N \\to \\mathbb{R}^N \\) is continuous in its first variable and satisfies a Lipschitz condition in its second variable. Then there exists a unique solution to this problem.\n\\end{theorem}",
+  "proof_text": "Proof. Let M denote the complete metric space of continuous functions\ny : [a, b] → RN , such that y(a) = y0 . The metric is defined by\n\n                ρ(y, z) = sup exp(−K(x − a)) y(x) − z(x) ,\n                          x∈[a,b]\n\nwhere K > L. For given y ∈ M , define φ(y) as the solution Y on [a, b] to the\ninitial value problem\n\n                              Y \u0002 (x) = f (x, Y (x)),\n                              Y (a) = y0 .\n\nThis problem is solvable by integration as\n                                      \u0010 x\n                      φ(y)(x) = y0 +       f (s, y(s))ds.\n                                           a\n\nThis is a contraction because for any two y, z ∈ M , we have\n                                         \u0017\u0010 x                                 \u0017\n                                         \u0017      \u0003                          \u0004 \u0017\n   ρ(φ(y), φ(z)) ≤ sup exp(−K(x − a)) \u0017  \u0017        f (s, y(s)) − f (s, z(s)) ds\u0017\n                                                                              \u0017\n                    x∈[a,b]\n                                         \u0010 x a\n\n                 ≤ sup exp(−K(x − a))           f (s, y(s)) − f (s, z(s)) ds\n                    x∈[a,b]                a\n                                            \u0010 x\n                 ≤ L sup exp(−K(x − a))            y(s) − z(s) ds\n                      x∈[a,b]                 a\n                                                     \u0010 x\n                 ≤ Lρ(y, z) sup exp(−K(x − a))           exp(K(s − a))ds\n                             x∈[a,b]                    a\n                  L\n                 ≤ ρ(y, z).\n                  K\nThe unique function y that therefore exists satisfying φ(y) = y, is evidently\nthe unique solution to the initial value problem given by (110a), (110b).",
+  "proof_latex": "\\begin{proof}\nLet \\( M \\) denote the complete metric space of continuous functions \\( y : [a, b] \\to \\mathbb{R}^N \\), such that \\( y(a) = y_0 \\). The metric is defined by\n\\[\n\\rho(y, z) = \\sup_{x \\in [a, b]} \\exp(-K(x - a)) \\| y(x) - z(x) \\|,\n\\]\nwhere \\( K > L \\). For given \\( y \\in M \\), define \\( \\varphi(y) \\) as the solution \\( Y \\) on \\( [a, b] \\) to the initial value problem\n\\[\nY'(x) = f(x, Y(x)), \\quad Y(a) = y_0.\n\\]\nThis problem is solvable by integration as\n\\[\n\\varphi(y)(x) = y_0 + \\int_a^x f(s, y(s)) \\, ds.\n\\]\nThis is a contraction because for any two \\( y, z \\in M \\), we have\n\\begin{align*}\n\\rho(\\varphi(y), \\varphi(z)) &\\leq \\sup_{x \\in [a, b]} \\exp(-K(x - a)) \\left\\| \\int_a^x \\bigl( f(s, y(s)) - f(s, z(s)) \\bigr) \\, ds \\right\\| \\\\\n&\\leq \\sup_{x \\in [a, b]} \\exp(-K(x - a)) \\int_a^x \\| f(s, y(s)) - f(s, z(s)) \\| \\, ds \\\\\n&\\leq L \\sup_{x \\in [a, b]} \\exp(-K(x - a)) \\int_a^x \\| y(s) - z(s) \\| \\, ds \\\\\n&\\leq L \\rho(y, z) \\sup_{x \\in [a, b]} \\exp(-K(x - a)) \\int_a^x \\exp(K(s - a)) \\, ds \\\\\n&\\leq \\frac{L}{K} \\rho(y, z).\n\\end{align*}\nThe unique function \\( y \\) that therefore exists satisfying \\( \\varphi(y) = y \\), is evidently the unique solution to the initial value problem given by \\eqref{eq:110a}, \\eqref{eq:110b}.\n\nThe third requirement for being well-posed, that the solution is not overly sensitive to the initial condition, can be readily assessed for problems satisfying a Lipschitz condition. If \\( y \\) and \\( z \\) each satisfy \\eqref{eq:110a} with \\( y(a) = y_0 \\) and \\( z(a) = z_0 \\), then\n\\[\n\\frac{d}{dx} \\| y(x) - z(x) \\| \\leq L \\| y(x) - z(x) \\|.\n\\]\nMultiply both sides by \\( \\exp(-Lx) \\) and deduce that\n\\[\n\\frac{d}{dx} \\left[ \\exp(-Lx) \\| y(x) - z(x) \\| \\right] \\leq 0,\n\\]\nimplying that\n\\[\n\\| y(x) - z(x) \\| \\leq \\| y_0 - z_0 \\| \\exp( L(x - a) ). \\tag{110c}\n\\]\nThis bound on the growth of initial perturbations may be too pessimistic in particular circumstances. Sometimes it can be improved upon by the use of `one-sided Lipschitz conditions'. This will be discussed in Subsection 112.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nConsider the initial value problem for an ODE. The function \\(f: [a, b] \\times \\mathbb{R}^N \\to \\mathbb{R}^N\\) is continuous in its first variable and satisfies a Lipschitz condition in its second variable. There exists a constant \\(L\\) such that for any \\(x \\in [a, b]\\) and \\(Y, Z \\in \\mathbb{R}^N\\),\n\\[\n\\|f(x, Y) - f(x, Z)\\| \\leq L \\|Y - Z\\|.\n\\]\nThe problem is given by\n\\begin{align}\n    y'(x) &= f(x, y(x)), \\tag{110a}\\\\\n    y(a)  &= y_0. \\tag{110b}\n\\end{align}",
+  "variables": [
+    {
+      "name": "f",
+      "definition": "f : [a, b] × R^N → R^N, continuous in its first variable and satisfies a Lipschitz condition in its second variable"
+    },
+    {
+      "name": "L",
+      "definition": "Lipschitz constant such that for any x ∈ [a, b] and Y, Z ∈ R^N, ||f(x, Y) - f(x, Z)|| ≤ L ||Y - Z||"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "110a",
+      "content": "y'(x) = f(x, y(x))"
+    },
+    {
+      "tag": "110b",
+      "content": "y(a) = y0"
+    }
+  ],
+  "preamble": "The theorem concerns an initial value problem for an ODE. The function f is defined on a product of an interval and R^N, and must satisfy a Lipschitz condition in its second variable, ensuring well-posedness via existence, uniqueness, and sensitivity.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:110A",
+      "kind": "definition",
+      "number": "110A",
+      "name": "Lipschitz condition in its second variable",
+      "edge_type": "uses_concept",
+      "context": "lipschitz condition in its second variable"
+    },
+    {
+      "id": "lem:110B",
+      "kind": "lemma",
+      "number": "110B",
+      "name": "Contraction Mapping Fixed Point Existence",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "lem:110B"
+  ],
+  "dependents": [
+    "lem:319A",
+    "thm:111A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

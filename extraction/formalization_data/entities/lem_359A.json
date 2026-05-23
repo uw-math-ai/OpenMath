@@ -1,0 +1,95 @@
+{
+  "id": "lem:359A",
+  "kind": "lemma",
+  "number": "359A",
+  "name": "The V and W transformations",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "359",
+  "subsection_title": "The V and W transformations",
+  "page": 277,
+  "statement_text": "Let\n                                   XG = W BAW,\nwhere A and B = diag(b) are as for the Gauss method of order 2s. Also let\n                          1\n                   ξk = √        ,               k = 1, 2, . . . , s − 1.\n                       2 4k2 − 1\nThen\n                                                                                 \n                   1\n                   2     −ξ1       0         0          ···         0       0\n                                                                                 \n              ξ1         0       −ξ2        0          ···         0       0     \n                                                                                 \n              0          ξ2       0        −ξ3         ···         0       0     \n                                                                                 \n        XG =  .           ..       ..        ..                    ..      ..    .\n              ..           .        .         .                     .       .    \n                                                                                 \n                                                                                 \n              0          0        0         0          ···         0     −ξs−1   \n               0          0        0         0          ···        ξs−1      0",
+  "statement_latex": "\\begin{lemma}\nLet\n\\[\nX_G = W BAW,\n\\]\nwhere $A$ and $B = \\operatorname{diag}(b)$ are as for the Gauss method of order $2s$. Also let\n\\[\n\\xi_k = \\frac{1}{\\sqrt{2} \\sqrt{4k^2 - 1}}, \\quad k = 1, 2, \\dots, s-1.\n\\]\nThen\n\\[\nX_G = \\begin{bmatrix}\n\\frac{1}{2} & -\\xi_1 & 0 & 0 & \\cdots & 0 & 0 \\\\\n\\xi_1 & 0 & -\\xi_2 & 0 & \\cdots & 0 & 0 \\\\\n0 & \\xi_2 & 0 & -\\xi_3 & \\cdots & 0 & 0 \\\\\n\\vdots & \\vdots & \\vdots & \\vdots & \\ddots & \\vdots & \\vdots \\\\\n0 & 0 & 0 & 0 & \\cdots & 0 & -\\xi_{s-1} \\\\\n0 & 0 & 0 & 0 & \\cdots & \\xi_{s-1} & 0\n\\end{bmatrix}.\n\\]\n\\end{lemma}",
+  "proof_text": "Proof. From linear combinations of identities included in the condition\nE(s, s), given by (321c), we have\n               \u0014\n               s \u0014\n                 s                               \u0010 1          \u0010 u\n                         bi φ(ci )aij ψ(cj ) =         φ(u)         ψ(v)dvdu,\n               i=1 j=1                            0            0\n\n\nfor polynomials φ and ψ each with degree less than s. Use the polynomials\nφ = Pk−1 , ψ = Pl−1 and we have a formula for the (k, l) element of XG . Add\nto this the result for k and l interchanged and use integration by parts. We\nhave                           \u0010 1            \u0010 1\n          (XG )kl + (XG )lk =      Pk−1 (u)du     Pl−1 (v)dv = δk1 δl1 .\n                                   0                    0\nThis result determines the diagonal elements of XG , and also implies the\nskew-symmetric form of XG − 12 e1 e1 . We now determine \u0016u     the form of the\nlower triangular elements. If k > l + 1, the integral 0 Pl−1 (v)dv has lower\ndegree than Pk−1 and is therefore orthogonal to it. Thus, in this case,\n        \u0016 u 0. It remains to evaluate (XG )k,k−1 for k = 1, 2, . . . , s − 1. The\n(XG )kl =\nintegral 0 Pk−1 (v)dv is a polynomial in u of degree k and can be written in the\nform θPk (u) added to a polynomial of degree less than k. The integral of Pk (u)\nmultiplied by the polynomial of degree less than k is zero, by orthogonality,\nand the integral reduces to\n                              \u0010 1\n                                  θPk (u)2 du = θ.\n                                   0\n\n                                                             k−1\nThe\n  √ value of θ can\n          \u00032k−2 \u0004 be found by noting that the coefficient of v     in Pk−1 (v)\nis 2k − 1 k−1 , with a similar formula for the leading coefficient of Pk (u).\n\nHence,                                           √      \u0003     \u0004\n                                             1\n                                                  2k − 1 2k−2      1\n                   (XG )k,k−1 = θ =          k\n                                                 √      \u0003 \u0004 = √\n                                                          k−1\n                                                                         .",
+  "proof_latex": "\\begin{proof}\nFrom linear combinations of identities included in the condition $E(s, s)$, given by \\eqref{eq:321c}, we have\n\\[\n\\sum_{i=1}^{s} \\sum_{j=1}^{s} b_i \\phi(c_i) a_{ij} \\psi(c_j) = \\int_0^1 \\phi(u) \\int_0^u \\psi(v) \\, dv \\, du,\n\\]\nfor polynomials $\\phi$ and $\\psi$ each with degree less than $s$. Use the polynomials $\\phi = P_{k-1}$, $\\psi = P_{l-1}$ and we have a formula for the $(k, l)$ element of $X_G$. Add to this the result for $k$ and $l$ interchanged and use integration by parts. We have\n\\[\n(X_G)_{kl} + (X_G)_{lk} = \\int_0^1 P_{k-1}(u) \\, du \\int_0^1 P_{l-1}(v) \\, dv = \\delta_{k1} \\delta_{l1}.\n\\]\nThis result determines the diagonal elements of $X_G$, and also implies the skew-symmetric form of $X_G - \\frac{1}{2} e_1 e_1^\\top$. We now determine the form of the lower triangular elements. If $k > l + 1$, the integral $\\int_0^u P_{l-1}(v) \\, dv$ has lower degree than $P_{k-1}$ and is therefore orthogonal to it. Thus, in this case, $(X_G)_{kl} = 0$. It remains to evaluate $(X_G)_{k,k-1}$ for $k = 1, 2, \\dots, s-1$. The integral $\\int_0^u P_{k-1}(v) \\, dv$ is a polynomial in $u$ of degree $k$ and can be written in the form $\\theta P_k(u)$ added to a polynomial of degree less than $k$. The integral of $P_k(u)$ multiplied by the polynomial of degree less than $k$ is zero, by orthogonality, and the integral reduces to\n\\[\n\\int_0^1 \\theta P_k(u)^2 \\, du = \\theta.\n\\]\nThe value of $\\theta$ can be found by noting that the coefficient of $v^{k-1}$ in $P_{k-1}(v)$ is $\\sqrt{2k-1} \\binom{2k-2}{k-1}$, with a similar formula for the leading coefficient of $P_k(u)$. Hence,\n\\[\n(X_G)_{k,k-1} = \\theta = \\frac{1}{\\sqrt{2k-1} \\binom{2k-2}{k-1}} \\cdot \\frac{\\sqrt{2k+1} \\binom{2k}{k}}{1} = \\frac{1}{\\sqrt{2} \\sqrt{4k^2 - 1}}.\n\\]\nThe computation of elements of $X = W BAW$ for any Runge--Kutta method, for which $W$ makes sense, will lead to the same $(k, l)$ elements as in $X_G$ as long as $k + l \\leq p + 1$. We state this formally.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe lemma concerns the Gauss Runge--Kutta method of order $2s$.\nDefine the matrix $X_G = W^\\top B A W$ using the method's coefficient matrix $A$, weight matrix $B = \\operatorname{diag}(b)$, and a matrix $W$ whose columns are orthonormal polynomials.\nFor the Gauss method, $X_G - \\frac12 e_1 e_1^\\top$ is skew-symmetric.\n\nVariables:\n\\begin{itemize}\n    \\item $W$: matrix whose columns are orthonormal polynomials $P_0,P_1,\\dots,P_{s-1}$ on $[0,1]$\n    \\item $A$: coefficient matrix of the Runge--Kutta method\n    \\item $B = \\operatorname{diag}(b)$: diagonal matrix with weights $b$ from the Runge--Kutta method\n    \\item $s$: number of stages in the Gauss method\n    \\item $X_G = W^\\top B A W$: transformed matrix for the Gauss method\n    \\item $e_1$: first standard basis vector\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "W",
+      "definition": "matrix such that its columns are orthonormal polynomials P0, P1, ..., Ps-1 on [0,1]"
+    },
+    {
+      "name": "A",
+      "definition": "coefficient matrix of the Runge-Kutta method"
+    },
+    {
+      "name": "B",
+      "definition": "diag(b), diagonal matrix with weights b from the Runge-Kutta method"
+    },
+    {
+      "name": "s",
+      "definition": "number of stages in the Gauss method"
+    },
+    {
+      "name": "XG",
+      "definition": "W BAW, a transformed matrix for the Gauss method"
+    },
+    {
+      "name": "e1",
+      "definition": "first standard basis vector"
+    }
+  ],
+  "equations": [],
+  "preamble": "The lemma concerns the Gauss Runge-Kutta method of order 2s. The matrix XG = W BAW is defined using the method's coefficient matrix A, weight matrix B = diag(b), and a matrix W whose columns are orthonormal polynomials. The preceding text shows that for the Gauss method, XG - (1/2)e1 e1^T is skew-symmetric.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "lem:342A",
+      "kind": "lemma",
+      "number": "342A",
+      "name": "Methods based on Gaussian quadrature",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "lem:342B",
+      "kind": "lemma",
+      "number": "342B",
+      "name": "Gaussian quadrature exactness degree",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:342C",
+      "kind": "theorem",
+      "number": "342C",
+      "name": "Gaussian Quadrature Order Conditions Equivalence",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "cor:342D",
+      "kind": "corollary",
+      "number": "342D",
+      "name": "Gaussian Quadrature Runge Kutta Order Condition",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:342D",
+    "lem:342A",
+    "lem:342B",
+    "thm:342C"
+  ],
+  "dependents": [
+    "cor:359B",
+    "thm:352E",
+    "thm:359C",
+    "thm:363A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

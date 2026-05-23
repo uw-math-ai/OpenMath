@@ -1,0 +1,102 @@
+{
+  "id": "lem:441A",
+  "kind": "lemma",
+  "number": "441A",
+  "name": "Maximum order for a convergent k-step method",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "44",
+  "subsection": "441",
+  "subsection_title": "Maximum order for a convergent k-step method",
+  "page": 375,
+  "statement_text": "If the method under consideration is stable then a1 > 0 and\nai ≥ 0, for i = 2, 3, . . . , k.",
+  "statement_latex": "\\begin{lemma}\nIf the method under consideration is stable then $a_1 > 0$ and\n$a_i \\ge 0$, for $i = 2, 3, \\dots, k$.\n\\end{lemma}",
+  "proof_text": "Proof. Write the polynomial a in the form\n\n  a(z) = (1+z)k −α1 (1+z)k−1 (1−z)−α2 (1+z)k−2 (1−z)2 − · · · −αk (1−z)k .\n\nWe calculate the value of a1 , the coefficient of z, to be\n\n      k − (k − 2)α1 − (k − 4)α2 − · · · − (−k)αk = kα(1) − 2α\u0002 (1) = −2α\u0002 (1),\n\nbecause α(1) = 0. The polynomial ρ, which we recall is defined by\n\n                      ρ(z) = z k − α1 z k−1 − α2 z k−2 − · · · − αk ,\n\nhas no real zeros greater than 1, and hence, because ρ(1) = 0 and because\nlimz−>∞ ρ(z) = ∞, it is necessary that ρ\u0002 (1) > 0. Calculate this to be\n\n               ρ\u0002 (1) = k − (k − 1)α1 − (k − 2)α2 − · · · − αk−1 = a1 .\n\nThis completes the proof that a1 > 0.\n\n  Write ζ for a possible zero of a so that, because of the relationship between\nthis polynomial and α, it follows that\n                                               1−ζ\n                                               1+ζ\nis a zero of α, unless it happens that ζ = −1, in which case there is a drop in\nthe degree of α. In either case, we must have Re(ζ) ≤ 0. Because all zeros of\na are real, or occur in conjugate pairs, the polynomial a can be decomposed\ninto factors of the form z − ξ or of the form z 2 − 2ξz + (ξ 2 + η 2 ), where the\nreal number ξ cannot be positive. This means that all factors have only terms\nwith coefficients of the same sign, and accordingly this also holds for a itself.\nThese coefficients must in fact be non-negative because a1 > 0.",
+  "proof_latex": "\\begin{proof}\nWrite the polynomial $a$ in the form\n\\[\na(z) = (1+z)^k - \\alpha_1 (1+z)^{k-1}(1-z) - \\alpha_2 (1+z)^{k-2}(1-z)^2 - \\cdots - \\alpha_k (1-z)^k.\n\\]\n\nWe calculate the value of $a_1$, the coefficient of $z$, to be\n\\[\nk - (k-2)\\alpha_1 - (k-4)\\alpha_2 - \\cdots - (-k)\\alpha_k = k\\alpha(1) - 2\\alpha'(1) = -2\\alpha'(1),\n\\]\nbecause $\\alpha(1) = 0$. The polynomial $\\rho$, which we recall is defined by\n\\[\n\\rho(z) = z^k - \\alpha_1 z^{k-1} - \\alpha_2 z^{k-2} - \\cdots - \\alpha_k,\n\\]\nhas no real zeros greater than $1$, and hence, because $\\rho(1) = 0$ and because\n$\\lim_{z\\to\\infty} \\rho(z) = \\infty$, it is necessary that $\\rho'(1) > 0$. Calculate this to be\n\\[\n\\rho'(1) = k - (k-1)\\alpha_1 - (k-2)\\alpha_2 - \\cdots - \\alpha_{k-1} = a_1.\n\\]\nThis completes the proof that $a_1 > 0$.\n\nWrite $\\zeta$ for a possible zero of $a$ so that, because of the relationship between\nthis polynomial and $\\alpha$, it follows that\n\\[\n\\frac{1-\\zeta}{1+\\zeta}\n\\]\nis a zero of $\\alpha$, unless it happens that $\\zeta = -1$, in which case there is a drop in\nthe degree of $\\alpha$. In either case, we must have $\\operatorname{Re}(\\zeta) \\le 0$. Because all zeros of\n$a$ are real, or occur in conjugate pairs, the polynomial $a$ can be decomposed\ninto factors of the form $z - \\xi$ or of the form $z^2 - 2\\xi z + (\\xi^2 + \\eta^2)$, where the\nreal number $\\xi$ cannot be positive. This means that all factors have only terms\nwith coefficients of the same sign, and accordingly this also holds for $a$ itself.\nThese coefficients must in fact be non-negative because $a_1 > 0$.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe lemma concerns a stable linear multistep method for ODEs, where \\(a(z)\\) and \\(b(z)\\) are polynomials of degree \\(k\\) derived from the generating polynomials \\(\\alpha\\) and \\(\\beta\\). The coefficients \\(a_i\\) are defined via the expansion of \\(a(z)\\).\n\nVariables:\n\\begin{itemize}\n    \\item \\(a(z) = a_0 + a_1 z + a_2 z^2 + \\dots + a_k z^k = (1+z)^k \\alpha\\!\\left(\\frac{1-z}{1+z}\\right)\\)\n    \\item \\(b(z) = b_0 + b_1 z + b_2 z^2 + \\dots + b_k z^k = (1+z)^k \\beta\\!\\left(\\frac{1-z}{1+z}\\right)\\)\n    \\item \\(a_0, a_1, \\dots, a_k\\): coefficients of the polynomial \\(a(z)\\)\n    \\item \\(k\\): degree of the polynomials \\(a(z)\\) and \\(b(z)\\)\n    \\item \\(p\\): order of the method, such that certain expressions are \\(O(z^p)\\)\n\\end{itemize}\n\nReferenced equation:\n\\begin{equation}\n(1+z)^k \\alpha\\!\\left(\\frac{1-z}{1+z}\\right) \\cdot \\frac{z}{\\log\\!\\left(\\frac{1+z}{1-z}\\right)} - (1+z)^k \\beta\\!\\left(\\frac{1-z}{1+z}\\right) = O(z^p) \\tag{441a}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "a(z)",
+      "definition": "a(z) = a0 + a1 z + a2 z^2 + ... + ak z^k = (1+z)^k α((1-z)/(1+z))"
+    },
+    {
+      "name": "b(z)",
+      "definition": "b(z) = b0 + b1 z + b2 z^2 + ... + bk z^k = (1+z)^k β((1-z)/(1+z))"
+    },
+    {
+      "name": "a0, a1, ..., ak",
+      "definition": "coefficients of the polynomial a(z)"
+    },
+    {
+      "name": "k",
+      "definition": "degree of the polynomials a(z) and b(z)"
+    },
+    {
+      "name": "p",
+      "definition": "order of the method, such that certain expressions are O(z^p)"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "441a",
+      "content": "(1+z)^k α((1-z)/(1+z)) * (z / log((1+z)/(1-z))) - (1+z)^k β((1-z)/(1+z)) = O(z^p)"
+    }
+  ],
+  "preamble": "The lemma concerns a stable linear multistep method for ODEs, where a(z) and b(z) are polynomials of degree k derived from the generating polynomials α and β. The coefficients a_i are defined via the expansion of a(z).",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:404B",
+      "kind": "definition",
+      "number": "404B",
+      "name": "consistent (LMM)",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:441C",
+      "kind": "theorem",
+      "number": "441C",
+      "name": "Maximum order bound for stable linear multistep methods",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "lem:441B",
+      "kind": "lemma",
+      "number": "441B",
+      "name": "Maximum order coefficients negativity",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:310A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "lem:110B",
+    "lem:441B",
+    "thm:110C",
+    "thm:111A",
+    "thm:140A",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:441C"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

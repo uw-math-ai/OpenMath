@@ -1,0 +1,60 @@
+{
+  "id": "thm:123A",
+  "kind": "theorem",
+  "number": "123A",
+  "name": "Further Hamiltonian problems",
+  "is_helper": false,
+  "chapter": 1,
+  "section": "12",
+  "subsection": "123",
+  "subsection_title": "Further Hamiltonian problems",
+  "page": 56,
+  "statement_text": "H(y(x)) is invariant.",
+  "statement_latex": "\\begin{theorem}\n$H(y(x))$ is invariant.\n\\end{theorem}",
+  "proof_text": "Proof. Calculate ∂H/∂y to obtain the result\n                         ∇(H) J∇(H) = 0.",
+  "proof_latex": "\\begin{proof}\nCalculate $\\partial H/\\partial y$ to obtain the result\n\\[\n\\nabla(H) J\\nabla(H) = 0.\n\\]\n\nThe Jacobian of this problem is equal to\n\\[\n\\frac{\\partial}{\\partial y} f(y) = \\frac{\\partial}{\\partial y} (J\\nabla(H)) = J W(y),\n\\]\nwhere $W$ is the `Wronskian' matrix defined as the $2N \\times 2N$ matrix with $(i, j)$ element equal to $\\partial^2 H/\\partial y_i \\partial y_j$.\n\nIf the initial value $y_0 = y(x_0)$ is perturbed by a small number multiplied by a fixed vector $v_0$, then, to within $O(\\epsilon^2)$, the solution is modified by $v + O(\\epsilon^2)$ where\n\\[\nv'(x) = \\frac{\\partial f}{\\partial y} v(x) = J W(y) v(x).\n\\]\nFor two such perturbations $u$ and $v$, it is interesting to consider\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe system is in Hamiltonian form, where $y$ is a vector combining momenta and coordinates. Let $H(p_1,\\dots,p_N,q_1,\\dots,q_N)$ be the Hamiltonian, regarded as a function of $y$. Define the vector $y(x) = (y_1,\\dots,y_{2N})$ with $y_i = p_i$ for $1 \\le i \\le N$ and $y_i = q_{i-N}$ for $N+1 \\le i \\le 2N$. Let $J = \\begin{pmatrix} 0 & -I \\\\ I & 0 \\end{pmatrix}$, where $I$ is the $N \\times N$ unit matrix, and let $\\nabla H$ be the gradient of $H$ with respect to $y$. The dynamics are given by\n\\begin{equation}\ny' = f(y), \\quad \\text{where } f(y) = J \\nabla H.\n\\end{equation}",
+  "variables": [
+    {
+      "name": "H",
+      "definition": "Hamiltonian function H(p1, p2, ..., pN, q1, q2, ..., qN), regarded as a function of y"
+    },
+    {
+      "name": "y",
+      "definition": "vector variable y(x) made up from N momenta followed by N coordinates: yi = pi for 1 ≤ i ≤ N, yi = qi-N for N+1 ≤ i ≤ 2N"
+    },
+    {
+      "name": "J",
+      "definition": "matrix J = [[0, -I], [I, 0]], where I is the N×N unit matrix"
+    },
+    {
+      "name": "∇(H)",
+      "definition": "gradient of H with respect to y"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "y' = f(y)",
+      "content": "y' = f(y) where f(y) = J∇(H)"
+    }
+  ],
+  "preamble": "The system is in Hamiltonian form, where y is a vector combining momenta and coordinates, and the dynamics are given by y' = J∇(H). The theorem states that the Hamiltonian H is invariant along solutions y(x).",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:123B",
+      "kind": "theorem",
+      "number": "123B",
+      "name": "Area invariance for Hamiltonian parallelograms",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "thm:123B"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

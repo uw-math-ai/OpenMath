@@ -1,0 +1,72 @@
+{
+  "id": "thm:355G",
+  "kind": "theorem",
+  "number": "355G",
+  "name": "A-stability Pade approximation order restriction",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "355",
+  "subsection_title": "Order arrows and the Ehle barrier",
+  "page": 266,
+  "statement_text": "Let R(z) denote the stability function of a Runge–Kutta\nmethod. If R(z) is an (n, d) Padé approximation to exp(z) then the Runge–\nKutta is not A-stable unless d ≤ n + 2.",
+  "statement_latex": "\\begin{theorem}[355G]\nLet \\( R(z) \\) denote the stability function of a Runge--Kutta method. If \\( R(z) \\) is an \\( (n, d) \\) Pad\\'e approximation to \\( \\exp(z) \\) then the Runge--Kutta method is not A-stable unless \\( d \\leq n + 2 \\).\n\\end{theorem}",
+  "proof_text": "Proof. If d ≥ n + 3 and p = n + d, it follows that d ≥ 12 (p + 3). By Theorem\n355E, at least d up arrows terminate at poles. Suppose these leave zero in\ndirections between −θ and +θ from the positive real axis. Then\n\n                                     2π(d − 1)\n                              2θ ≥             ≥ π,\n                                       p+1\nand at least one up arrow, which terminates at a pole, is tangential to the\nimaginary axis or passes into the left half-plane. If the pole is in the left half-\nplane, then the stability function is unbounded in this half-plane. On the other\nhand, if the pole is in the right half-plane, then the up arrow must cross the\nimaginary axis. In either case, the method cannot be A-stable, by Theorem\n355F.",
+  "proof_latex": "\\begin{proof}\nIf \\( d \\geq n + 3 \\) and \\( p = n + d \\), it follows that \\( d \\geq \\frac{1}{2}(p + 3) \\). By Theorem~355E, at least \\( d \\) up arrows terminate at poles. Suppose these leave zero in directions between \\( -\\theta \\) and \\( +\\theta \\) from the positive real axis. Then\n\\[\n2\\theta \\geq \\frac{2\\pi(d - 1)}{p + 1} \\geq \\pi,\n\\]\nand at least one up arrow, which terminates at a pole, is tangential to the imaginary axis or passes into the left half-plane. If the pole is in the left half-plane, then the stability function is unbounded in this half-plane. On the other hand, if the pole is in the right half-plane, then the up arrow must cross the imaginary axis. In either case, the method cannot be A-stable, by Theorem~355F.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:355E",
+      "kind": "theorem",
+      "number": "355E",
+      "name": "Pade approximation arrow termination theorem",
+      "edge_type": "uses_theorem",
+      "context": "Theorem\n355E"
+    },
+    {
+      "id": "thm:355F",
+      "kind": "theorem",
+      "number": "355F",
+      "name": "A stability condition for Runge Kutta methods",
+      "edge_type": "uses_theorem",
+      "context": "Theorem\n355F"
+    },
+    {
+      "id": "def:355A",
+      "kind": "definition",
+      "number": "355A",
+      "name": "down arrows",
+      "edge_type": "uses_concept",
+      "context": "up arrow"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:342D",
+    "def:350A",
+    "def:355A",
+    "lem:342A",
+    "lem:342B",
+    "lem:359A",
+    "thm:342C",
+    "thm:351B",
+    "thm:352A",
+    "thm:352C",
+    "thm:352D",
+    "thm:352E",
+    "thm:355B",
+    "thm:355C",
+    "thm:355D",
+    "thm:355E",
+    "thm:355F"
+  ],
+  "dependents": [
+    "thm:443A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}
