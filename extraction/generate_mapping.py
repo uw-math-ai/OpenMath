@@ -244,17 +244,44 @@ _KIND_WORDS = {
     "cor": ["Corollary", "Cor"],
 }
 
+# Which Lean keywords are acceptable when looking for an entity of a given
+# kind. Note that Lean 4 has no `corollary` keyword — corollaries are
+# normally written as `theorem` in Mathlib-style code.
+_KIND_ACCEPT = {
+    "thm": {"theorem", "lemma"},
+    "def": {"def", "structure", "class", "abbrev", "instance", "inductive"},
+    "lem": {"lemma", "theorem"},
+    "cor": {"theorem", "lemma"},
+}
+
+_KIND_DECL_RE = re.compile(
+    r"^[ \t]*(?:noncomputable\s+|protected\s+|private\s+)*"
+    r"(def|theorem|lemma|abbrev|structure|class|instance|inductive)\s+"
+)
+
+
+def _line_kind(line: str) -> str | None:
+    m = _KIND_DECL_RE.match(line)
+    return m.group(1) if m else None
+
 
 def find_by_textbook_reference(
     lean_root: Path, entity_id: str
 ) -> tuple[Path, int] | None:
-    """Look for a docstring/comment in any *.lean file under lean_root that
-    references this entity's textbook id (e.g. 'Theorem 355B' or '§355B'
-    for entity 'thm:355B') and return the file and line of the FIRST
-    declaration that follows it within a small window.
+    """Locate the declaration that formalizes a textbook entity, using
+    docstring/comment references like 'Theorem 355B' or '§355B'.
 
-    This is the most reliable matching signal we have: main's Lean files
-    often annotate declarations with their Butcher section number.
+    Strategy:
+      1. Collect candidates from every *.lean file: for each reference,
+         look ahead up to 40 lines for the FIRST declaration.
+      2. Prefer candidates whose Lean keyword matches the entity's kind
+         (a `theorem`/`lemma` for `thm:XXX`; a `def`/`structure`/... for
+         `def:XXX`). This avoids picking an auxiliary `def` that happens
+         to follow a docstring about Theorem 355B.
+      3. Among the preferred set, return the one with the smallest
+         reference-to-declaration distance (tightest binding).
+      4. Only if no kind-matching candidate exists, fall back to the
+         closest any-kind candidate.
     """
     if ":" not in entity_id:
         return None
@@ -262,12 +289,15 @@ def find_by_textbook_reference(
     if not re.fullmatch(r"\d{3}[A-Z]", num):
         return None
     words = _KIND_WORDS.get(kind, [])
-    # Allow `§NUM` too (kind-agnostic).
     alternation = "|".join(re.escape(w) for w in (words + ["§"])) or "§"
     ref_re = re.compile(
         rf"(?:{alternation})\s*{re.escape(num)}(?![0-9A-Za-z])",
         re.IGNORECASE,
     )
+
+    accept_kinds = _KIND_ACCEPT.get(kind, set())
+    kind_hits: list[tuple[int, Path, int]] = []
+    any_hits:  list[tuple[int, Path, int]] = []
 
     for f in sorted(lean_root.rglob("*.lean")):
         try:
@@ -275,13 +305,25 @@ def find_by_textbook_reference(
         except (OSError, UnicodeDecodeError):
             continue
         for i, line in enumerate(lines):
-            if ref_re.search(line):
-                # Find next declaration within the next 40 lines.
-                for j in range(i, min(i + 40, len(lines))):
-                    if _DECL_RE.match(lines[j]):
-                        return (f, j)
-                # No declaration nearby — keep looking elsewhere.
-    return None
+            if not ref_re.search(line):
+                continue
+            for j in range(i, min(i + 40, len(lines))):
+                decl_kind = _line_kind(lines[j])
+                if not decl_kind:
+                    continue
+                distance = j - i
+                if decl_kind in accept_kinds:
+                    kind_hits.append((distance, f, j))
+                else:
+                    any_hits.append((distance, f, j))
+                break  # only the first declaration following each reference
+
+    pool = kind_hits if kind_hits else any_hits
+    if not pool:
+        return None
+    pool.sort(key=lambda c: (c[0], str(c[1]), c[2]))
+    _, f, j = pool[0]
+    return (f, j)
 
 
 def _camelcase(s: str) -> str:
@@ -461,7 +503,7 @@ def extract_statements_for_entry(
                     elif not lean_file_rel:
                         notes.append(f"discovered in {rel}")
 
-        if stmt:
+        if stmt and stmt not in results:
             results.append(stmt)
             if actual is not None:
                 actual_files.append(actual)

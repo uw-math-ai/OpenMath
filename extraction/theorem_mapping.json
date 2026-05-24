@@ -58,7 +58,9 @@
       "thm:358A",
       "thm:363A"
     ],
-    "lean_statement": "noncomputable def shiftedLegendreP : ℕ → ℝ → ℝ\n  | 0, _ => 1\n  | 1, x => 2 * x - 1\n  | n + 2, x =>\n    ((2 * (n : ℝ) + 3) * (2 * x - 1) * shiftedLegendreP (n + 1) x -\n      ((n : ℝ) + 1) * shiftedLegendreP n x) / ((n : ℝ) + 2)\n\n/-! ## Basic Evaluations -/\n\n@[simp] theorem shiftedLegendreP_zero (x : ℝ) : shiftedLegendreP 0 x = 1 := rfl\n\n@[simp] theorem shiftedLegendreP_one (x : ℝ) :\n    shiftedLegendreP 1 x = 2 * x - 1 := rfl"
+    "lean_statement": "theorem gaussLegendre_full_conditions (t : ButcherTableau s)\n    (hGL : t.HasGaussLegendreNodes)\n    (hB : t.SatisfiesB s)\n    (hC : t.SatisfiesC s)\n    (hc_inj : Function.Injective t.c) :\n    t.SatisfiesB (2 * s) ∧ t.SatisfiesE s s ∧ t.SatisfiesD s",
+    "lean_back_translation": "Let \\(t\\) be an \\(s\\)-stage Butcher tableau. If  \n- \\(t\\) has Gauss–Legendre nodes,  \n- \\(t\\) satisfies the simplifying assumption \\(B(s)\\),  \n- \\(t\\) satisfies the simplifying assumption \\(C(s)\\), and  \n- the abscissae \\(c_i\\) of \\(t\\) are distinct,  \n\nthen \\(t\\) satisfies \\(B(2s)\\), \\(E(s,s)\\), and \\(D(s)\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "cor:356D": {
     "lean_symbol": null,
@@ -93,7 +95,9 @@
     "dependents": [
       "def:356B"
     ],
-    "lean_statement": "def IsDJReducible (t : ButcherTableau s) : Prop :=\n  ∃ S₀ : Finset (Fin s),\n    S₀.Nonempty ∧\n    (∀ j ∈ S₀, t.b j = 0) ∧\n    (∀ i, i ∉ S₀ → ∀ j ∈ S₀, t.A i j = 0)\n\n/-- DJ-irreducibility is the negation of DJ-reducibility. -/"
+    "lean_statement": "theorem cor_356D {t : ButcherTableau s} (hAN : t.IsANStable) (hirr : t.IsDJIrreducible) :\n    ∀ i : Fin s, 0 < t.b i",
+    "lean_back_translation": "If a Butcher tableau \\(t\\) with \\(s\\) stages is A-stable and DJ-irreducible, then all of its weights \\(b_i\\) are strictly positive: for every \\(i = 1, \\dots, s\\), we have \\(b_i > 0\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "cor:359B": {
     "lean_symbol": null,
@@ -779,7 +783,9 @@
       "thm:355G",
       "thm:443B"
     ],
-    "lean_statement": "def orderWeb (R : ℂ → ℂ) : Set ℂ := {z | ∃ r : ℝ, 0 < r ∧ R z * exp (-z) = ↑r}\n\n/-- A ray direction `θ` from the origin is an **up-arrow direction** if\n    `t ↦ ‖R(t·exp(iθ))·exp(-t·exp(iθ))‖` exceeds 1 for small positive `t`. -/"
+    "lean_statement": "def orderWeb (R : ℂ → ℂ) : Set ℂ := {z | ∃ r : ℝ, 0 < r ∧ R z * exp (-z) = ↑r}\n\n/-- A ray direction `θ` from the origin is an **up-arrow direction** if\n    `t ↦ ‖R(t·exp(iθ))·exp(-t·exp(iθ))‖` exceeds 1 for small positive `t`. -/",
+    "lean_back_translation": "A ray direction \\(\\theta\\) from the origin is an **up-arrow direction** if the function \\(t \\mapsto \\|R(t e^{i\\theta}) e^{-t e^{i\\theta}}\\|\\) exceeds \\(1\\) for all sufficiently small positive \\(t\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:356A": {
     "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsDJIrreducible",
@@ -847,7 +853,9 @@
       "def:357A",
       "thm:357D"
     ],
-    "lean_statement": "def IsDJIrreducible (t : ButcherTableau s) : Prop :=\n  ¬ t.IsDJReducible"
+    "lean_statement": "def IsDJIrreducible (t : ButcherTableau s) : Prop :=\n  ¬ t.IsDJReducible",
+    "lean_back_translation": "A Butcher tableau \\(t\\) with \\(s\\) stages is called *DJ-irreducible* (irreducible in the sense of Dahlquist and Jeltsch) if it is not DJ-reducible.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:356B": {
     "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsDJReducible",
@@ -912,7 +920,9 @@
       "def:356A",
       "thm:357D"
     ],
-    "lean_statement": "def IsDJReducible (t : ButcherTableau s) : Prop :=\n  ∃ S₀ : Finset (Fin s),\n    S₀.Nonempty ∧\n    (∀ j ∈ S₀, t.b j = 0) ∧\n    (∀ i, i ∉ S₀ → ∀ j ∈ S₀, t.A i j = 0)\n\n/-- DJ-irreducibility is the negation of DJ-reducibility. -/"
+    "lean_statement": "def IsDJReducible (t : ButcherTableau s) : Prop :=\n  ∃ S₀ : Finset (Fin s),\n    S₀.Nonempty ∧\n    (∀ j ∈ S₀, t.b j = 0) ∧\n    (∀ i, i ∉ S₀ → ∀ j ∈ S₀, t.A i j = 0)\n\n/-- DJ-irreducibility is the negation of DJ-reducibility. -/",
+    "lean_back_translation": "A Butcher tableau \\( t \\) with \\( s \\) stages is called **DJ-reducible** if there exists a nonempty subset \\( S_0 \\) of the stage indices \\(\\{1, \\dots, s\\}\\) such that:\n\n1. For every \\( j \\in S_0 \\), the weight \\( b_j \\) is zero.\n2. For every \\( i \\notin S_0 \\) and every \\( j \\in S_0 \\), the coefficient \\( a_{ij} \\) is zero.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:357A": {
     "lean_symbol": "OpenMath.Chapter3.Section357.IsBNStable",
@@ -959,7 +969,9 @@
       "thm:357C",
       "thm:357D"
     ],
-    "lean_statement": "def IsBNStable (t : ButcherTableau s) : Prop :=\n  ∀ {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]\n    (f : ℝ → E → E),\n    IsDissipative f →\n    ∀ x h, 0 ≤ h →\n    ∀ y₀ z₀ y₁ z₁ : E,\n    ∀ Y Z F G : Fin s → E,\n    SatisfiesRKStep t f x h y₀ Y F y₁ →\n    SatisfiesRKStep t f x h z₀ Z G z₁ →\n    ‖y₁ - z₁‖ ≤ ‖y₀ - z₀‖"
+    "lean_statement": "def IsBNStable (t : ButcherTableau s) : Prop :=\n  ∀ {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]\n    (f : ℝ → E → E),\n    IsDissipative f →\n    ∀ x h, 0 ≤ h →\n    ∀ y₀ z₀ y₁ z₁ : E,\n    ∀ Y Z F G : Fin s → E,\n    SatisfiesRKStep t f x h y₀ Y F y₁ →\n    SatisfiesRKStep t f x h z₀ Z G z₁ →\n    ‖y₁ - z₁‖ ≤ ‖y₀ - z₀‖",
+    "lean_back_translation": "A Butcher tableau \\(t\\) with \\(s\\) stages is called **B-stable** if for every real inner product space \\(E\\), every dissipative function \\(f : \\mathbb{R} \\times E \\to E\\), every step size \\(h \\ge 0\\), and every pair of Runge–Kutta steps\n\n\\[\n\\begin{aligned}\n(y_0, Y, F, y_1) &\\quad\\text{satisfying}\\quad \\text{SatisfiesRKStep}(t, f, x, h, y_0, Y, F, y_1),\\\\\n(z_0, Z, G, z_1) &\\quad\\text{satisfying}\\quad \\text{SatisfiesRKStep}(t, f, x, h, z_0, Z, G, z_1),\n\\end{aligned}\n\\]\n\nthe contractivity estimate\n\n\\[\n\\|y_1 - z_1\\| \\le \\|y_0 - z_0\\|\n\\]\n\nholds.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:357B": {
     "lean_symbol": "OpenMath.Chapter3.Section357.IsAlgebraicallyStable",
@@ -1276,7 +1288,9 @@
     "dependents": [
       "thm:372A"
     ],
-    "lean_statement": "theorem dotProduct_mulVec_symm {n : ℕ} {S : Matrix (Fin n) (Fin n) ℝ}\n    (hS : S.IsSymm) (v w : Fin n → ℝ) :\n    v ⬝ᵥ S *ᵥ w = w ⬝ᵥ S *ᵥ v"
+    "lean_statement": "theorem dotProduct_mulVec_symm {n : ℕ} {S : Matrix (Fin n) (Fin n) ℝ}\n    (hS : S.IsSymm) (v w : Fin n → ℝ) :\n    v ⬝ᵥ S *ᵥ w = w ⬝ᵥ S *ᵥ v",
+    "lean_back_translation": "If \\(S\\) is a symmetric \\(n \\times n\\) real matrix, then for all vectors \\(v, w \\in \\mathbb{R}^n\\),\n\n\\[\nv \\cdot (S w) = w \\cdot (S v).\n\\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:381A": {
     "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.Equivalent",
@@ -1821,7 +1835,9 @@
       "thm:405C",
       "thm:406D"
     ],
-    "lean_statement": "def IsConvergent (m : LMM s) : Prop :=\n  m.IsConsistent ∧ m.HasStableRecurrence\n\n/-- **Dahlquist Equivalence Theorem** (Iserles, Theorem 1.5.2):\n  A linear multistep method is convergent if and only if it is consistent\n  and zero-stable.\n\n  Forward direction: consistency + zero-stability → convergence.\n  - Consistency ensures the local truncation error is o(h).\n  - Zero-stability (root condition) ensures the error propagation operator\n    has uniformly bounded powers (via the stable recurrence).\n  - Combined with the Gronwall bound, the global error → 0.\n\n  Backward direction: convergence → consistency + zero-stability.\n  - Convergence → consistency: test with y = c and y = t.\n  - Convergence → zero-stability: via stable recurrence (proved above). -/"
+    "lean_statement": "def IsConvergent (m : LMM s) : Prop :=\n  m.IsConsistent ∧ m.HasStableRecurrence\n\n/-- **Dahlquist Equivalence Theorem** (Iserles, Theorem 1.5.2):\n  A linear multistep method is convergent if and only if it is consistent\n  and zero-stable.\n\n  Forward direction: consistency + zero-stability → convergence.\n  - Consistency ensures the local truncation error is o(h).\n  - Zero-stability (root condition) ensures the error propagation operator\n    has uniformly bounded powers (via the stable recurrence).\n  - Combined with the Gronwall bound, the global error → 0.\n\n  Backward direction: convergence → consistency + zero-stability.\n  - Convergence → consistency: test with y = c and y = t.\n  - Convergence → zero-stability: via stable recurrence (proved above). -/",
+    "lean_back_translation": "A linear multistep method \\(m\\) is called **convergent** if it is both consistent and has a stable recurrence.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:403A": {
     "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.IsStable",
@@ -1890,7 +1906,9 @@
       "thm:422C",
       "thm:441C"
     ],
-    "lean_statement": "def IsStable (m : GeneralLinearMethod s r) : Prop :=\n  ∃ M : ℝ, 0 ≤ M ∧ ∀ (n : ℕ) (q : Fin r → ℝ),\n    (∀ k, |q k| ≤ 1) →\n    ∀ k, |((fun v => fun k' => ∑ l, m.V k' l * v l)^[n] q) k| ≤ M\n\n/-- Butcher §512 — convergence of a general linear method. We define this\nthrough the two algebraic conditions that characterize it on the GLM side:\nconsistency (§510) and stability (§510). The full Dahlquist-style\nequivalence with sequence-level convergence is §515. -/"
+    "lean_statement": "def IsStable (m : GeneralLinearMethod s r) : Prop :=\n  ∃ M : ℝ, 0 ≤ M ∧ ∀ (n : ℕ) (q : Fin r → ℝ),\n    (∀ k, |q k| ≤ 1) →\n    ∀ k, |((fun v => fun k' => ∑ l, m.V k' l * v l)^[n] q) k| ≤ M\n\n/-- Butcher §512 — convergence of a general linear method. We define this\nthrough the two algebraic conditions that characterize it on the GLM side:\nconsistency (§510) and stability (§510). The full Dahlquist-style\nequivalence with sequence-level convergence is §515. -/",
+    "lean_back_translation": "A general linear method \\(m\\) with \\(s\\) internal stages and \\(r\\) external approximations is called **stable** (in the sense of Dahlquist) if there exists a real number \\(M \\ge 0\\) such that for every integer \\(n \\ge 0\\) and every vector \\(q \\in \\mathbb{R}^r\\) with \\(|q_k| \\le 1\\) for all \\(k\\), the iterated application of the linear map \\(v \\mapsto \\bigl(k' \\mapsto \\sum_l m.V_{k',l}\\, v_l\\bigr)\\) satisfies\n\\[\n\\Bigl|\\bigl((v \\mapsto (k' \\mapsto \\sum_l m.V_{k',l}\\, v_l))^{\\circ n}\\, q\\bigr)_k\\Bigr| \\le M\n\\]\nfor all components \\(k\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:404A": {
     "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.IsPreconsistent",
@@ -1948,7 +1966,9 @@
       "thm:422A",
       "thm:422C"
     ],
-    "lean_statement": "def IsPreconsistent (m : GeneralLinearMethod s r) : Prop :=\n  ∃ q : Fin r → ℝ,\n    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧\n    (∀ i : Fin s, ∑ k, m.U i k * q k = 1)\n\n/-- Butcher §510 — stability. The iterated propagation of any bounded\ninput by `V` stays uniformly bounded. We phrase this in elementary\nterms (no `Matrix.pow` unfolding) by iterating the explicit-sum\n`mulVec`. -/"
+    "lean_statement": "def IsPreconsistent (m : GeneralLinearMethod s r) : Prop :=\n  ∃ q : Fin r → ℝ,\n    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧\n    (∀ i : Fin s, ∑ k, m.U i k * q k = 1)\n\n/-- Butcher §510 — stability. The iterated propagation of any bounded\ninput by `V` stays uniformly bounded. We phrase this in elementary\nterms (no `Matrix.pow` unfolding) by iterating the explicit-sum\n`mulVec`. -/",
+    "lean_back_translation": "**Definition.** A general linear method \\(m\\) with \\(s\\) stages and \\(r\\) quantities is called *preconsistent* if there exists a vector \\(q \\in \\mathbb{R}^r\\) such that\n\n1. \\(q\\) is a fixed point of the matrix \\(V\\): for every \\(k \\in \\{1,\\dots,r\\}\\),\n   \\[\n   \\sum_{l=1}^r V_{k l}\\, q_l = q_k,\n   \\]\n2. and the matrix \\(U\\) maps \\(q\\) to the all-ones vector: for every \\(i \\in \\{1,\\dots,s\\}\\),\n   \\[\n   \\sum_{k=1}^r U_{i k}\\, q_k = 1.\n   \\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:404B": {
     "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.IsConsistent",
@@ -2024,7 +2044,9 @@
       "thm:406D",
       "thm:410B"
     ],
-    "lean_statement": "structure IsConsistent (p : EmbeddedRKPair s) : Prop where\n  main_consistent : p.mainMethod.IsConsistent\n  embed_consistent : p.embedMethod.IsConsistent\n\n/-- An embedded pair is **explicit** if A is strictly lower triangular. -/"
+    "lean_statement": "structure IsConsistent (p : EmbeddedRKPair s) : Prop where\n  main_consistent : p.mainMethod.IsConsistent\n  embed_consistent : p.embedMethod.IsConsistent\n\n/-- An embedded pair is **explicit** if A is strictly lower triangular. -/",
+    "lean_back_translation": "An embedded Runge–Kutta pair \\(p\\) is called **consistent** if both its main method and its embedded method are consistent.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:406A": {
     "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.localTruncationError",
@@ -2094,7 +2116,9 @@
     "dependents": [
       "lem:406B"
     ],
-    "lean_statement": "noncomputable def localTruncationError\n    (m : LMM s) (h t : ℝ) (y : ℝ → ℝ) : ℝ :=\n  m.truncationOp h\n    (fun u => iteratedDeriv 0 y u)\n    (fun u => iteratedDeriv 1 y u) t\n\n/-- Uniform-in-`h` bound on the local truncation error for an order-`p` LMM\nacting on a `C^(p+2)` solution: there exist constants `C ≥ 0` and `δ > 0` such\nthat `τ(t, h)` agrees with the leading term `y^(p+1)(t) · errorConstant · h^(p+1)`\nup to size `C * h^(p+2)`, uniformly for `h ∈ (0, δ]`. -/"
+    "lean_statement": "noncomputable def localTruncationError\n    (m : LMM s) (h t : ℝ) (y : ℝ → ℝ) : ℝ :=\n  m.truncationOp h\n    (fun u => iteratedDeriv 0 y u)\n    (fun u => iteratedDeriv 1 y u) t\n\n/-- Uniform-in-`h` bound on the local truncation error for an order-`p` LMM\nacting on a `C^(p+2)` solution: there exist constants `C ≥ 0` and `δ > 0` such\nthat `τ(t, h)` agrees with the leading term `y^(p+1)(t) · errorConstant · h^(p+1)`\nup to size `C * h^(p+2)`, uniformly for `h ∈ (0, δ]`. -/",
+    "lean_back_translation": "For a linear multistep method \\(m\\) of step number \\(s\\), a step size \\(h \\in \\mathbb{R}\\), a time \\(t \\in \\mathbb{R}\\), and a function \\(y: \\mathbb{R} \\to \\mathbb{R}\\), the **local truncation error** is defined as\n\\[\n\\tau(t, h) = m.\\text{truncationOp}_h\\big( u \\mapsto y(u),\\; u \\mapsto y'(u) \\big)(t).\n\\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:422B": {
     "lean_symbol": "OpenMath.Chapter4.Section422.D_element_elementaryWeight",
@@ -2251,7 +2275,9 @@
     "dependents": [
       "thm:454A"
     ],
-    "lean_statement": "structure IsGStable (m : OneLegMethod s) (G : Matrix (Fin s) (Fin s) ℝ) : Prop where\n  /-- The matrix defining the seminorm is positive semidefinite. -/\n  posSemidef : G.PosSemidef\n  /-- One-step `G`-norm bound for a scalar one-leg update. -/\n  energy_bound :\n    ∀ (h F : ℝ) (Y : Fin (s + 1) → ℝ),\n      (∑ j : Fin (s + 1), m.α j * Y j = h * m.betaTotal * F) →\n        gNormSq G (newState Y) ≤\n          gNormSq G (oldState Y) + 2 * h * m.betaTotal * F * m.weightedState Y\n  /-- Contractivity when the scalar vector field is monotone at the one-leg state. -/\n  contractive :\n    ∀ (h F : ℝ) (Y : Fin (s + 1) → ℝ),\n      0 ≤ h →\n      0 ≤ m.betaTotal →\n      (∑ j : Fin (s + 1), m.α j * Y j = h * m.betaTotal * F) →\n      F * m.weightedState Y ≤ 0 →\n        gNormSq G (newState Y) ≤ gNormSq G (oldState Y)\n\n/-! ## Trapezoidal one-leg method -/\n\n/-- The trapezoidal one-leg method is `G`-stable for the `1 x 1` identity matrix. -/"
+    "lean_statement": "structure IsGStable (m : OneLegMethod s) (G : Matrix (Fin s) (Fin s) ℝ) : Prop where\n  /-- The matrix defining the seminorm is positive semidefinite. -/\n  posSemidef : G.PosSemidef\n  /-- One-step `G`-norm bound for a scalar one-leg update. -/\n  energy_bound :\n    ∀ (h F : ℝ) (Y : Fin (s + 1) → ℝ),\n      (∑ j : Fin (s + 1), m.α j * Y j = h * m.betaTotal * F) →\n        gNormSq G (newState Y) ≤\n          gNormSq G (oldState Y) + 2 * h * m.betaTotal * F * m.weightedState Y\n  /-- Contractivity when the scalar vector field is monotone at the one-leg state. -/\n  contractive :\n    ∀ (h F : ℝ) (Y : Fin (s + 1) → ℝ),\n      0 ≤ h →\n      0 ≤ m.betaTotal →\n      (∑ j : Fin (s + 1), m.α j * Y j = h * m.betaTotal * F) →\n      F * m.weightedState Y ≤ 0 →\n        gNormSq G (newState Y) ≤ gNormSq G (oldState Y)\n\n/-! ## Trapezoidal one-leg method -/\n\n/-- The trapezoidal one-leg method is `G`-stable for the `1 x 1` identity matrix. -/",
+    "lean_back_translation": "The one-leg method \\(m\\) is called \\(G\\)-stable (for a given \\(s \\times s\\) real matrix \\(G\\)) if the following three conditions hold:\n\n1. **Positive semidefiniteness:** \\(G\\) is positive semidefinite.\n\n2. **Energy bound:** For all real numbers \\(h, F\\) and all vectors \\(Y \\in \\mathbb{R}^{s+1}\\), if  \n   \\[\n   \\sum_{j=0}^{s} \\alpha_j Y_j = h \\, \\beta_{\\text{total}} F,\n   \\]  \n   then  \n   \\[\n   \\| \\text{newState}(Y) \\|_G^2 \\le \\| \\text{oldState}(Y) \\|_G^2 + 2 h \\, \\beta_{\\text{total}} F \\, \\text{weightedState}(Y),\n   \\]  \n   where \\(\\| \\cdot \\|_G\\) denotes the seminorm induced by \\(G\\).\n\n3. **Contractivity:** For all real numbers \\(h, F\\) and all vectors \\(Y \\in \\mathbb{R}^{s+1}\\), if  \n   \\[\n   h \\ge 0,\\quad \\beta_{\\text{total}} \\ge 0,\\quad \\sum_{j=0}^{s} \\alpha_j Y_j = h \\, \\beta_{\\text{total}} F,\\quad \\text{and}\\quad F \\, \\text{weightedState}(Y) \\le 0,\n   \\]  \n   then  \n   \\[\n   \\| \\text{newState}(Y) \\|_G^2 \\le \\| \\text{oldState}(Y) \\|_G^2.\n   \\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:510A": {
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsPreconsistent",
@@ -2329,7 +2355,9 @@
       "thm:515D",
       "thm:535A"
     ],
-    "lean_statement": "def IsPreconsistent (m : GeneralLinearMethod s r) : Prop :=\n  ∃ q : Fin r → ℝ,\n    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧\n    (∀ i : Fin s, ∑ k, m.U i k * q k = 1)\n\n/-- Butcher §510 — stability. The iterated propagation of any bounded\ninput by `V` stays uniformly bounded. We phrase this in elementary\nterms (no `Matrix.pow` unfolding) by iterating the explicit-sum\n`mulVec`. -/"
+    "lean_statement": "def IsPreconsistent (m : GeneralLinearMethod s r) : Prop :=\n  ∃ q : Fin r → ℝ,\n    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧\n    (∀ i : Fin s, ∑ k, m.U i k * q k = 1)\n\n/-- Butcher §510 — stability. The iterated propagation of any bounded\ninput by `V` stays uniformly bounded. We phrase this in elementary\nterms (no `Matrix.pow` unfolding) by iterating the explicit-sum\n`mulVec`. -/",
+    "lean_back_translation": "**Definition.** Let \\( m \\) be a general linear method with \\( s \\) stages and \\( r \\) quantities. The method \\( m \\) is called *preconsistent* if there exists a vector \\( q \\in \\mathbb{R}^r \\) such that\n\n1. for every \\( k \\in \\{0,\\dots,r-1\\} \\),  \n   \\[\n   \\sum_{l=0}^{r-1} m.V_{k,l}\\, q_l = q_k,\n   \\]\n   and  \n\n2. for every \\( i \\in \\{0,\\dots,s-1\\} \\),  \n   \\[\n   \\sum_{k=0}^{r-1} m.U_{i,k}\\, q_k = 1.\n   \\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:510B": {
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsConsistent",
@@ -2418,7 +2446,9 @@
       "thm:523A",
       "thm:535A"
     ],
-    "lean_statement": "def IsConsistent (m : GeneralLinearMethod s r) : Prop :=\n  ∃ q q' : Fin r → ℝ,\n    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧\n    (∀ i : Fin s, ∑ k, m.U i k * q k = 1) ∧\n    (∀ k : Fin r, (∑ j, m.B k j) + ∑ l, m.V k l * q' l = q k + q' k)\n\n/-- Butcher §510 — preconsistency. A general linear method is\npreconsistent if there is an input-vector decomposition `q : Fin r → ℝ`\nthat is a fixed point of `V` and is sent by `U` to the all-ones stage\nvector. The vector `q` interprets each input quantity as carrying a\ncopy of `y(x_n)`. -/"
+    "lean_statement": "def IsConsistent (m : GeneralLinearMethod s r) : Prop :=\n  ∃ q q' : Fin r → ℝ,\n    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧\n    (∀ i : Fin s, ∑ k, m.U i k * q k = 1) ∧\n    (∀ k : Fin r, (∑ j, m.B k j) + ∑ l, m.V k l * q' l = q k + q' k)\n\n/-- Butcher §510 — preconsistency. A general linear method is\npreconsistent if there is an input-vector decomposition `q : Fin r → ℝ`\nthat is a fixed point of `V` and is sent by `U` to the all-ones stage\nvector. The vector `q` interprets each input quantity as carrying a\ncopy of `y(x_n)`. -/",
+    "lean_back_translation": "A general linear method \\(m\\) with \\(s\\) stages and \\(r\\) input/output values is called **consistent** if there exist vectors \\(q, q' \\in \\mathbb{R}^r\\) such that:\n\n1. \\(q\\) is a fixed point of the matrix \\(V\\): for every \\(k = 1, \\dots, r\\),\n   \\[\n   \\sum_{l=1}^r V_{k l} \\, q_l = q_k.\n   \\]\n\n2. The matrix \\(U\\) maps \\(q\\) to the all-ones vector: for every \\(i = 1, \\dots, s\\),\n   \\[\n   \\sum_{k=1}^r U_{i k} \\, q_k = 1.\n   \\]\n\n3. For every \\(k = 1, \\dots, r\\),\n   \\[\n   \\sum_{j=1}^s B_{k j} \\;+\\; \\sum_{l=1}^r V_{k l} \\, q'_l \\;=\\; q_k + q'_k.\n   \\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:510C": {
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsStable",
@@ -2489,7 +2519,9 @@
       "thm:523A",
       "thm:535A"
     ],
-    "lean_statement": "def IsStable (m : GeneralLinearMethod s r) : Prop :=\n  ∃ M : ℝ, 0 ≤ M ∧ ∀ (n : ℕ) (q : Fin r → ℝ),\n    (∀ k, |q k| ≤ 1) →\n    ∀ k, |((fun v => fun k' => ∑ l, m.V k' l * v l)^[n] q) k| ≤ M\n\n/-- Butcher §512 — convergence of a general linear method. We define this\nthrough the two algebraic conditions that characterize it on the GLM side:\nconsistency (§510) and stability (§510). The full Dahlquist-style\nequivalence with sequence-level convergence is §515. -/"
+    "lean_statement": "def IsStable (m : GeneralLinearMethod s r) : Prop :=\n  ∃ M : ℝ, 0 ≤ M ∧ ∀ (n : ℕ) (q : Fin r → ℝ),\n    (∀ k, |q k| ≤ 1) →\n    ∀ k, |((fun v => fun k' => ∑ l, m.V k' l * v l)^[n] q) k| ≤ M\n\n/-- Butcher §512 — convergence of a general linear method. We define this\nthrough the two algebraic conditions that characterize it on the GLM side:\nconsistency (§510) and stability (§510). The full Dahlquist-style\nequivalence with sequence-level convergence is §515. -/",
+    "lean_back_translation": "A general linear method \\(m\\) is called **stable** if there exists a real number \\(M \\ge 0\\) such that for every number of steps \\(n \\in \\mathbb{N}\\) and every bounded input sequence \\(q \\colon \\{1,\\dots,r\\} \\to \\mathbb{R}\\) with \\(|q_k| \\le 1\\) for all \\(k\\), the \\(n\\)-fold iteration of the method’s step operator applied to \\(q\\) remains uniformly bounded by \\(M\\); that is, for all \\(k\\),\n\n\\[\n\\bigl| \\bigl( (v \\mapsto \\bigl(k' \\mapsto \\sum_l m.V_{k',l}\\, v_l\\bigr) \\bigr)^{\\circ n} q \\bigr)_k \\bigr| \\le M.\n\\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:512A": {
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsConvergent",
@@ -2583,7 +2615,9 @@
       "thm:514A",
       "thm:515D"
     ],
-    "lean_statement": "def IsConvergent (m : GeneralLinearMethod s r) : Prop :=\n  m.IsConsistent ∧ m.IsStable\n\n/-- **Butcher §530** — A general linear method `(A, U, B, V)` has\n**order at least 1** if it is §510-consistent. This packages the\nNordsieck input decomposition `(q, q')` together with the\nfirst-derivative compatibility identity, which is precisely the\norder-1 local-truncation-error condition for the GLM update on the\nscalar autonomous test problem `y' = f(y)`.\n\nHigher-order analogues (§530 order ≥ 2, ≥ 3, …) extend this with\nadditional Nordsieck input vectors `q'', q''', …` and the\ncorresponding Taylor-coefficient identities. Those are follow-up\nwork; the order-1 case below is what cycle 760 commits. -/"
+    "lean_statement": "def IsConvergent (m : GeneralLinearMethod s r) : Prop :=\n  m.IsConsistent ∧ m.IsStable\n\n/-- **Butcher §530** — A general linear method `(A, U, B, V)` has\n**order at least 1** if it is §510-consistent. This packages the\nNordsieck input decomposition `(q, q')` together with the\nfirst-derivative compatibility identity, which is precisely the\norder-1 local-truncation-error condition for the GLM update on the\nscalar autonomous test problem `y' = f(y)`.\n\nHigher-order analogues (§530 order ≥ 2, ≥ 3, …) extend this with\nadditional Nordsieck input vectors `q'', q''', …` and the\ncorresponding Taylor-coefficient identities. Those are follow-up\nwork; the order-1 case below is what cycle 760 commits. -/",
+    "lean_back_translation": "A general linear method \\(m\\) is called **convergent** if it is both consistent and stable.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:520A": {
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.stabilityMatrix",
@@ -2664,7 +2698,9 @@
       "thm:520B",
       "thm:551B"
     ],
-    "lean_statement": "noncomputable def stabilityMatrix\n    (m : GeneralLinearMethod s r) (z : ℂ) : Matrix (Fin r) (Fin r) ℂ :=\n  m.Vℂ + z • (m.Bℂ * ((1 : Matrix (Fin s) (Fin s) ℂ) - z • m.Aℂ)⁻¹ * m.Uℂ)\n\n@[simp] theorem stabilityMatrix_apply (m : GeneralLinearMethod s r)\n    (z : ℂ) (k l : Fin r) :\n    m.stabilityMatrix z k l =\n      m.Vℂ k l +\n        z * ∑ i, ∑ j,\n          m.Bℂ k i *\n            ((1 : Matrix (Fin s) (Fin s) ℂ) - z • m.Aℂ)⁻¹ i j *\n            m.Uℂ j l := by\n  simp [stabilityMatrix, Matrix.mul_apply, Finset.mul_sum, Finset.sum_mul, mul_assoc]\n  rw [Finset.sum_comm]"
+    "lean_statement": "noncomputable def stabilityMatrix\n    (m : GeneralLinearMethod s r) (z : ℂ) : Matrix (Fin r) (Fin r) ℂ :=\n  m.Vℂ + z • (m.Bℂ * ((1 : Matrix (Fin s) (Fin s) ℂ) - z • m.Aℂ)⁻¹ * m.Uℂ)\n\n@[simp] theorem stabilityMatrix_apply (m : GeneralLinearMethod s r)\n    (z : ℂ) (k l : Fin r) :\n    m.stabilityMatrix z k l =\n      m.Vℂ k l +\n        z * ∑ i, ∑ j,\n          m.Bℂ k i *\n            ((1 : Matrix (Fin s) (Fin s) ℂ) - z • m.Aℂ)⁻¹ i j *\n            m.Uℂ j l := by\n  simp [stabilityMatrix, Matrix.mul_apply, Finset.mul_sum, Finset.sum_mul, mul_assoc]\n  rw [Finset.sum_comm]",
+    "lean_back_translation": "**Definition.** Let \\( m \\) be a general linear method with \\( s \\) internal stages and \\( r \\) external approximations, and let \\( z \\in \\mathbb{C} \\). The *stability matrix* of \\( m \\) at \\( z \\) is the \\( r \\times r \\) complex matrix\n\n\\[\nS(m,z) = V + z \\, B \\, (I - z A)^{-1} U,\n\\]\n\nwhere \\( A, B, U, V \\) are the complex coefficient matrices of the method (of sizes \\( s \\times s \\), \\( r \\times s \\), \\( s \\times r \\), and \\( r \\times r \\), respectively) and \\( I \\) is the \\( s \\times s \\) identity matrix.\n\n**Theorem.** For any general linear method \\( m \\) (with \\( s \\) stages and \\( r \\) approximations), any \\( z \\in \\mathbb{C} \\), and any indices \\( k, l \\in \\{0,\\dots,r-1\\} \\), the \\((k,l)\\)-entry of the stability matrix is given by\n\n\\[\nS(m,z)_{k,l} = V_{k,l} + z \\sum_{i=0}^{s-1} \\sum_{j=0}^{s-1} B_{k,i} \\, \\bigl((I - z A)^{-1}\\bigr)_{i,j} \\, U_{j,l}.\n\\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:520C": {
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.stabilityFunction",
@@ -2720,7 +2756,9 @@
       "thm:520B",
       "thm:520D"
     ],
-    "lean_statement": "noncomputable def stabilityFunction (t : ButcherTableau s) (z : ℂ) : ℂ :=\n  let Aℂ : Matrix (Fin s) (Fin s) ℂ := fun i j => (t.A i j : ℂ)\n  1 + z * ∑ i, ∑ j,\n    (t.b i : ℂ) * ((1 : Matrix (Fin s) (Fin s) ℂ) - z • Aℂ)⁻¹ i j\n\n/-- §502 sanity check for §520: the GLM stability matrix of an RK method\nis the `1 × 1` matrix whose sole entry is the scalar RK stability\nfunction. -/"
+    "lean_statement": "noncomputable def stabilityFunction (t : ButcherTableau s) (z : ℂ) : ℂ :=\n  let Aℂ : Matrix (Fin s) (Fin s) ℂ := fun i j => (t.A i j : ℂ)\n  1 + z * ∑ i, ∑ j,\n    (t.b i : ℂ) * ((1 : Matrix (Fin s) (Fin s) ℂ) - z • Aℂ)⁻¹ i j\n\n/-- §502 sanity check for §520: the GLM stability matrix of an RK method\nis the `1 × 1` matrix whose sole entry is the scalar RK stability\nfunction. -/",
+    "lean_back_translation": "The stability function of a Butcher tableau \\( t \\) with \\( s \\) stages, evaluated at a complex number \\( z \\), is defined as\n\n\\[\nR(z) = 1 + z \\sum_{i=1}^{s} \\sum_{j=1}^{s} b_i \\bigl((I - z A)^{-1}\\bigr)_{ij},\n\\]\n\nwhere \\( A \\) is the \\( s \\times s \\) coefficient matrix of the tableau, \\( b \\) is the vector of weights, and \\( I \\) is the \\( s \\times s \\) identity matrix.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:520E": {
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsAStable",
@@ -2794,7 +2832,9 @@
     "dependents": [
       "def:520F"
     ],
-    "lean_statement": "def IsAStable (m : GeneralLinearMethod s r) : Prop :=\n  ∀ z : ℂ, z.re ≤ 0 →\n    ∀ μ : ℂ, (m.stabilityMatrix z).charpoly.IsRoot μ → ‖μ‖ ≤ 1\n\n/-- Complex lift of a real preconsistency vector. -/"
+    "lean_statement": "def IsAStable (m : GeneralLinearMethod s r) : Prop :=\n  ∀ z : ℂ, z.re ≤ 0 →\n    ∀ μ : ℂ, (m.stabilityMatrix z).charpoly.IsRoot μ → ‖μ‖ ≤ 1\n\n/-- Complex lift of a real preconsistency vector. -/",
+    "lean_back_translation": "A general linear method \\(m\\) with \\(s\\) stages and \\(r\\) external approximations is called **A-stable** if for every complex number \\(z\\) with \\(\\operatorname{Re}(z) \\le 0\\) and every complex number \\(\\mu\\) that is a root of the characteristic polynomial of the stability matrix \\(m.\\text{stabilityMatrix}(z)\\), we have \\(|\\mu| \\le 1\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:520F": {
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsLStable",
@@ -2897,7 +2937,9 @@
     "dependents": [
       "thm:521B"
     ],
-    "lean_statement": "def HasStabilityOrder (m : GeneralLinearMethod s r) (q : Fin r → ℝ)\n    (p : ℕ) : Prop :=\n  ∃ (C δ : ℝ), 0 < δ ∧ 0 ≤ C ∧\n    ∀ z : ℂ, ‖z‖ < δ →\n      ∀ k, ‖m.stabilityDefect q z k‖ ≤ C * ‖z‖ ^ (p + 1)\n\n/-! ## Stage Solvability by Contraction -/\n\n/-- The scalar GLM stage self-map. Fixed points are stage vectors satisfying\nButcher's §500 stage equations. -/"
+    "lean_statement": "def HasStabilityOrder (m : GeneralLinearMethod s r) (q : Fin r → ℝ)\n    (p : ℕ) : Prop :=\n  ∃ (C δ : ℝ), 0 < δ ∧ 0 ≤ C ∧\n    ∀ z : ℂ, ‖z‖ < δ →\n      ∀ k, ‖m.stabilityDefect q z k‖ ≤ C * ‖z‖ ^ (p + 1)\n\n/-! ## Stage Solvability by Contraction -/\n\n/-- The scalar GLM stage self-map. Fixed points are stage vectors satisfying\nButcher's §500 stage equations. -/",
+    "lean_back_translation": "The method \\(m\\) has stability order \\(p\\) with respect to the parameters \\(q\\) if there exist real numbers \\(C\\) and \\(\\delta\\) with \\(\\delta > 0\\) and \\(C \\ge 0\\) such that for every complex number \\(z\\) with \\(\\|z\\| < \\delta\\) and for every \\(k\\),\n\n\\[\n\\|m.\\text{stabilityDefect}(q, z, k)\\| \\le C \\cdot \\|z\\|^{p+1}.\n\\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:525A": {
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsGSymplectic",
@@ -2965,7 +3007,9 @@
       }
     ],
     "dependents": [],
-    "lean_statement": "def IsGSymplectic (m : GeneralLinearMethod s r) : Prop :=\n  ∃ (G : Fin r → Fin r → ℝ) (D : Fin s → ℝ),\n    (∀ i j : Fin r, G i j = G j i) ∧\n    (∀ i j : Fin s,\n      D i * m.A i j + D j * m.A j i =\n        ∑ k₁ : Fin r, ∑ k₂ : Fin r, m.B k₁ i * G k₁ k₂ * m.B k₂ j) ∧\n    (∀ (i : Fin s) (k : Fin r),\n      D i * m.U i k =\n        ∑ k₁ : Fin r, ∑ k₂ : Fin r, m.B k₁ i * G k₁ k₂ * m.V k₂ k) ∧\n    (∀ k₁ k₂ : Fin r,\n      (∑ i : Fin r, ∑ j : Fin r, m.V i k₁ * G i j * m.V j k₂) = G k₁ k₂)"
+    "lean_statement": "def IsGSymplectic (m : GeneralLinearMethod s r) : Prop :=\n  ∃ (G : Fin r → Fin r → ℝ) (D : Fin s → ℝ),\n    (∀ i j : Fin r, G i j = G j i) ∧\n    (∀ i j : Fin s,\n      D i * m.A i j + D j * m.A j i =\n        ∑ k₁ : Fin r, ∑ k₂ : Fin r, m.B k₁ i * G k₁ k₂ * m.B k₂ j) ∧\n    (∀ (i : Fin s) (k : Fin r),\n      D i * m.U i k =\n        ∑ k₁ : Fin r, ∑ k₂ : Fin r, m.B k₁ i * G k₁ k₂ * m.V k₂ k) ∧\n    (∀ k₁ k₂ : Fin r,\n      (∑ i : Fin r, ∑ j : Fin r, m.V i k₁ * G i j * m.V j k₂) = G k₁ k₂)",
+    "lean_back_translation": "A general linear method with \\(s\\) stages and \\(r\\) external approximations is called **G-symplectic** if there exist a symmetric matrix \\(G \\in \\mathbb{R}^{r \\times r}\\) and a diagonal matrix \\(D = \\operatorname{diag}(d_1,\\dots,d_s) \\in \\mathbb{R}^{s \\times s}\\) such that the following three conditions hold for the method's coefficient matrices \\(A \\in \\mathbb{R}^{s \\times s}\\), \\(B \\in \\mathbb{R}^{r \\times s}\\), \\(U \\in \\mathbb{R}^{s \\times r}\\), and \\(V \\in \\mathbb{R}^{r \\times r}\\):\n\n1. For all \\(i,j = 1,\\dots,s\\),\n   \\[\n   d_i A_{ij} + d_j A_{ji} = \\sum_{k_1=1}^{r} \\sum_{k_2=1}^{r} B_{k_1 i} G_{k_1 k_2} B_{k_2 j}.\n   \\]\n\n2. For all \\(i = 1,\\dots,s\\) and \\(k = 1,\\dots,r\\),\n   \\[\n   d_i U_{ik} = \\sum_{k_1=1}^{r} \\sum_{k_2=1}^{r} B_{k_1 i} G_{k_1 k_2} V_{k_2 k}.\n   \\]\n\n3. For all \\(k_1,k_2 = 1,\\dots,r\\),\n   \\[\n   \\sum_{i=1}^{r} \\sum_{j=1}^{r} V_{i k_1} G_{ij} V_{j k_2} = G_{k_1 k_2}.\n   \\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "def:530A": {
     "lean_symbol": "OpenMath.Chapter5.Section530.StartingMethod.IsNonDegenerate",
@@ -3725,7 +3769,9 @@
       "thm:358A",
       "thm:363A"
     ],
-    "lean_statement": "noncomputable def shiftedLegendreP : ℕ → ℝ → ℝ\n  | 0, _ => 1\n  | 1, x => 2 * x - 1\n  | n + 2, x =>\n    ((2 * (n : ℝ) + 3) * (2 * x - 1) * shiftedLegendreP (n + 1) x -\n      ((n : ℝ) + 1) * shiftedLegendreP n x) / ((n : ℝ) + 2)\n\n/-! ## Basic Evaluations -/\n\n@[simp] theorem shiftedLegendreP_zero (x : ℝ) : shiftedLegendreP 0 x = 1 := rfl\n\n@[simp] theorem shiftedLegendreP_one (x : ℝ) :\n    shiftedLegendreP 1 x = 2 * x - 1 := rfl"
+    "lean_statement": "noncomputable def shiftedLegendreP : ℕ → ℝ → ℝ\n  | 0, _ => 1\n  | 1, x => 2 * x - 1\n  | n + 2, x =>\n    ((2 * (n : ℝ) + 3) * (2 * x - 1) * shiftedLegendreP (n + 1) x -\n      ((n : ℝ) + 1) * shiftedLegendreP n x) / ((n : ℝ) + 2)\n\n/-! ## Basic Evaluations -/\n\n@[simp] theorem shiftedLegendreP_zero (x : ℝ) : shiftedLegendreP 0 x = 1 := rfl\n\n@[simp] theorem shiftedLegendreP_one (x : ℝ) :\n    shiftedLegendreP 1 x = 2 * x - 1 := rfl",
+    "lean_back_translation": "For \\(n \\in \\mathbb{N}\\) and \\(x \\in \\mathbb{R}\\), the shifted Legendre polynomial \\(P_n^*(x)\\) is defined recursively by\n\\[\nP_0^*(x) = 1,\n\\]\n\\[\nP_1^*(x) = 2x - 1,\n\\]\nand for \\(n \\ge 0\\),\n\\[\nP_{n+2}^*(x) = \\frac{(2n+3)(2x-1)P_{n+1}^*(x) - (n+1)P_n^*(x)}{n+2}.\n\\]\n\nIn particular, for all \\(x \\in \\mathbb{R}\\),\n\\[\nP_0^*(x) = 1, \\qquad P_1^*(x) = 2x - 1.\n\\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "lem:342B": {
     "lean_symbol": "butcherShiftedLegendre_quadrature_exact_lt_two_n",
@@ -3774,7 +3820,9 @@
       "thm:358A",
       "thm:363A"
     ],
-    "lean_statement": "noncomputable def shiftedLegendreP : ℕ → ℝ → ℝ\n  | 0, _ => 1\n  | 1, x => 2 * x - 1\n  | n + 2, x =>\n    ((2 * (n : ℝ) + 3) * (2 * x - 1) * shiftedLegendreP (n + 1) x -\n      ((n : ℝ) + 1) * shiftedLegendreP n x) / ((n : ℝ) + 2)\n\n/-! ## Basic Evaluations -/\n\n@[simp] theorem shiftedLegendreP_zero (x : ℝ) : shiftedLegendreP 0 x = 1 := rfl\n\n@[simp] theorem shiftedLegendreP_one (x : ℝ) :\n    shiftedLegendreP 1 x = 2 * x - 1 := rfl"
+    "lean_statement": "theorem gaussLegendre_B_double (t : ButcherTableau s)\n    (hGL : t.HasGaussLegendreNodes)\n    (hB : t.SatisfiesB s) :\n    t.SatisfiesB (2 * s)",
+    "lean_back_translation": "For a Butcher tableau \\(t\\) with \\(s\\) stages, if \\(t\\) has Gauss–Legendre nodes and satisfies the simplifying assumption \\(B(s)\\), then \\(t\\) also satisfies \\(B(2s)\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "lem:351A": {
     "lean_symbol": null,
@@ -5429,7 +5477,9 @@
     "dependents": [
       "thm:213A"
     ],
-    "lean_statement": "lemma seq_le_prod_mul (b c : ℕ → ℝ) (n : ℕ)\n    (hb_nonneg : ∀ i, i ≤ n → 0 ≤ b i)\n    (hc_nonneg : ∀ i, i < n → 0 ≤ c i)\n    (hrec : ∀ i, i < n → b (i + 1) ≤ c i * b i) :\n    b n ≤ (∏ i ∈ range n, c i) * b 0\n\nlemma seq_le_prod_mul (b c : ℕ → ℝ) (n : ℕ)\n    (hb_nonneg : ∀ i, i ≤ n → 0 ≤ b i)\n    (hc_nonneg : ∀ i, i < n → 0 ≤ c i)\n    (hrec : ∀ i, i < n → b (i + 1) ≤ c i * b i) :\n    b n ≤ (∏ i ∈ range n, c i) * b 0"
+    "lean_statement": "theorem euler_error_bound_L_eq_zero\n    (a h : ℕ → ℝ) (C : ℝ) (n : ℕ)\n    (hrec : ∀ i, i < n → a (i + 1) ≤ a i + h i * C) :\n    a n ≤ a 0 + C * ∑ i ∈ range n, h i",
+    "lean_back_translation": "For a sequence \\((a_i)_{i \\in \\mathbb{N}}\\) and a sequence of step sizes \\((h_i)_{i \\in \\mathbb{N}}\\) of real numbers, a real constant \\(C\\), and a natural number \\(n\\), if for every \\(i < n\\) we have  \n\\[\na_{i+1} \\le a_i + h_i \\cdot C,\n\\]  \nthen  \n\\[\na_n \\le a_0 + C \\sum_{i=0}^{n-1} h_i.\n\\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:213A": {
     "lean_symbol": "OpenMath.Chapter2.Section213.euler_convergence",
@@ -5489,7 +5539,9 @@
     "dependents": [
       "thm:213B"
     ],
-    "lean_statement": "theorem gronwallBound_linear_in_h_pos (L T M h : ℝ) (hL_pos : 0 < L) :\n    gronwallBound 0 L (M * h) T = M / L * (exp (L * T) - 1) * h"
+    "lean_statement": "theorem euler_convergence_order1 (L T M : ℝ)\n    (hL_nonneg : 0 ≤ L) (hT_nonneg : 0 ≤ T) (hM_nonneg : 0 ≤ M) :\n    ∃ K : ℝ, 0 ≤ K ∧ ∀ h : ℝ, 0 ≤ h →\n    gronwallBound 0 L (M * h) T ≤ K * h",
+    "lean_back_translation": "∃ K ≥ 0 such that for all h ≥ 0,\ngronwallBound(0, L, M·h, T) ≤ K·h.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:213B": {
     "lean_symbol": "OpenMath.Chapter2.Section213.euler_convergence_uniform",
@@ -5650,7 +5702,9 @@
       "thm:302A",
       "thm:372A"
     ],
-    "lean_statement": "noncomputable def elementaryWeight (tab : ButcherTableau s) : BTree → Fin s → ℝ\n  | .leaf, _ => 1\n  | .node children, i =>\n      children.foldr\n        (fun t acc => acc * (∑ k : Fin s, tab.A i k * tab.elementaryWeight t k)) 1\ntermination_by t => sizeOf t\ndecreasing_by\n  have hmem : sizeOf t < sizeOf children :=\n    List.sizeOf_lt_of_mem (by assumption)\n  have hnode : sizeOf children < sizeOf (BTree.node children) := by simp\n  exact Nat.lt_trans hmem hnode\n\n/-- The **tree order condition** for a single rooted tree t:\n∑ᵢ bᵢ Φᵢ(t) = 1/γ(t). -/\n\nnoncomputable def elementaryWeight (tab : ButcherTableau s) : BTree → Fin s → ℝ\n  | .leaf, _ => 1\n  | .node children, i =>\n      children.foldr\n        (fun t acc => acc * (∑ k : Fin s, tab.A i k * tab.elementaryWeight t k)) 1\ntermination_by t => sizeOf t\ndecreasing_by\n  have hmem : sizeOf t < sizeOf children :=\n    List.sizeOf_lt_of_mem (by assumption)\n  have hnode : sizeOf children < sizeOf (BTree.node children) := by simp\n  exact Nat.lt_trans hmem hnode\n\n/-- The **tree order condition** for a single rooted tree t:\n∑ᵢ bᵢ Φᵢ(t) = 1/γ(t). -/\n\nnoncomputable def elementaryWeight (tab : ButcherTableau s) : BTree → Fin s → ℝ\n  | .leaf, _ => 1\n  | .node children, i =>\n      children.foldr\n        (fun t acc => acc * (∑ k : Fin s, tab.A i k * tab.elementaryWeight t k)) 1\ntermination_by t => sizeOf t\ndecreasing_by\n  have hmem : sizeOf t < sizeOf children :=\n    List.sizeOf_lt_of_mem (by assumption)\n  have hnode : sizeOf children < sizeOf (BTree.node children) := by simp\n  exact Nat.lt_trans hmem hnode\n\n/-- The **tree order condition** for a single rooted tree t:\n∑ᵢ bᵢ Φᵢ(t) = 1/γ(t). -/\n\nnoncomputable def elementaryWeight (tab : ButcherTableau s) : BTree → Fin s → ℝ\n  | .leaf, _ => 1\n  | .node children, i =>\n      children.foldr\n        (fun t acc => acc * (∑ k : Fin s, tab.A i k * tab.elementaryWeight t k)) 1\ntermination_by t => sizeOf t\ndecreasing_by\n  have hmem : sizeOf t < sizeOf children :=\n    List.sizeOf_lt_of_mem (by assumption)\n  have hnode : sizeOf children < sizeOf (BTree.node children) := by simp\n  exact Nat.lt_trans hmem hnode\n\n/-- The **tree order condition** for a single rooted tree t:\n∑ᵢ bᵢ Φᵢ(t) = 1/γ(t). -/"
+    "lean_statement": "theorem thm_301A_order2 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :\n    tab.hasTreeOrder 2 ↔ tab.HasOrderGe2",
+    "lean_back_translation": "Let \\( \\text{tab} \\) be a Butcher tableau with \\( s \\) stages. If \\( \\text{tab} \\) is row-sum consistent, then \\( \\text{tab} \\) has tree order \\( 2 \\) if and only if \\( \\text{tab} \\) has order at least \\( 2 \\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:302A": {
     "lean_symbol": null,
@@ -6834,7 +6888,9 @@
       "thm:358A",
       "thm:363A"
     ],
-    "lean_statement": "theorem SatisfiesE_of_B_C (t : ButcherTableau s) (hB : t.SatisfiesB (2 * s))\n    (hC : t.SatisfiesC s) : t.SatisfiesE s s"
+    "lean_statement": "theorem SatisfiesE_of_B_C (t : ButcherTableau s) (hB : t.SatisfiesB (2 * s))\n    (hC : t.SatisfiesC s) : t.SatisfiesE s s",
+    "lean_back_translation": "For a Butcher tableau with \\(s\\) stages, if the tableau satisfies the simplifying assumption \\(B(2s)\\) and the simplifying assumption \\(C(s)\\), then it also satisfies the simplifying assumption \\(E(s,s)\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:343A": {
     "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.reflection_reflection",
@@ -6881,7 +6937,7 @@
   },
   "thm:343B": {
     "lean_symbol": null,
-    "lean_file": "OpenMath/Collocation.lean",
+    "lean_file": "OpenMath/ReflectedMethods.lean",
     "lean_file_original": null,
     "status": "unformalized",
     "kind": "theorem",
@@ -6951,7 +7007,9 @@
       }
     ],
     "dependents": [],
-    "lean_statement": "def SatisfiesE (t : ButcherTableau s) (η ζ : ℕ) : Prop :=\n  ∀ k l : ℕ, 1 ≤ k → k ≤ η → 1 ≤ l → l ≤ ζ →\n    ∑ i : Fin s, ∑ j : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j * t.c j ^ (l - 1) =\n      1 / ((l : ℝ) * ((k + l : ℕ) : ℝ))\n\n/-- **B(2s) ∧ C(s) ⇒ E(s,s)**, the implication (342m) from Theorem 342C. -/"
+    "lean_statement": "theorem reflect_satisfiesB {t : ButcherTableau s} {η : ℕ}\n    (hB : t.SatisfiesB η) : t.reflect.SatisfiesB η",
+    "lean_back_translation": "For a Butcher tableau \\(t\\) with \\(s\\) stages and a natural number \\(\\eta\\), if \\(t\\) satisfies the order condition \\(B(\\eta)\\), then the reflected tableau \\(t^{\\text{ref}}\\) also satisfies \\(B(\\eta)\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:344A": {
     "lean_symbol": "OpenMath.Chapter3.Section344.butcherRadauI_orthogonal_to_lower_degree",
@@ -7055,7 +7113,9 @@
       "lem:351A",
       "thm:355F"
     ],
-    "lean_statement": "def ePoly (N D : Polynomial ℂ) (y : ℝ) : ℝ :=\n  ‖D.eval ((y : ℂ) * I)‖ ^ 2 - ‖N.eval ((y : ℂ) * I)‖ ^ 2\n\n/-- A convenient abbreviation for evaluation on the imaginary axis. -/"
+    "lean_statement": "theorem ePoly_nonneg_of_aStable\n    (N D : Polynomial ℂ)\n    (hAstab : ∀ z : ℂ, z.re ≤ 0 → D.eval z ≠ 0 → ‖N.eval z / D.eval z‖ ≤ 1)\n    (hImag : ∀ y : ℝ, evalImag D y ≠ 0) :\n    ∀ y : ℝ, 0 ≤ ePoly N D y",
+    "lean_back_translation": "Let \\(N, D \\in \\mathbb{C}[x]\\) be polynomials. Suppose that  \n- For every \\(z \\in \\mathbb{C}\\) with \\(\\operatorname{Re}(z) \\le 0\\) and \\(D(z) \\ne 0\\), we have \\(\\left| \\frac{N(z)}{D(z)} \\right| \\le 1\\).  \n- For every real \\(y\\), the imaginary part of \\(D(i y)\\) is nonzero.  \n\nThen for every real \\(y\\), the E-polynomial \\(E(y) = |D(i y)|^2 - |N(i y)|^2\\) satisfies \\(E(y) \\ge 0\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:352A": {
     "lean_symbol": null,
@@ -7195,7 +7255,9 @@
       }
     ],
     "dependents": [],
-    "lean_statement": "noncomputable def expTaylor_poly (n : ℕ) : Polynomial ℂ :=\n  ∑ i in Finset.range (n + 1),\n    Polynomial.C (1 / (i.factorial : ℂ)) * Polynomial.X ^ i\n\n/-- The Padé numerator P_{p,q} as a formal polynomial. -/"
+    "lean_statement": "theorem pade_uniqueness (l m : ℕ)\n    (P Q : Polynomial ℂ)\n    (hP : P.natDegree ≤ l) (hQ : Q.natDegree ≤ m)\n    (hQ0 : Q.eval 0 = 1)\n    (happrox : Polynomial.X ^ (l + m + 1) ∣ (P - Q * expTaylor_poly (l + m))) :\n    P * padeQ_poly l m = padeP_poly l m * Q",
+    "lean_back_translation": "Let \\(l, m \\in \\mathbb{N}\\). Let \\(P, Q \\in \\mathbb{C}[x]\\) be polynomials satisfying\n\n- \\(\\deg P \\le l\\),\n- \\(\\deg Q \\le m\\),\n- \\(Q(0) = 1\\),\n- \\(x^{l+m+1} \\mid \\bigl(P(x) - Q(x) \\cdot T_{l+m}(x)\\bigr)\\), where \\(T_{l+m}(x)\\) is the Taylor polynomial of \\(e^x\\) of degree \\(l+m\\).\n\nThen \\(P(x) \\cdot Q_{\\text{padé}}(x) = P_{\\text{padé}}(x) \\cdot Q(x)\\), where \\(P_{\\text{padé}}\\) and \\(Q_{\\text{padé}}\\) are the numerator and denominator polynomials of the Padé approximant of \\(e^x\\) of order \\((l,m)\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:352C": {
     "lean_symbol": null,
@@ -7253,7 +7315,9 @@
       "thm:352B",
       "thm:353A"
     ],
-    "lean_statement": "theorem padePQ_pair_recurrence (p q : ℕ) (hp : 0 < p) (hq : 0 < q) (z : ℂ) :\n    (padeP p (q + 1) z, padeQ (p + 1) q z) =\n      (padeP p q z - (p : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeP (p - 1) q z,\n        padeQ p q z + (q : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeQ p (q - 1) z)"
+    "lean_statement": "theorem padePQ_pair_recurrence (p q : ℕ) (hp : 0 < p) (hq : 0 < q) (z : ℂ) :\n    (padeP p (q + 1) z, padeQ (p + 1) q z) =\n      (padeP p q z - (p : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeP (p - 1) q z,\n        padeQ p q z + (q : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeQ p (q - 1) z)",
+    "lean_back_translation": "Let \\(p, q\\) be positive integers, and let \\(z \\in \\mathbb{C}\\). Then the pair of Padé approximants \\((P_{p,q+1}(z), Q_{p+1,q}(z))\\) satisfies the recurrence relation\n\n\\[\n\\bigl(P_{p,q+1}(z),\\, Q_{p+1,q}(z)\\bigr) \\;=\\;\n\\Bigl(\nP_{p,q}(z) - \\frac{p\\,z}{(p+q)(p+q+1)}\\,P_{p-1,q}(z),\\;\nQ_{p,q}(z) + \\frac{q\\,z}{(p+q)(p+q+1)}\\,Q_{p,q-1}(z)\n\\Bigr).\n\\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:352D": {
     "lean_symbol": null,
@@ -7291,7 +7355,9 @@
       "thm:352C",
       "thm:353A"
     ],
-    "lean_statement": "noncomputable def padeP (p q : ℕ) (z : ℂ) : ℂ :=\n  Finset.sum (Finset.range (p + 1)) fun j =>\n    (((p + q - j).factorial : ℕ) : ℂ) * (p.factorial : ℂ) /\n      (((p + q).factorial : ℂ) * ((p - j).factorial : ℂ) * (j.factorial : ℂ)) * z ^ j\n\n/-- The denominator polynomial `Q_{p,q}` of the `(p,q)`-Padé approximant to `exp`. -/"
+    "lean_statement": "theorem padeQ_succ_left (p q : ℕ) (hq : 0 < q) (z : ℂ) :\n    padeQ (p + 1) q z =\n      padeQ p q z + (q : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeQ p (q - 1) z",
+    "lean_back_translation": "The Padé approximant \\(Q_{p,q}(z)\\) satisfies the recurrence relation\n\n\\[\nQ_{p+1,q}(z) = Q_{p,q}(z) + \\frac{q\\,z}{(p+q)(p+q+1)}\\,Q_{p,q-1}(z)\n\\]\n\nfor all integers \\(p \\ge 0\\), \\(q > 0\\), and complex numbers \\(z\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:352E": {
     "lean_symbol": null,
@@ -7405,7 +7471,9 @@
       }
     ],
     "dependents": [],
-    "lean_statement": "theorem pade_approximation_order_q0 (p : ℕ) :\n    ∃ r : ℂ → ℂ, ∀ z : ℂ,\n      padeP p 0 z - padeQ p 0 z * expTaylor p z =\n        z ^ (p + 1) * r z"
+    "lean_statement": "theorem pade_approximation_order_q0 (p : ℕ) :\n    ∃ r : ℂ → ℂ, ∀ z : ℂ,\n      padeP p 0 z - padeQ p 0 z * expTaylor p z =\n        z ^ (p + 1) * r z",
+    "lean_back_translation": "For any natural number \\(p\\), there exists a function \\(r : \\mathbb{C} \\to \\mathbb{C}\\) such that for all \\(z \\in \\mathbb{C}\\),\n\n\\[\nP_{p,0}(z) - Q_{p,0}(z) \\cdot T_p(z) = z^{p+1} \\, r(z),\n\\]\n\nwhere \\(P_{p,0}\\) and \\(Q_{p,0}\\) denote the numerator and denominator of the \\((p,0)\\)-Padé approximant to the exponential function, and \\(T_p\\) denotes the \\(p\\)-th order Taylor polynomial of the exponential function.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:355B": {
     "lean_symbol": null,
@@ -7478,7 +7546,9 @@
       "thm:355C",
       "thm:443A"
     ],
-    "lean_statement": "def orderStarPlus (R : ℂ → ℂ) : Set ℂ := {z | 1 < ‖R z * exp (-z)‖}\n\n/-- The **order-star minus** region: `𝒜⁻(R) = {z ∈ ℂ : |R(z)·e⁻ᶻ| < 1}`. -/"
+    "lean_statement": "theorem local_plus_near_even_angle_of_neg_errorConst\n    (R : ℂ → ℂ) (p k : ℕ) (C K δ₀ : ℝ)\n    (hC : C < 0) (hK : 0 < K) (hδ : 0 < δ₀)\n    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →\n      ‖R z * exp (-z) - (1 - ↑C * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2)) :\n    ∃ aperture > 0, ∃ radius > 0,\n      ∀ z : ℂ, z ∈ rayConeNearOrigin (2 * ↑k * π / (↑p + 1)) aperture radius →\n        1 < ‖R z * exp (-z)‖",
+    "lean_back_translation": "Let \\(R : \\mathbb{C} \\to \\mathbb{C}\\) be a function, let \\(p, k \\in \\mathbb{N}\\), and let \\(C, K, \\delta_0 \\in \\mathbb{R}\\). Suppose that \\(C < 0\\), \\(K > 0\\), \\(\\delta_0 > 0\\), and that for all \\(z \\in \\mathbb{C}\\) with \\(\\|z\\| < \\delta_0\\),\n\n\\[\n\\|R(z) e^{-z} - (1 - C z^{p+1})\\| \\le K \\|z\\|^{p+2}.\n\\]\n\nThen there exist an aperture \\(> 0\\) and a radius \\(> 0\\) such that for every \\(z \\in \\mathbb{C}\\) belonging to the ray cone near the origin with direction \\(\\frac{2k\\pi}{p+1}\\), aperture, and radius, we have\n\n\\[\n1 < \\|R(z) e^{-z}\\|.\n\\]",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:355C": {
     "lean_symbol": null,
@@ -7567,7 +7637,9 @@
       "thm:355E",
       "thm:443A"
     ],
-    "lean_statement": "def SatisfiesArrowCountInequality (data : OrderArrowCountData) : Prop :=\n  data.order ≤ data.downArrowsAtZeros + data.upArrowsAtPoles\n\n/-- If ordinary finite endpoints are excluded and no branch escapes to infinity,\nthe explicit termination bookkeeping collapses to the 355D arrow-count inequality. -/"
+    "lean_statement": "theorem pade_exact_arrow_counts_of_countInequality (data : OrderArrowCountData)\n    (hp : data.order = data.numeratorDegree + data.denominatorDegree)\n    (hineq : SatisfiesArrowCountInequality data) :\n    data.downArrowsAtZeros = data.numeratorDegree ∧\n      data.upArrowsAtPoles = data.denominatorDegree",
+    "lean_back_translation": "For any order-arrow count data satisfying the condition that the order equals the numerator degree plus the denominator degree, if the arrow count inequality holds, then the number of down arrows at zeros equals the numerator degree and the number of up arrows at poles equals the denominator degree.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:355E": {
     "lean_symbol": null,
@@ -7637,7 +7709,9 @@
       "thm:355G",
       "thm:443A"
     ],
-    "lean_statement": "structure OrderArrowCountData where\n  order : ℕ\n  numeratorDegree : ℕ\n  denominatorDegree : ℕ\n  downArrowsAtZeros : ℕ\n  upArrowsAtPoles : ℕ\n  downArrowsAtZeros_le_numeratorDegree : downArrowsAtZeros ≤ numeratorDegree\n  upArrowsAtPoles_le_denominatorDegree : upArrowsAtPoles ≤ denominatorDegree\n\n/-- Global endpoint bookkeeping for order arrows. Besides zeros and poles, a branch\nmay in principle terminate at an ordinary finite nonsingular point or escape to\ninfinity. The ordinary finite endpoint counts are kept separate so the missing\nfinite-endpoint classification step can be stated explicitly rather than folded\ninto the single no-infinity hypothesis. -/"
+    "lean_statement": "theorem pade_exact_arrow_counts_of_countInequality (data : OrderArrowCountData)\n    (hp : data.order = data.numeratorDegree + data.denominatorDegree)\n    (hineq : SatisfiesArrowCountInequality data) :\n    data.downArrowsAtZeros = data.numeratorDegree ∧\n      data.upArrowsAtPoles = data.denominatorDegree",
+    "lean_back_translation": "The number of down-arrows at zeros equals the numerator degree, and the number of up-arrows at poles equals the denominator degree, provided that the order equals the sum of the numerator and denominator degrees and the arrow count inequality is satisfied.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:355F": {
     "lean_symbol": null,
@@ -7694,7 +7768,9 @@
       "thm:355G",
       "thm:443A"
     ],
-    "lean_statement": "theorem aStable_imagAxis_not_orderStarPlus (R : ℂ → ℂ)\n    (hA : ∀ z : ℂ, z.re ≤ 0 → ‖R z‖ ≤ 1)\n    (y : ℝ) : (↑y * I) ∉ orderStarPlus R"
+    "lean_statement": "theorem backwardEuler_imagAxis_not_orderStarPlus (y : ℝ) :\n    (↑y * I) ∉ orderStarPlus backwardEulerR",
+    "lean_back_translation": "For the backward Euler method, the point \\( iy \\) (with \\( y \\in \\mathbb{R} \\)) does not belong to the set \\(\\text{orderStarPlus}(\\text{backwardEulerR})\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:355G": {
     "lean_symbol": null,
@@ -7745,7 +7821,9 @@
     "dependents": [
       "thm:443A"
     ],
-    "lean_statement": "structure IsAStablePadeApprox (data : OrderArrowTerminationData) : Prop where\n  /-- The underlying Padé approximation property. -/\n  pade : IsPadeApproxToExp data\n  /-- Fact A1: topological sector counting gives `n ≤ d + downArrowsAtZeros`. -/\n  sector_bound_n :\n    data.numeratorDegree ≤ data.denominatorDegree + data.downArrowsAtZeros\n  /-- Fact A2: topological sector counting gives `d ≤ n + 2 + upArrowsAtPoles`. -/\n  sector_bound_d :\n    data.denominatorDegree ≤ data.numeratorDegree + 2 + data.upArrowsAtPoles\n  /-- Fact B1: A-stability forces the zero-arrow correction term to vanish. -/\n  arrows_zero : data.downArrowsAtZeros = 0\n  /-- Fact B2: A-stability forces the pole-arrow correction term to vanish. -/\n  arrows_poles : data.upArrowsAtPoles = 0\n\n/-- The current 355G-side interface cannot be recovered from the explicit 355E\nendpoint counts except in the trivial zero-degree case. This records the live\nsemantic mismatch: `IsAStablePadeApprox.arrows_zero` and\n`IsAStablePadeApprox.arrows_poles` are not compatible with the exact endpoint\nequalities produced by `thm_355E`. -/"
+    "lean_statement": "theorem ehle_barrier (data : OrderArrowTerminationData)\n    (h : EhleBarrierInput data) :\n    data.numeratorDegree ≤ data.denominatorDegree ∧\n    data.denominatorDegree ≤ data.numeratorDegree + 2",
+    "lean_back_translation": "For a Padé approximant to an exponential function, if the approximant is A-stable, then the degree of the numerator \\( m \\) and the degree of the denominator \\( n \\) satisfy \\( m \\le n \\le m + 2 \\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:356C": {
     "lean_symbol": null,
@@ -7773,7 +7851,9 @@
       "def:356A",
       "def:356B"
     ],
-    "lean_statement": "def Aℂ (t : ButcherTableau s) : Matrix (Fin s) (Fin s) ℂ :=\n  fun i j => (t.A i j : ℂ)"
+    "lean_statement": "def Aℂ (t : ButcherTableau s) : Matrix (Fin s) (Fin s) ℂ :=\n  fun i j => (t.A i j : ℂ)",
+    "lean_back_translation": "The matrix \\(A_{\\mathbb{C}}\\) associated with a Butcher tableau \\(t\\) of \\(s\\) stages is the \\(s \\times s\\) complex matrix whose \\((i,j)\\)-entry is the complex number corresponding to the \\((i,j)\\)-entry of the tableau's coefficient matrix \\(A\\).",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:357C": {
     "lean_symbol": "OpenMath.Chapter3.Section357.algebraicallyStable_isBNStable",
@@ -7849,7 +7929,9 @@
     "dependents": [
       "thm:358A"
     ],
-    "lean_statement": "def IsDissipative {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]\n    (f : ℝ → E → E) : Prop :=\n  ∀ x u v, @inner ℝ E _ (f x u - f x v) (u - v) ≤ 0\n\n/-- Data for one implicit RK step, including stages and stage derivatives. -/"
+    "lean_statement": "theorem alg_stable_implies_bn_stable {t : ButcherTableau s}\n    (ht : t.IsAlgStable) : t.IsBNStable",
+    "lean_back_translation": "For a Butcher tableau \\(t\\) with \\(s\\) stages, if \\(t\\) is algebraically stable, then \\(t\\) is BN-stable.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:357D": {
     "lean_symbol": null,
@@ -7921,7 +8003,9 @@
     "dependents": [
       "thm:357C"
     ],
-    "lean_statement": "def IsNonConfluent (t : ButcherTableau s) : Prop := Function.Injective t.c\n\n/-! ### Stage multiplier: assigns z_i at abscissa c_i -/\n\n/-- Multiplier function mapping each abscissa cᵢ to zᵢ and all other points to 0.\n    Used to construct the dissipative field for the BN→AN reduction. -/"
+    "lean_statement": "theorem bnStable_implies_anStable {t : ButcherTableau s}\n    (hBN : IsBNStable.{0} t) (_hirr : ButcherTableau.IsDJIrreducible t)\n    (hnc : t.IsNonConfluent) :\n    t.IsANStable",
+    "lean_back_translation": "Let \\(t\\) be an \\(s\\)-stage Butcher tableau. If \\(t\\) is BN-stable, DJ-irreducible, and non-confluent, then \\(t\\) is AN-stable.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:358A": {
     "lean_symbol": null,
@@ -8017,7 +8101,9 @@
     "dependents": [
       "thm:359C"
     ],
-    "lean_statement": "noncomputable def shiftedLegendrePoly (n : ℕ) : ℝ[X] :=\n  Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre n)\n\n/-- The textbook-sign shifted Legendre polynomial in `ℝ[X]`. -/"
+    "lean_statement": "theorem thm_358A_only_if\n    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable) :\n    t.HasAlgStabilityBoundaryNodes",
+    "lean_back_translation": "The collocation method defined by a Butcher tableau \\(t\\) with \\(s\\) stages is algebraically stable if and only if all its collocation nodes lie on the boundary of the algebraic stability region.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:359C": {
     "lean_symbol": null,
@@ -8074,7 +8160,9 @@
       }
     ],
     "dependents": [],
-    "lean_statement": "theorem gaussLegendreNodes_hasAlgStabilityBoundaryNodes\n    (t : ButcherTableau s) (hGL : t.HasGaussLegendreNodes) :\n    t.HasAlgStabilityBoundaryNodes"
+    "lean_statement": "theorem rkGaussLegendre2_algStable_via_358A :\n    rkGaussLegendre2.IsAlgStable",
+    "lean_back_translation": "The two-stage Gauss–Legendre implicit Runge–Kutta method is algebraically stable.",
+    "lean_back_translation_model": "deepseek-ai/DeepSeek-V4-Pro"
   },
   "thm:363A": {
     "lean_symbol": null,
